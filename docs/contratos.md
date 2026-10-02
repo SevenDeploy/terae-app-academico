@@ -42,7 +42,9 @@ MotivoRecusa.x)` com `.mensagem` simples (`falhas.dart`); nenhuma implementaçã
 - `RepositorioDiario`: `enviar(RegistroDiario) → ResultadoEnvio(registro, alerta?)` (idempotente pelo id; `.enviado`,
   `.equipeAvisada` — só esta autoriza "profissional avisado"), `reenviarFila`, `registros`, `alertaDoRegistro`.
 - `RepositorioCuidadores`: `cuidadores(pacienteId) → [CuidadorAutorizado(vinculo, convite)]`, `convidar({pacienteId,
-  nome, cpf})`, `revogar(vinculoId)`; `limiteCuidadores = 2` conta `SituacaoVinculo.contaNoLimite`.
+  nome, cpf})`, `revogar(vinculoId)`; `limiteCuidadores = 2` conta
+  `CuidadorAutorizado.contaNoLimite(agora)` — ativo, ou pendente com convite não usado e não vencido (regra em
+  `dados/regras/cuidadores.dart`); pendente vencido não ocupa vaga e a TM07 o mostra como "Convite expirado".
 - `RepositorioVisaoCuidador` (RNFM05; sem vínculo ativo → `acessoNegado`): com `{contaCuidadorId, pacienteId}`,
   `pacienteAcompanhado`, `consultas`, `receitaVigente`, `itensDaReceita(+receitaId)`, `alertas → [AvisoDeAlerta(
   emitidoEm, cienteEm)]`; e `profissional(id)`. Já devolvem as cópias reduzidas.

@@ -10,8 +10,9 @@ import 'memoria_demonstracao.dart';
 import 'regras.dart';
 
 /// Cuidadores do paciente (RFM07; TM07): convidar e revogar, com o limite de
-/// dois que soma pendentes e ativos (§7.4, §23). Nada é apagado: revogar muda
-/// a situação e preenche `revogadoEm`.
+/// dois que soma ativos e pendentes com convite em aberto (§7.4, §23;
+/// `dados/regras/cuidadores.dart`). Nada é apagado: revogar muda a situação e
+/// preenche `revogadoEm`; pendente vencido continua na lista.
 class CuidadoresMemoria implements RepositorioCuidadores {
   CuidadoresMemoria(this._memoria);
 
@@ -44,11 +45,12 @@ class CuidadoresMemoria implements RepositorioCuidadores {
     }
     if (!cpfValido(cpf)) throw const RecusaDeRegra(MotivoRecusa.cpfInvalido);
     final digitos = somenteDigitos(cpf);
-    if (_e.cpfComVinculoEmAberto(pacienteId, digitos)) {
+    final agora = _memoria.agora();
+    if (_e.cpfComVinculoEmAberto(pacienteId, digitos, agora: agora)) {
       throw const RecusaDeRegra(MotivoRecusa.cpfJaConvidado);
     }
     // §23 — limite conferido ao convidar (e de novo ao aceitar, na TM10).
-    if (_e.vinculosNoLimite(pacienteId) >= limiteCuidadores) {
+    if (_e.vinculosNoLimite(pacienteId, agora: agora) >= limiteCuidadores) {
       throw const RecusaDeRegra(MotivoRecusa.limiteDeCuidadores);
     }
     final convite = ConviteAcesso(
@@ -57,7 +59,7 @@ class CuidadoresMemoria implements RepositorioCuidadores {
       codigo: _memoria.novoCodigo(),
       tipo: TipoConvite.cuidador,
       cpfConvidado: digitos,
-      expiraEm: _memoria.agora().add(validadeDoConviteCuidador),
+      expiraEm: agora.add(validadeDoConviteCuidador),
     );
     final vinculo = VinculoCuidador(
       id: _memoria.novoId(),

@@ -123,7 +123,10 @@ void main() {
 
     test('Ana: 2/2 cuidadores, Regina ativa e Paulo pendente', () {
       final daAna = e.vinculos.values.where((v) => v.pacienteId == idAna);
-      expect(e.vinculosNoLimite(idAna), limiteCuidadores);
+      expect(
+        e.vinculosNoLimite(idAna, agora: agoraDaMemoria),
+        limiteCuidadores,
+      );
       expect(
         {for (final v in daAna) v.nome: v.situacao},
         {
@@ -132,7 +135,10 @@ void main() {
         },
       );
       for (final p in e.pacientes.values) {
-        expect(e.vinculosNoLimite(p.id), lessThanOrEqualTo(2));
+        expect(
+          e.vinculosNoLimite(p.id, agora: agoraDaMemoria),
+          lessThanOrEqualTo(2),
+        );
       }
     });
 

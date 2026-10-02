@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:terae_app/dados/modelos/convite_acesso.dart';
+import 'package:terae_app/dados/repositorios/cuidadores_repositorio.dart';
 import 'package:terae_app/dados/repositorios/falhas.dart';
 import 'package:terae_app/nucleo/rotas/rotas.dart';
+import 'package:terae_app/nucleo/tempo/relogio.dart';
 
 import 'apoio_paciente.dart';
 
@@ -39,6 +42,43 @@ void main() {
       expect(find.text('Autorizado'), findsOneWidget);
       expect(find.text('Convite em aberto'), findsOneWidget);
       expect(find.text('Código PAU456, vale até 09/10/2026'), findsOneWidget);
+      semantica.dispose();
+    });
+
+    testWidgets('convite pendente expirado: "Convite expirado", não conta '
+        'no limite e pode ser revogado', (tester) async {
+      final semantica = tester.ensureSemantics();
+      final paulo = pauloPendente();
+      final expirado = CuidadorAutorizado(
+        vinculo: paulo.vinculo,
+        convite: ConviteAcesso(
+          id: paulo.convite.id,
+          pacienteId: paulo.convite.pacienteId,
+          codigo: paulo.convite.codigo,
+          tipo: paulo.convite.tipo,
+          cpfConvidado: paulo.convite.cpfConvidado,
+          expiraEm: instanteNaClinica(2026, 9, 30, 23, 59),
+        ),
+      );
+      final app = await abrirAppDoPaciente(
+        tester,
+        em: Rotas.pacienteCuidadores,
+        cuidadores: CuidadoresEmMemoria([reginaAtiva(), expirado]),
+      );
+
+      expect(find.text('1/2'), findsOneWidget);
+      expect(_contador(tester), startsWith('1 de 2 cuidadores'));
+      expect(_formulario, findsOneWidget, reason: 'pode convidar');
+      expect(find.byKey(const Key('aviso-limite')), findsNothing);
+      expect(find.text('Convite expirado'), findsOneWidget);
+      expect(find.text('Convite em aberto'), findsNothing);
+      expect(find.text('Código PAU456, venceu em 30/09/2026'), findsOneWidget);
+
+      await _tocar(tester, find.byKey(const Key('revogar-vc-paulo')));
+      await _tocar(tester, find.byKey(const Key('confirmar-revogar')));
+      expect(app.cuidadores.revogados, ['vc-paulo']);
+      expect(find.text('Acesso removido'), findsOneWidget);
+      expect(find.text('1/2'), findsOneWidget);
       semantica.dispose();
     });
 

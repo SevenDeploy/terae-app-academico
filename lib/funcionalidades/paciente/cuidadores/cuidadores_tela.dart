@@ -35,6 +35,7 @@ class CuidadoresTela extends StatelessWidget {
               create: (context) => CuidadoresControlador(
                 repositorio: context.read<RepositorioCuidadores>(),
                 pacienteId: perfil.pacienteId,
+                relogio: context.read<Relogio>(),
               )..carregar(),
               child: const _ConteudoCuidadores(),
             ),
@@ -294,7 +295,13 @@ class _CartaoDoCuidador extends StatelessWidget {
     final vinculo = cuidador.vinculo;
     final situacao = vinculo.situacao;
     final removido = situacao == SituacaoVinculo.revogado;
+    // Pendente vencido: não conta no limite; fica até ser revogado (§7.4).
+    final expirado = c.conviteExpirado(cuidador);
     final cores = switch (situacao) {
+      _ when expirado => const ParDeCores(
+        CoresTerae.neutro600,
+        CoresTerae.neutro100,
+      ),
       SituacaoVinculo.ativo => const ParDeCores(
         CoresTerae.clinico700,
         CoresTerae.clinico50,
@@ -309,6 +316,9 @@ class _CartaoDoCuidador extends StatelessWidget {
       ),
     };
     final detalhe = switch (situacao) {
+      _ when expirado =>
+        'Código ${cuidador.convite.codigo}, venceu em '
+            '${formatarData(cuidador.convite.expiraEm)}',
       SituacaoVinculo.pendente =>
         'Código ${cuidador.convite.codigo}, vale até '
             '${formatarData(cuidador.convite.expiraEm)}',
@@ -339,7 +349,10 @@ class _CartaoDoCuidador extends StatelessWidget {
                     children: [
                       Text(vinculo.nome, style: textos.titleMedium),
                       const SizedBox(height: 4),
-                      Etiqueta(texto: situacao.rotulo, cores: cores),
+                      Etiqueta(
+                        texto: expirado ? 'Convite expirado' : situacao.rotulo,
+                        cores: cores,
+                      ),
                       if (detalhe != null) ...[
                         const SizedBox(height: 4),
                         Text(
@@ -355,7 +368,7 @@ class _CartaoDoCuidador extends StatelessWidget {
               ),
             ],
           ),
-          if (situacao.contaNoLimite) ...[
+          if (!removido) ...[
             const SizedBox(height: MedidasTerae.espacoPequeno),
             Align(
               alignment: Alignment.centerRight,

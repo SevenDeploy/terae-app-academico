@@ -140,7 +140,11 @@ class AutenticacaoMemoria implements RepositorioAutenticacao {
     final (convite, vinculo, paciente) = _conferirCuidador(codigo, cpf);
     // §23 — o limite é conferido de novo no aceite: depois dele, o paciente
     // continua com no máximo dois pendentes ou ativos.
-    if (_e.vinculosNoLimite(paciente.id, exceto: vinculo.id) >=
+    if (_e.vinculosNoLimite(
+          paciente.id,
+          agora: _memoria.agora(),
+          exceto: vinculo.id,
+        ) >=
         limiteCuidadores) {
       _recusa(MotivoRecusa.limiteDeCuidadores);
     }

@@ -603,7 +603,7 @@ void main() {
         expect(vinculo.contaCuidadorId, v.conta.id);
         expect(vinculo.autorizadoEm, agoraDaMemoria);
         expect(m.estado.conviteDoCodigo(codigoPaulo)!.usadoEm, agoraDaMemoria);
-        expect(m.estado.vinculosNoLimite(idAna), 2);
+        expect(m.estado.vinculosNoLimite(idAna, agora: agoraDaMemoria), 2);
 
         await recusaSemGravar(
           m,
@@ -685,7 +685,7 @@ void main() {
       });
       final m = memoriaDeTeste(dados: dados);
       final auth = m.repositorios.autenticacao;
-      expect(m.estado.vinculosNoLimite(idAna), 3);
+      expect(m.estado.vinculosNoLimite(idAna, agora: agoraDaMemoria), 3);
 
       await recusaSemGravar(
         m,

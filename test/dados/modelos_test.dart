@@ -340,8 +340,6 @@ void main() {
       expect(pendente.contaCuidadorId, isNull);
       expect(revogado.contaCuidadorId, 'c-paulo');
       expect(revogado.autorizadoEm, _instante);
-      expect(revogado.situacao.contaNoLimite, isFalse);
-      expect(pendente.situacao.contaNoLimite, isTrue);
     });
 
     test('registro naFila → enviado preserva o id gerado no aparelho', () {
