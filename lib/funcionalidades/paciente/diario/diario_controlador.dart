@@ -50,6 +50,12 @@ class DesfechoDoEnvio {
 /// No envio, o registro nasce no aparelho com UUID próprio e `naFila`; o
 /// formulário é limpo antes de navegar (voltar nunca reabre o preenchido) e
 /// um segundo toque durante o envio não envia de novo.
+///
+/// O UUID é do rascunho (§23: evita duplicidade no reenvio): nasce no
+/// primeiro envio e só muda quando o registro sai do formulário — resposta do
+/// repositório, ou TM04/TM05 com o provisório, que reenviam o mesmo registro
+/// — ou quando o formulário é limpo. Depois de uma falha, "Tentar de novo"
+/// reenvia com o mesmo UUID.
 class DiarioControlador extends ChangeNotifier {
   DiarioControlador({
     required this.repositorio,
@@ -72,6 +78,9 @@ class DiarioControlador extends ChangeNotifier {
   bool _enviando = false;
   String? _erro;
   bool _descartado = false;
+
+  /// UUID do registro em preenchimento; `null` até o primeiro envio.
+  String? _idDoRascunho;
 
   Adesao? get adesao => _adesao;
   Intensidade? get intensidade => _intensidade;
@@ -129,7 +138,7 @@ class DiarioControlador extends ChangeNotifier {
     }
     final texto = observacao.text.trim();
     final registro = RegistroDiario(
-      id: _gerarId(),
+      id: _idDoRascunho ??= _gerarId(),
       pacienteId: pacienteId,
       registradoEm: relogio.agora(),
       adesao: adesao,
@@ -181,8 +190,9 @@ class DiarioControlador extends ChangeNotifier {
     );
   }
 
-  /// Volta o formulário ao começo.
+  /// Volta o formulário ao começo, com um rascunho novo (outro UUID).
   void limpar() {
+    _idDoRascunho = null;
     _adesao = null;
     _intensidade = null;
     _sintoma = null;

@@ -2,21 +2,29 @@ import 'package:flutter/widgets.dart';
 
 import '../../../dados/repositorios/cuidadores_repositorio.dart';
 import '../../../dados/repositorios/falhas.dart';
+import '../../../nucleo/tempo/relogio.dart';
 import '../../../nucleo/validacao/cpf.dart';
 
 /// Estado da TM07 Cuidadores (RFM07, UC02, §7.4).
 ///
-/// O contador "n/2" soma convites pendentes e cuidadores ativos
-/// (`SituacaoVinculo.contaNoLimite`); com 2/2 a tela esconde o convite. O
+/// O contador "n/2" soma cuidadores ativos e convites em aberto
+/// (`CuidadorAutorizado.contaNoLimite` na hora do [relogio]); convite vencido
+/// não conta e aparece como "Convite expirado". Com 2/2 a tela esconde o
+/// convite. O
 /// convite pede nome e CPF (com máscara e dígito verificador conferidos aqui
 /// antes de ir ao repositório) e mostra o código gerado para repassar.
 /// Revogar não apaga nada: o vínculo fica na lista como "Acesso removido".
 /// Toda recusa do repositório vira a mensagem simples de [RecusaDeRegra].
 class CuidadoresControlador extends ChangeNotifier {
-  CuidadoresControlador({required this.repositorio, required this.pacienteId});
+  CuidadoresControlador({
+    required this.repositorio,
+    required this.pacienteId,
+    required this.relogio,
+  });
 
   final RepositorioCuidadores repositorio;
   final String pacienteId;
+  final Relogio relogio;
 
   final TextEditingController nome = TextEditingController();
   final TextEditingController cpf = TextEditingController();
@@ -38,9 +46,15 @@ class CuidadoresControlador extends ChangeNotifier {
   /// Todos os vínculos, como o repositório devolve (mais recentes primeiro).
   List<CuidadorAutorizado> get cuidadores => _cuidadores;
 
-  /// Pendentes + ativos (§7.4).
-  int get contagem =>
-      _cuidadores.where((c) => c.vinculo.situacao.contaNoLimite).length;
+  /// Ativos + convites em aberto (§7.4).
+  int get contagem {
+    final agora = relogio.agora();
+    return _cuidadores.where((c) => c.contaNoLimite(agora)).length;
+  }
+
+  /// Convite pendente que venceu sem ser usado.
+  bool conviteExpirado(CuidadorAutorizado cuidador) =>
+      cuidador.conviteExpirado(relogio.agora());
 
   bool get noLimite => contagem >= limiteCuidadores;
 

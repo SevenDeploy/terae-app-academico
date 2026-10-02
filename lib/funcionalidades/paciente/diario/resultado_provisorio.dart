@@ -1,4 +1,5 @@
 import 'package:flutter/widgets.dart';
+import 'package:provider/provider.dart';
 
 import '../../../dados/repositorios/diario_repositorio.dart';
 
@@ -37,13 +38,16 @@ enum AndamentoDoEnvio {
 
 /// Mostra o envio e se refaz quando um [ResultadoProvisorio] responde.
 ///
-/// [construtor] recebe o resultado atual (nulo em link direto) e o
-/// [AndamentoDoEnvio].
+/// [construtor] recebe o resultado atual (nulo em link direto), o
+/// [AndamentoDoEnvio] e, só quando o envio falhou, `tentarDeNovo`: reenvia o
+/// MESMO registro (mesmo UUID, idempotente — §23) pelo `RepositorioDiario`
+/// do provider e volta a acompanhar. O registro nunca se perde em silêncio.
 class AcompanharEnvio extends StatefulWidget {
   const AcompanharEnvio({
     super.key,
     required this.envio,
     required this.construtor,
+    this.aoMudarAndamento,
   });
 
   final ResultadoEnvio? envio;
@@ -51,8 +55,13 @@ class AcompanharEnvio extends StatefulWidget {
     BuildContext context,
     ResultadoEnvio? envio,
     AndamentoDoEnvio andamento,
+    VoidCallback? tentarDeNovo,
   )
   construtor;
+
+  /// Avisa cada mudança de andamento depois da inicial (a TM04 só arma a
+  /// volta automática quando o envio responde).
+  final ValueChanged<AndamentoDoEnvio>? aoMudarAndamento;
 
   @override
   State<AcompanharEnvio> createState() => _AcompanharEnvioState();
@@ -61,6 +70,9 @@ class AcompanharEnvio extends StatefulWidget {
 class _AcompanharEnvioState extends State<AcompanharEnvio> {
   ResultadoEnvio? _atual;
   AndamentoDoEnvio _andamento = AndamentoDoEnvio.respondido;
+
+  /// O provisório acompanhado agora; resposta de outro (antigo) é ignorada.
+  ResultadoProvisorio? _emCurso;
 
   @override
   void initState() {
@@ -77,27 +89,54 @@ class _AcompanharEnvioState extends State<AcompanharEnvio> {
   void _acompanhar(ResultadoEnvio? envio) {
     _atual = envio;
     if (envio is! ResultadoProvisorio) {
+      _emCurso = null;
       _andamento = AndamentoDoEnvio.respondido;
       return;
     }
+    _emCurso = envio;
     _andamento = AndamentoDoEnvio.aguardando;
     envio.definitivo.then(
       (resposta) {
-        if (!mounted || !identical(widget.envio, envio)) return;
+        if (!mounted || !identical(_emCurso, envio)) return;
         setState(() {
           _atual = resposta;
           _andamento = AndamentoDoEnvio.respondido;
         });
+        widget.aoMudarAndamento?.call(_andamento);
       },
       onError: (Object _) {
-        // Continua sem confirmação: "envio pendente", nunca "avisado".
-        if (!mounted || !identical(widget.envio, envio)) return;
+        // Continua sem confirmação: nunca "avisado".
+        if (!mounted || !identical(_emCurso, envio)) return;
         setState(() => _andamento = AndamentoDoEnvio.falhou);
+        widget.aoMudarAndamento?.call(_andamento);
       },
     );
   }
 
+  /// Reenvia o mesmo registro (o do provisório que falhou).
+  void _tentarDeNovo() {
+    final registro = _atual?.registro;
+    if (registro == null || _andamento != AndamentoDoEnvio.falhou) return;
+    final repositorio = context.read<RepositorioDiario>();
+    setState(
+      () => _acompanhar(
+        ResultadoProvisorio(
+          registro: registro,
+          // Future.sync: um repositório que lança na hora vira falha.
+          definitivo: Future.sync(() => repositorio.enviar(registro)),
+        ),
+      ),
+    );
+    widget.aoMudarAndamento?.call(_andamento);
+  }
+
   @override
-  Widget build(BuildContext context) =>
-      widget.construtor(context, _atual, _andamento);
+  Widget build(BuildContext context) => widget.construtor(
+    context,
+    _atual,
+    _andamento,
+    _andamento == AndamentoDoEnvio.falhou && _atual != null
+        ? _tentarDeNovo
+        : null,
+  );
 }

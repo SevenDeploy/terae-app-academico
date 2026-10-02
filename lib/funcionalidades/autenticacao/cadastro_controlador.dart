@@ -1,5 +1,6 @@
 import '../../dados/enums/canal_autorizado.dart';
 import '../../dados/enums/qualidade_consentimento.dart';
+import '../../dados/regras/consentimento.dart' as regra;
 import '../../dados/repositorios/autenticacao_repositorio.dart';
 import '../../dados/repositorios/falhas.dart';
 import '../../nucleo/tempo/data_civil.dart';
@@ -115,6 +116,26 @@ class CadastroPacienteControlador extends CadastroControlador {
   QualidadeConsentimento? get qualidade => _qualidade;
   CanalAutorizado? get canal => _canal;
 
+  /// O paciente do passo 1 tem menos de 12 anos hoje, no dia da clínica (ECA
+  /// art. 2º)? O nascimento digitado é o que o repositório conferiu.
+  bool get pacienteEhCrianca {
+    final nascimento = _nascimento;
+    return nascimento != null &&
+        regra.ehCrianca(nascimento: nascimento, hoje: DataCivil.hoje(relogio));
+  }
+
+  /// Passo 2 — quem pode aceitar o termo: criança, só o responsável legal
+  /// (LGPD art. 14, § 1º); as outras opções aparecem indisponíveis.
+  bool qualidadePermitida(QualidadeConsentimento qualidade) {
+    final nascimento = _nascimento;
+    return nascimento == null ||
+        regra.qualidadePermitida(
+          qualidade,
+          nascimento: nascimento,
+          hoje: DataCivil.hoje(relogio),
+        );
+  }
+
   /// Passo 3 pronto para "Continuar com Google".
   bool get podeAtivar =>
       _qualidade != null && _canal != null && aceite && !ocupado;
@@ -141,17 +162,23 @@ class CadastroPacienteControlador extends CadastroControlador {
         dataNascimento: nascimentoLido,
       ),
     );
-    if (conferido != null) _conferiu(conferido);
+    if (conferido == null) return;
+    // Outro nascimento no passo 1 pode tornar a escolha anterior inválida.
+    final escolhida = _qualidade;
+    if (escolhida != null && !qualidadePermitida(escolhida)) _qualidade = null;
+    _conferiu(conferido);
   }
 
   void escolherQualidade(QualidadeConsentimento qualidade) {
+    if (!qualidadePermitida(qualidade)) return;
     _qualidade = qualidade;
     avisar();
   }
 
   /// Passo 2 → 3.
   void irParaTermo() {
-    if (_qualidade != null) _irPara(3);
+    final escolhida = _qualidade;
+    if (escolhida != null && qualidadePermitida(escolhida)) _irPara(3);
   }
 
   void escolherCanal(CanalAutorizado canal) {
@@ -178,7 +205,15 @@ class CadastroPacienteControlador extends CadastroControlador {
         versaoTermo: versaoTermoConsentimento,
         identidade: identidade,
       ),
-      aoRecusar: _recusouNoPasso3,
+      aoRecusar: (motivo) {
+        if (motivo == MotivoRecusa.criancaComoTitular) {
+          // O servidor é quem decide: volta ao passo 2 para escolher de novo.
+          _qualidade = null;
+          _passo = 2;
+        } else {
+          _recusouNoPasso3(motivo);
+        }
+      },
     );
     if (vinculos != null) sessao.entrar(vinculos);
   }

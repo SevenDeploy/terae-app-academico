@@ -104,7 +104,10 @@ abstract interface class RepositorioAutenticacao {
 
   /// TM09 passo 3 — confere de novo e ativa: reaproveita a ContaUsuario do
   /// mesmo `idProvedor` ou cria uma, liga `Paciente.contaId`, grava um
-  /// Consentimento novo e preenche `usadoEm` do convite.
+  /// Consentimento novo e preenche `usadoEm` do convite. Além das recusas do
+  /// passo 1, `criancaComoTitular`: paciente com menos de 12 anos na data de
+  /// hoje da clínica só ativa com `responsavelLegal` (ECA art. 2º; LGPD art.
+  /// 14, § 1º; regra em `dados/regras/consentimento.dart`).
   Future<VinculosDaConta> ativarPaciente({
     required String codigo,
     required String cpf,

@@ -14,7 +14,8 @@ import 'regras.dart';
 /// - Com conexão: o servidor recebe primeiro o que estava na fila e depois o
 ///   registro novo, sempre na ordem do aparelho, e avalia as duas regras do
 ///   §7.1 contra o registro imediatamente anterior do mesmo paciente. O
-///   alerta vai para a caixa do profissional de referência.
+///   alerta vai para a caixa do profissional de referência. Religar a
+///   conexão pelo painel já reenvia a fila (`DemonstracaoMemoria`).
 /// - Idempotente pelo `id` gerado no aparelho: o mesmo registro não entra
 ///   duas vezes nem cria segundo alerta, e o que já foi enviado não é editado.
 class DiarioMemoria implements RepositorioDiario {

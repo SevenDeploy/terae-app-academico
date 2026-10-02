@@ -127,7 +127,8 @@ class _OrientacaoAgora extends StatelessWidget {
               style: textos.bodyMedium,
             )
           else ...[
-            Text(receita.orientacao, style: textos.bodyMedium),
+            if (receita.orientacao case final orientacao?)
+              Text(orientacao, style: textos.bodyMedium),
             const SizedBox(height: MedidasTerae.espacoPequeno),
             Text(
               'Peça a renovação da receita até '

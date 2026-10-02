@@ -212,21 +212,63 @@ void main() {
       expect(m.estado.fila, hasLength(1));
     });
 
-    test(
-      'religar não reenvia sozinho; sem conexão reenviarFila não envia',
-      () async {
-        final m = memoriaDeTeste();
-        await _semConexao(m, sem: true);
-        await m.repositorios.diario.enviar(
-          _registro(idAna, Intensidade.critica),
-        );
-        expect(await m.repositorios.diario.reenviarFila(), isEmpty);
-        await _semConexao(m, sem: false);
-        expect(m.estado.fila, hasLength(1));
-        final lista = await m.repositorios.diario.registros(idAna);
-        expect(lista.first.situacaoEnvio, SituacaoEnvio.naFila);
-      },
-    );
+    test('sem conexão reenviarFila não envia', () async {
+      final m = memoriaDeTeste();
+      await _semConexao(m, sem: true);
+      await m.repositorios.diario.enviar(_registro(idAna, Intensidade.critica));
+      expect(await m.repositorios.diario.reenviarFila(), isEmpty);
+      expect(m.estado.fila, hasLength(1));
+      final lista = await m.repositorios.diario.registros(idAna);
+      expect(lista.first.situacaoEnvio, SituacaoEnvio.naFila);
+    });
+
+    test('religar reenvia a fila: a crítica vira enviada e o alerta nasce '
+        'ao religar', () async {
+      final m = memoriaDeTeste();
+      final relogio = m.relogio as RelogioFixo;
+      await _semConexao(m, sem: true);
+      final critica = _registro(idAna, Intensidade.critica);
+      final naFila = await m.repositorios.diario.enviar(critica);
+      expect(naFila.equipeAvisada, isFalse);
+      relogio.avancar(const Duration(minutes: 40));
+
+      await _semConexao(m, sem: false);
+      expect(m.estado.fila, isEmpty);
+      final depois = (await m.repositorios.diario.registros(idAna)).first;
+      expect(depois.id, critica.id);
+      expect(depois.situacaoEnvio, SituacaoEnvio.enviado);
+      final alerta = await m.repositorios.diario.alertaDoRegistro(critica.id);
+      expect(alerta, isNotNull, reason: 'o alerta nasce ao religar');
+      expect(alerta!.regraDisparada, RegraAlerta.intensidadeCritica);
+      expect(alerta.emitidoEm, relogio.agora());
+      expect(m.estado.alertasDoProfissional(idHelena), contains(alerta));
+      expect(await m.repositorios.diario.reenviarFila(), isEmpty);
+    });
+
+    test('religar reenvia dois registros na ordem do aparelho', () async {
+      final m = memoriaDeTeste();
+      final relogio = m.relogio as RelogioFixo;
+      await _semConexao(m, sem: true);
+      // João: grave ontem. Na fila: moderada e, uma hora depois, grave.
+      final moderada = _registro(idJoao, Intensidade.moderada);
+      relogio.avancar(const Duration(hours: 1));
+      final grave = _registro(idJoao, Intensidade.grave, em: relogio.agora());
+      await m.repositorios.diario.enviar(moderada);
+      await m.repositorios.diario.enviar(grave);
+      final recebidos = m.estado.registros.length;
+
+      await _semConexao(m, sem: false);
+      expect(m.estado.fila, isEmpty);
+      expect(m.estado.registros.keys.skip(recebidos), [moderada.id, grave.id]);
+      expect(
+        m.estado.registros[grave.id]!.situacaoEnvio,
+        SituacaoEnvio.enviado,
+      );
+      // Na ordem, o grave vem depois da moderada: sem alerta. Fora de ordem,
+      // viria logo depois do grave de ontem e dispararia.
+      expect(await m.repositorios.diario.alertaDoRegistro(moderada.id), isNull);
+      expect(await m.repositorios.diario.alertaDoRegistro(grave.id), isNull);
+    });
 
     test(
       'reenviarFila: envia na ordem e o servidor avalia a sequência',
@@ -242,7 +284,8 @@ void main() {
         await m.repositorios.diario.enviar(grave);
         relogio.avancar(const Duration(hours: 1));
 
-        await _semConexao(m, sem: false);
+        // A conexão volta sem passar pelo painel (que já reenviaria).
+        m.semConexao = false;
         final saidos = await m.repositorios.diario.reenviarFila();
         expect(saidos.map((r) => r.registro.id), [moderada.id, grave.id]);
         expect(saidos.every((r) => r.enviado), isTrue);
@@ -261,7 +304,7 @@ void main() {
       final critica = _registro(idAna, Intensidade.critica);
       await m.repositorios.diario.enviar(critica);
       relogio.avancar(const Duration(minutes: 40));
-      await _semConexao(m, sem: false);
+      m.semConexao = false; // sem o painel, que já reenviaria
       final saidos = await m.repositorios.diario.reenviarFila();
       final r = saidos.single;
       expect(r.equipeAvisada, isTrue);
@@ -276,7 +319,7 @@ void main() {
       await _semConexao(m, sem: true);
       final naFila = _registro(idJoao, Intensidade.grave);
       await m.repositorios.diario.enviar(naFila);
-      await _semConexao(m, sem: false);
+      m.semConexao = false; // sem o painel, que já reenviaria
       relogio.avancar(const Duration(hours: 3));
       final novo = await m.repositorios.diario.enviar(
         _registro(idJoao, Intensidade.leve, em: relogio.agora()),
@@ -297,7 +340,7 @@ void main() {
         await _semConexao(m, sem: true);
         final registro = _registro(idAna, Intensidade.critica);
         await m.repositorios.diario.enviar(registro);
-        await _semConexao(m, sem: false);
+        m.semConexao = false; // sem o painel, que já reenviaria
         final r = await m.repositorios.diario.enviar(registro);
         expect(r.equipeAvisada, isTrue);
         expect(m.estado.fila, isEmpty);

@@ -10,6 +10,7 @@ import '../modelos/conta_usuario.dart';
 import '../modelos/convite_acesso.dart';
 import '../modelos/paciente.dart';
 import '../modelos/vinculo_cuidador.dart';
+import '../regras/consentimento.dart';
 import '../repositorios/autenticacao_repositorio.dart';
 import '../repositorios/cuidadores_repositorio.dart';
 import '../repositorios/falhas.dart';
@@ -23,7 +24,8 @@ Never _recusa(MotivoRecusa motivo) => throw RecusaDeRegra(motivo);
 ///
 /// Ordem das conferências (a primeira que falha decide a recusa): código →
 /// tipo → uso → vínculo pendente (só cuidador) → validade → CPF → nascimento
-/// (só paciente) → paciente ativo. O código vem antes do CPF para que quem só
+/// (só paciente) → paciente ativo → qualidade de quem aceita (só na ativação
+/// do paciente: criança só pelo responsável legal). O código vem antes do CPF para que quem só
 /// sabe um CPF não descubra nada sobre o cadastro (§23); a revogação vem antes
 /// da validade, porque explica melhor por que o convite parou de valer. Toda
 /// conferência acontece antes de qualquer gravação: recusa não grava nada.
@@ -88,6 +90,15 @@ class AutenticacaoMemoria implements RepositorioAutenticacao {
       throw ArgumentError.value(versaoTermo, 'versaoTermo', 'vazia');
     }
     final (convite, paciente) = _conferirPaciente(codigo, cpf, dataNascimento);
+    // Criança só pelo responsável legal (ECA art. 2º; LGPD art. 14, § 1º).
+    // O nascimento já conferiu com o do cadastro.
+    if (!qualidadePermitida(
+      qualidade,
+      nascimento: dataNascimento,
+      hoje: _memoria.hoje(),
+    )) {
+      _recusa(MotivoRecusa.criancaComoTitular);
+    }
     final agora = _memoria.agora();
     final conta = _contaQueEntra(identidade);
     // Daqui em diante só grava: nenhuma recusa possível.
@@ -129,7 +140,11 @@ class AutenticacaoMemoria implements RepositorioAutenticacao {
     final (convite, vinculo, paciente) = _conferirCuidador(codigo, cpf);
     // §23 — o limite é conferido de novo no aceite: depois dele, o paciente
     // continua com no máximo dois pendentes ou ativos.
-    if (_e.vinculosNoLimite(paciente.id, exceto: vinculo.id) >=
+    if (_e.vinculosNoLimite(
+          paciente.id,
+          agora: _memoria.agora(),
+          exceto: vinculo.id,
+        ) >=
         limiteCuidadores) {
       _recusa(MotivoRecusa.limiteDeCuidadores);
     }

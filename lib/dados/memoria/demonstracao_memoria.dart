@@ -10,10 +10,13 @@ class DemonstracaoMemoria implements ControleDemonstracao {
   @override
   bool get semConexao => _memoria.semConexao;
 
-  /// Só muda o interruptor: religar não reenvia a fila sozinho.
+  /// Muda o interruptor. Com a conexão de volta, a fila do aparelho sai
+  /// sozinha, do registro mais antigo ao mais novo (§19): o alerta de um
+  /// registro crítico que estava na fila nasce neste momento, no servidor.
   @override
   Future<void> definirSemConexao({required bool semConexao}) async {
     _memoria.semConexao = semConexao;
+    if (!semConexao) await _memoria.repositorios.diario.reenviarFila();
   }
 
   /// Volta às personas iniciais, com as datas relativas ao hoje do relógio, a

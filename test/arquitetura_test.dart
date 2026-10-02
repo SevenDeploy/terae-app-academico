@@ -22,6 +22,10 @@ class _Fonte {
       .split('\n')
       .where((l) => !l.trimLeft().startsWith('//'));
 
+  /// O [codigo] num texto só, para padrões que atravessam linhas (o
+  /// formatador quebra `context.go(` e o argumento em linhas diferentes).
+  late final String codigoUnido = codigo.join('\n');
+
   String _resolver(String alvo) {
     const pacote = 'package:terae_app/';
     if (alvo.startsWith(pacote)) return alvo.substring(pacote.length);
@@ -46,6 +50,23 @@ final List<_Fonte> _fontes = [
 
 Iterable<_Fonte> _em(String pasta) =>
     _fontes.where((f) => f.caminho.startsWith(pasta));
+
+/// Falhas no formato `arquivo: linha`, uma por ocorrência de [padrao] no
+/// código de [fontes] (fora das linhas de comentário).
+List<String> _ocorrencias(Iterable<_Fonte> fontes, RegExp padrao) => [
+  for (final f in fontes)
+    for (final m in padrao.allMatches(f.codigoUnido))
+      '${f.caminho}: ${_linhaEm(f.codigoUnido, m.start)}',
+];
+
+String _linhaEm(String texto, int posicao) {
+  final inicio = texto.lastIndexOf('\n', posicao) + 1;
+  final fim = texto.indexOf('\n', posicao);
+  return texto.substring(inicio, fim < 0 ? texto.length : fim).trim();
+}
+
+Iterable<_Fonte> get _foraDeRotas =>
+    _fontes.where((f) => f.caminho != 'nucleo/rotas/rotas.dart');
 
 /// Falhas no formato `arquivo → importação` para a mensagem do teste.
 List<String> _importacoesProibidas(
@@ -123,13 +144,75 @@ void main() {
     expect(falhas, isEmpty);
   });
 
-  test('nenhum caminho de rota escrito à mão fora de rotas.dart', () {
-    final literal = RegExp(r'''['"]/(paciente|cuidador|entrar|cadastro)''');
+  group('rotas só por rotas.dart (§24)', () {
+    test('nenhum caminho de rota escrito à mão', () {
+      // Qualquer texto que comece com "/" e um nome: '/paciente', '/x'…
+      final literal = RegExp(r'''['"]/[A-Za-z_$]''');
+      expect(_ocorrencias(_foraDeRotas, literal), isEmpty);
+    });
+
+    test('go/push/replace recebem constante de Rotas, nunca texto', () {
+      // Primeiro argumento literal ou interpolado: go('/'), push('x'),
+      // go('${Rotas.cuidadorInicio}/medicacao').
+      final navegacao = RegExp(
+        r'''\.(go|push|pushReplacement|replace|goNamed|pushNamed|'''
+        r'''pushReplacementNamed|replaceNamed)\s*(<[^>]*>)?\(\s*r?['"]''',
+      );
+      expect(_ocorrencias(_foraDeRotas, navegacao), isEmpty);
+    });
+
+    test('parâmetros de rota recebem constante de Rotas, nunca texto', () {
+      final parametro = RegExp(
+        r'''\b(initialLocation|localInicial|location)\s*[:=]\s*r?['"]|'''
+        r'''\b(GoRoute|ShellRoute)\((\s*\w+:\s*[^,()]*,)*\s*path:\s*r?['"]''',
+      );
+      expect(_ocorrencias(_foraDeRotas, parametro), isEmpty);
+    });
+
+    test('literal "/" só em rotas.dart (fora de montar texto)', () {
+      // '/' é a TM00: em go('/'), path: '/' ou no return da guarda. Montar
+      // texto com barra (a máscara da data) não é rota.
+      final barra = RegExp(
+        r'''(?<!\.(write|split|join|contains|startsWith|endsWith|'''
+        r'''replaceAll|replaceFirst|indexOf|lastIndexOf)\()r?['"]/['"]''',
+      );
+      expect(_ocorrencias(_foraDeRotas, barra), isEmpty);
+    });
+
+    test('redirect: só em lib/roteador.dart (guarda num lugar só)', () {
+      final redirect = RegExp(r'\bredirect\s*:');
+      expect(
+        _ocorrencias(
+          _fontes.where((f) => f.caminho != 'roteador.dart'),
+          redirect,
+        ),
+        isEmpty,
+      );
+      expect(
+        _ocorrencias(_em('roteador.dart'), redirect),
+        isNotEmpty,
+        reason: 'a guarda continua no roteador',
+      );
+    });
+  });
+
+  test('áreas de funcionalidades/ não se importam (paciente ↔ cuidador; '
+      'publico e autenticacao não chegam a paciente nem cuidador)', () {
+    const proibidas = {
+      'funcionalidades/paciente/': ['funcionalidades/cuidador/'],
+      'funcionalidades/cuidador/': ['funcionalidades/paciente/'],
+      'funcionalidades/publico/': [
+        'funcionalidades/paciente/',
+        'funcionalidades/cuidador/',
+      ],
+      'funcionalidades/autenticacao/': [
+        'funcionalidades/paciente/',
+        'funcionalidades/cuidador/',
+      ],
+    };
     final falhas = [
-      for (final f in _fontes)
-        if (f.caminho != 'nucleo/rotas/rotas.dart')
-          for (final linha in f.codigo)
-            if (literal.hasMatch(linha)) '${f.caminho}: ${linha.trim()}',
+      for (final MapEntry(key: area, value: alvos) in proibidas.entries)
+        ..._importacoesProibidas(_em(area), (i) => alvos.any(i.startsWith)),
     ];
     expect(falhas, isEmpty);
   });

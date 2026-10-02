@@ -400,6 +400,123 @@ void main() {
     });
   });
 
+  group(
+    'criança só pelo responsável legal (ECA art. 2º; LGPD art. 14 § 1º)',
+    () {
+      /// Ativa João (código da clínica válido) com o nascimento trocado para
+      /// [nascimento] no cenário e a [qualidade] pedida.
+      Future<VinculosDaConta> ativarJoaoNascidoEm(
+        DataCivil nascimento, {
+        required QualidadeConsentimento qualidade,
+        RelogioFixo? relogio,
+      }) {
+        final dados = dadosDaDemonstracao();
+        itemDe(dados, 'pacientes', idJoao)['dataNascimento'] = nascimento
+            .paraIso();
+        final m = memoriaDeTeste(dados: dados, relogio: relogio);
+        return m.repositorios.autenticacao.ativarPaciente(
+          codigo: codigoJoao,
+          cpf: cpfJoao,
+          dataNascimento: nascimento,
+          qualidade: qualidade,
+          canalAutorizado: CanalAutorizado.aplicativo,
+          versaoTermo: '1.0',
+          identidade: identidadeNova,
+        );
+      }
+
+      test('Miguel (7 anos) como titular recusa sem gravar; pelo responsável '
+          'legal ativa com o mesmo código', () async {
+        final dados = dadosDaDemonstracao();
+        final miguel = itemDe(dados, 'pacientes', idMiguel);
+        final codigo = _novoCodigoDaClinica(
+          dados,
+          pacienteId: idMiguel,
+          cpf: miguel['cpf']! as String,
+          codigo: 'T5Q8MV',
+        );
+        final m = memoriaDeTeste(dados: dados);
+        Future<VinculosDaConta> ativar(QualidadeConsentimento qualidade) =>
+            m.repositorios.autenticacao.ativarPaciente(
+              codigo: codigo,
+              cpf: miguel['cpf']! as String,
+              dataNascimento: DataCivil.parse(
+                miguel['dataNascimento']! as String,
+              ),
+              qualidade: qualidade,
+              canalAutorizado: CanalAutorizado.aplicativo,
+              versaoTermo: '1.0',
+              identidade: identidadeNova,
+            );
+
+        await recusaSemGravar(
+          m,
+          () => ativar(QualidadeConsentimento.titular),
+          MotivoRecusa.criancaComoTitular,
+        );
+        final v = await ativar(QualidadeConsentimento.responsavelLegal);
+        expect(v.pacientes.single.id, idMiguel);
+        expect(
+          m.estado.consentimentos.values.last.qualidade,
+          QualidadeConsentimento.responsavelLegal,
+        );
+      });
+
+      test(
+        '12 anos completos no dia do aniversário: pode ser titular',
+        () async {
+          final v = await ativarJoaoNascidoEm(
+            DataCivil(2014, 10, 2),
+            qualidade: QualidadeConsentimento.titular,
+          );
+          expect(v.pacientes.single.id, idJoao);
+        },
+      );
+
+      test('11 anos e 364 dias: ainda é criança, não é titular', () async {
+        await expectLater(
+          ativarJoaoNascidoEm(
+            DataCivil(2014, 10, 3),
+            qualidade: QualidadeConsentimento.titular,
+          ),
+          recusa(MotivoRecusa.criancaComoTitular),
+        );
+        final v = await ativarJoaoNascidoEm(
+          DataCivil(2014, 10, 3),
+          qualidade: QualidadeConsentimento.responsavelLegal,
+        );
+        expect(v.pacientes.single.id, idJoao);
+      });
+
+      test('"hoje" é o dia da clínica: 23h de 1/10 em Cuiabá (03h de 2/10 '
+          'UTC) ainda não completa 12', () async {
+        await expectLater(
+          ativarJoaoNascidoEm(
+            DataCivil(2014, 10, 2),
+            qualidade: QualidadeConsentimento.titular,
+            relogio: RelogioFixo(DateTime.utc(2026, 10, 2, 3)),
+          ),
+          recusa(MotivoRecusa.criancaComoTitular),
+        );
+      });
+
+      test(
+        'adolescente (12–17) e adulto escolhem titular ou responsável',
+        () async {
+          for (final nascimento in [DataCivil(2010, 5, 12), nascimentoJoao]) {
+            for (final qualidade in QualidadeConsentimento.values) {
+              final v = await ativarJoaoNascidoEm(
+                nascimento,
+                qualidade: qualidade,
+              );
+              expect(v.pacientes.single.id, idJoao, reason: '$nascimento');
+            }
+          }
+        },
+      );
+    },
+  );
+
   group('convite do cuidador (RFM09, TM10)', () {
     test('confere código e CPF sem consumir', () async {
       final m = memoriaDeTeste();
@@ -486,7 +603,7 @@ void main() {
         expect(vinculo.contaCuidadorId, v.conta.id);
         expect(vinculo.autorizadoEm, agoraDaMemoria);
         expect(m.estado.conviteDoCodigo(codigoPaulo)!.usadoEm, agoraDaMemoria);
-        expect(m.estado.vinculosNoLimite(idAna), 2);
+        expect(m.estado.vinculosNoLimite(idAna, agora: agoraDaMemoria), 2);
 
         await recusaSemGravar(
           m,
@@ -568,7 +685,7 @@ void main() {
       });
       final m = memoriaDeTeste(dados: dados);
       final auth = m.repositorios.autenticacao;
-      expect(m.estado.vinculosNoLimite(idAna), 3);
+      expect(m.estado.vinculosNoLimite(idAna, agora: agoraDaMemoria), 3);
 
       await recusaSemGravar(
         m,

@@ -1,6 +1,8 @@
 /// `VinculoCuidador.situacao` (§22).
 ///
-/// Pendentes e ativos contam no limite de dois (§7.4); revogar não apaga o histórico.
+/// Ativos e pendentes com convite em aberto contam no limite de dois (§7.4;
+/// regra em `dados/regras/cuidadores.dart`, que depende do convite e da
+/// hora); revogar não apaga o histórico.
 enum SituacaoVinculo {
   pendente('Convite em aberto'),
   ativo('Autorizado'),
@@ -10,7 +12,4 @@ enum SituacaoVinculo {
 
   /// Texto em linguagem simples para a tela (RNFM01). No mapa vai o `name`.
   final String rotulo;
-
-  /// Conta no limite de dois cuidadores por paciente (§23).
-  bool get contaNoLimite => this != revogado;
 }

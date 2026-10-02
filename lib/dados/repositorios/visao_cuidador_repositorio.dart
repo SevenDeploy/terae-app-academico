@@ -43,7 +43,8 @@ class AvisoDeAlerta {
 ///
 /// RNFM05 na camada de dados: tudo sai já como cópia do cuidador — Paciente
 /// sem CPF nem nascimento (`paraCuidador`), Agendamento sem motivo do retorno
-/// (`paraCuidador`), alerta como [AvisoDeAlerta]. Sem vínculo ativo entre
+/// (`paraCuidador`), receita sem orientação nem prescritor (`paraCuidador`),
+/// alerta como [AvisoDeAlerta]. Sem vínculo ativo entre
 /// [contaCuidadorId] e [pacienteId], recusa com `acessoNegado`. Não existe
 /// método que devolva registro do diário, marco da jornada nem consentimento.
 abstract interface class RepositorioVisaoCuidador {

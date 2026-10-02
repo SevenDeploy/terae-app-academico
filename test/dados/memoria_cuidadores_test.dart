@@ -1,16 +1,18 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:terae_app/dados/enums/situacao_vinculo.dart';
 import 'package:terae_app/dados/enums/tipo_convite.dart';
+import 'package:terae_app/dados/memoria/memoria_demonstracao.dart';
 import 'package:terae_app/dados/memoria/regras.dart';
 import 'package:terae_app/dados/repositorios/cuidadores_repositorio.dart';
 import 'package:terae_app/dados/repositorios/falhas.dart';
+import 'package:terae_app/nucleo/tempo/relogio.dart';
 import 'package:terae_app/nucleo/uuid.dart';
 import 'package:terae_app/nucleo/validacao/cpf.dart';
 
 import 'memoria_apoio.dart';
 
 int _noLimite(List<CuidadorAutorizado> lista) =>
-    lista.where((c) => c.vinculo.situacao.contaNoLimite).length;
+    lista.where((c) => c.contaNoLimite(agoraDaMemoria)).length;
 
 void main() {
   test('lista da Ana: Paulo (pendente) e Regina (ativa), mais recente '
@@ -128,6 +130,69 @@ void main() {
         m.estado.vinculos[novo.vinculo.id]!.situacao,
         SituacaoVinculo.ativo,
       );
+    });
+  });
+
+  group('pendente com convite expirado não conta no limite (§7.4, §23)', () {
+    /// Ana com Regina ativa e o convite do Paulo vencido (vale 5 dias).
+    MemoriaDemonstracao depoisDoPrazoDoPaulo() {
+      final relogio = RelogioFixo(agoraDaMemoria);
+      final m = memoriaDeTeste(relogio: relogio);
+      relogio.avancar(const Duration(days: 6));
+      return m;
+    }
+
+    test('1 ativo + 1 pendente expirado: pode convidar', () async {
+      final m = depoisDoPrazoDoPaulo();
+      final repo = m.repositorios.cuidadores;
+      final novo = await repo.convidar(
+        pacienteId: idAna,
+        nome: 'Avó Martins',
+        cpf: cpfsLivres.first,
+      );
+      expect(novo.vinculo.situacao, SituacaoVinculo.pendente);
+      final lista = await repo.cuidadores(idAna);
+      expect(lista, hasLength(3), reason: 'o expirado continua na lista');
+      expect(
+        m.estado.vinculos[vinculoPaulo]!.situacao,
+        SituacaoVinculo.pendente,
+        reason: 'nada muda sozinho no vínculo vencido',
+      );
+      // Com a Avó, volta a 2/2.
+      await recusaSemGravar(
+        m,
+        () => repo.convidar(
+          pacienteId: idAna,
+          nome: 'Mais Alguém',
+          cpf: cpfsLivres[1],
+        ),
+        MotivoRecusa.limiteDeCuidadores,
+      );
+    });
+
+    test('o mesmo CPF do convite vencido pode ser convidado de novo; o '
+        'código antigo continua recusado', () async {
+      final m = depoisDoPrazoDoPaulo();
+      final novo = await m.repositorios.cuidadores.convidar(
+        pacienteId: idAna,
+        nome: 'Paulo Martins',
+        cpf: cpfPaulo,
+      );
+      expect(novo.convite.codigo, isNot(codigoPaulo));
+      await expectLater(
+        m.repositorios.autenticacao.aceitarConviteCuidador(
+          codigo: codigoPaulo,
+          cpf: cpfPaulo,
+          identidade: identidadeDe(m, 'Paulo Martins'),
+        ),
+        recusa(MotivoRecusa.codigoExpirado),
+      );
+      final aceito = await m.repositorios.autenticacao.aceitarConviteCuidador(
+        codigo: novo.convite.codigo,
+        cpf: cpfPaulo,
+        identidade: identidadeDe(m, 'Paulo Martins'),
+      );
+      expect(aceito.acompanhados.single.id, idAna);
     });
   });
 

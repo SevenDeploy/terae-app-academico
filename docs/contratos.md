@@ -33,22 +33,28 @@ sessao, relogio, lancador, localInicial)` em `lib/app.dart`; `main.dart` só cri
 MotivoRecusa.x)` com `.mensagem` simples (`falhas.dart`); nenhuma implementação pode ser `Listenable`.
 - `RepositorioAutenticacao`: `identidadesNoAparelho(Provedor)`, `entrar(IdentidadeProvedor) → VinculosDaConta`,
   `conferirCodigoPaciente({codigo, cpf, dataNascimento: DataCivil}) → ConviteConferido`, `ativarPaciente({codigo, cpf,
-  dataNascimento, qualidade, canalAutorizado, versaoTermo, identidade})`, `conferirConviteCuidador({codigo, cpf})`,
+  dataNascimento, qualidade, canalAutorizado, versaoTermo, identidade})` (paciente com menos de 12 anos hoje, no dia
+  da clínica, só `responsavelLegal`; senão `MotivoRecusa.criancaComoTitular` — ECA art. 2º, LGPD art. 14 § 1º; regra
+  pura em `dados/regras/consentimento.dart`, usada também pela TM09), `conferirConviteCuidador({codigo, cpf})`,
   `aceitarConviteCuidador({codigo, cpf, identidade})`. `VinculosDaConta(conta, pacientes, acompanhados)`.
 - `RepositorioPaciente`: `paciente`, `profissional`, `proximaConsulta`, `agendamentos`, `receitaVigente`,
   `itensDaReceita(receitaId)`, `marcos`.
 - `RepositorioDiario`: `enviar(RegistroDiario) → ResultadoEnvio(registro, alerta?)` (idempotente pelo id; `.enviado`,
   `.equipeAvisada` — só esta autoriza "profissional avisado"), `reenviarFila`, `registros`, `alertaDoRegistro`.
 - `RepositorioCuidadores`: `cuidadores(pacienteId) → [CuidadorAutorizado(vinculo, convite)]`, `convidar({pacienteId,
-  nome, cpf})`, `revogar(vinculoId)`; `limiteCuidadores = 2` conta `SituacaoVinculo.contaNoLimite`.
+  nome, cpf})`, `revogar(vinculoId)`; `limiteCuidadores = 2` conta
+  `CuidadorAutorizado.contaNoLimite(agora)` — ativo, ou pendente com convite não usado e não vencido (regra em
+  `dados/regras/cuidadores.dart`); pendente vencido não ocupa vaga e a TM07 o mostra como "Convite expirado".
 - `RepositorioVisaoCuidador` (RNFM05; sem vínculo ativo → `acessoNegado`): com `{contaCuidadorId, pacienteId}`,
   `pacienteAcompanhado`, `consultas`, `receitaVigente`, `itensDaReceita(+receitaId)`, `alertas → [AvisoDeAlerta(
   emitidoEm, cienteEm)]`; e `profissional(id)`. Já devolvem as cópias reduzidas.
-- `ControleDemonstracao` (D11): `semConexao`, `definirSemConexao({semConexao})`, `reiniciarDados()`.
+- `ControleDemonstracao` (D11): `semConexao`, `definirSemConexao({semConexao})` (religar reenvia a fila antes de
+  responder; o alerta de um crítico que estava nela nasce aí), `reiniciarDados()`.
 
 **Modelos e enums** — 12 classes imutáveis em `lib/dados/modelos/` com os campos da Figura 3, `fromMap`/`toMap`
 (chave = nome do campo; enum pelo `name`; instante ISO UTC `Z`; data civil `AAAA-MM-DD`; erro = `FormatException`),
-`==`, `copyWith` só nos campos de situação, `Paciente.paraCuidador()` e `Agendamento.paraCuidador()`. 11 enums em
+`==`, `copyWith` só nos campos de situação, `Paciente.paraCuidador()`, `Agendamento.paraCuidador()` e
+`ReceitaUsoContinuo.paraCuidador()` (sem `orientacao` nem `profissionalId`, anuláveis por isso — RNFM05). 11 enums em
 `lib/dados/enums/` com a grafia do docx e `.rotulo` em linguagem simples (`Intensidade.ehCritica`).
 
 **Núcleo** — `tempo/relogio.dart`: `Relogio.agora()` (UTC; `RelogioSistema`, `RelogioFixo` p/ teste),
@@ -57,7 +63,8 @@ MotivoRecusa.x)` com `.mensagem` simples (`falhas.dart`); nenhuma implementaçã
 (`cpfValido`, `mascararCpf`, `formatarCpf`, `somenteDigitos`) e `FormatadorCpf`; `uuid.dart` (`gerarUuidV4`).
 Tema: `temaTerae()`, `CoresTerae` (`daIntensidade`, `daAdesao` → `ParDeCores`), `MedidasTerae`. Widgets:
 `BotaoGrande(rotulo, aoTocar, icone, variante)`, `Cartao(child, aoTocar)`, `SeletorOpcoes<T>(rotulo, opcoes:
-[OpcaoSeletor], valor, aoMudar, colunas)`, `FaixaEmergencia(destaque)` (chaves `ligar-188`, `ligar-192`),
+[OpcaoSeletor(valor, rotulo, icone, cores, habilitada)], valor, aoMudar, colunas)` (`habilitada: false` = opção
+indisponível, sem toque e anunciada desativada), `FaixaEmergencia(destaque)` (chaves `ligar-188`, `ligar-192`),
 `SeloAcademico`.
 
 **Testes** — `test/apoio/dubles.dart` (dublês que lançam `UnimplementedError`: estenda e sobrescreva; personas

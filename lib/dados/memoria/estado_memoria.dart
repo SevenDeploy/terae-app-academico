@@ -24,6 +24,7 @@ import '../modelos/profissional_saude.dart';
 import '../modelos/receita_uso_continuo.dart';
 import '../modelos/registro_diario.dart';
 import '../modelos/vinculo_cuidador.dart';
+import '../regras/cuidadores.dart' as cuidadores;
 import '../repositorios/autenticacao_repositorio.dart';
 import '../repositorios/falhas.dart';
 import 'regras.dart';
@@ -363,6 +364,7 @@ class EstadoMemoria {
         'profissional da receita',
         r.id,
       );
+      _exigir(r.orientacao != null, 'orientação da receita', r.id);
     }
     for (final i in itensMedicacao.values) {
       _exigir(receitas.containsKey(i.receitaId), 'receita do item', i.id);
@@ -425,25 +427,36 @@ class EstadoMemoria {
 
   Set<String> get codigos => {for (final c in convites.values) c.codigo};
 
-  /// §7.4 — vínculos do paciente que contam no limite de dois (pendentes e
-  /// ativos), sem contar [exceto].
-  int vinculosNoLimite(String pacienteId, {String? exceto}) => vinculos.values
+  bool _contaNoLimite(VinculoCuidador v, DateTime agora) => cuidadores
+      .contaNoLimite(vinculo: v, convite: convites[v.conviteId]!, agora: agora);
+
+  /// §7.4 — vínculos do paciente que contam no limite de dois em [agora]
+  /// (ativos e pendentes com convite em aberto), sem contar [exceto].
+  int vinculosNoLimite(
+    String pacienteId, {
+    required DateTime agora,
+    String? exceto,
+  }) => vinculos.values
       .where(
         (v) =>
             v.pacienteId == pacienteId &&
             v.id != exceto &&
-            v.situacao.contaNoLimite,
+            _contaNoLimite(v, agora),
       )
       .length;
 
-  /// Há vínculo pendente ou ativo do paciente convidado com este CPF?
-  bool cpfComVinculoEmAberto(String pacienteId, String cpf) =>
-      vinculos.values.any(
-        (v) =>
-            v.pacienteId == pacienteId &&
-            v.situacao.contaNoLimite &&
-            convites[v.conviteId]!.cpfConvidado == cpf,
-      );
+  /// O CPF já ocupa vaga do paciente em [agora] (ativo, ou convite em
+  /// aberto)? Convite vencido não impede convidar de novo.
+  bool cpfComVinculoEmAberto(
+    String pacienteId,
+    String cpf, {
+    required DateTime agora,
+  }) => vinculos.values.any(
+    (v) =>
+        v.pacienteId == pacienteId &&
+        _contaNoLimite(v, agora) &&
+        convites[v.conviteId]!.cpfConvidado == cpf,
+  );
 
   /// §19 — o perfil decorre dos vínculos: pacientes ativos com `contaId` da
   /// [conta] (cópia completa) e pacientes ativos com vínculo de cuidador
