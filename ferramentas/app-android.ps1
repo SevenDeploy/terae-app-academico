@@ -22,7 +22,7 @@ if ($Apk) {
   $arquivo = 'build\app\outputs\flutter-apk\app-debug.apk'
   if (-not (Test-Path $arquivo)) { & $flutter build apk --debug }
   & $adb install -r $arquivo
-  & $adb shell monkey -p br.edu.unemat.terae_app -c android.intent.category.LAUNCHER 1 | Out-Null
+  & $adb shell monkey -p br.edu.unemat.terae_app -c android.intent.category.LAUNCHER 1 2>&1 | Out-Null
   Write-Host 'App aberto no emulador.'
 } else {
   & $flutter run -d emulator-5554
