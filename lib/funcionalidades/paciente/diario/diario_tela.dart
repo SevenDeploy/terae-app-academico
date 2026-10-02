@@ -160,7 +160,12 @@ class _FormularioDoDiario extends StatelessWidget {
         ],
         BotaoGrande(
           key: const Key('enviar-diario'),
-          rotulo: c.enviando ? 'Enviando…' : 'Enviar meu registro',
+          // Depois de uma falha, reenvia o mesmo registro (mesmo UUID).
+          rotulo: c.enviando
+              ? 'Enviando…'
+              : c.erro != null
+              ? 'Tentar de novo'
+              : 'Enviar meu registro',
           icone: Icons.send,
           aoTocar: c.podeEnviar ? () => _enviar(context) : null,
         ),

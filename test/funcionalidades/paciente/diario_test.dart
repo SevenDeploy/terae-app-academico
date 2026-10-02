@@ -4,6 +4,7 @@ import 'package:terae_app/dados/enums/adesao.dart';
 import 'package:terae_app/dados/enums/intensidade.dart';
 import 'package:terae_app/dados/enums/situacao_envio.dart';
 import 'package:terae_app/funcionalidades/paciente/diario/diario_controlador.dart';
+import 'package:terae_app/funcionalidades/paciente/diario/diario_enviado_tela.dart';
 import 'package:terae_app/nucleo/rotas/rotas.dart';
 import 'package:terae_app/nucleo/uuid.dart';
 
@@ -219,7 +220,8 @@ void main() {
       expect(app.lancador.abertos, [Uri(scheme: 'tel', path: '188')]);
     });
 
-    testWidgets('falha do envio crítico também fica pendente', (tester) async {
+    testWidgets('falha do envio crítico: "Não conseguimos enviar", sem '
+        '"avisado" nem "guardado"', (tester) async {
       await abrirAppDoPaciente(
         tester,
         em: Rotas.pacienteDiario,
@@ -229,14 +231,11 @@ void main() {
       await preencherDiario(toques, intensidade: 'Crítica');
       await toques.tocar(botaoEnviar);
       _naTela('TM05');
-      expect(find.text('Envio pendente'), findsOneWidget);
+      expect(find.text('Não conseguimos enviar'), findsOneWidget);
       expect(falaEmAvisado, findsNothing);
       // Falha inesperada: não promete que ficou guardado.
       expect(find.textContaining('guardado'), findsNothing);
-      expect(
-        find.textContaining('Não conseguimos enviar seu registro'),
-        findsOneWidget,
-      );
+      expect(find.textContaining('ainda não chegou'), findsOneWidget);
     });
 
     testWidgets('"Ciente" leva ao Início', (tester) async {
@@ -286,7 +285,8 @@ void main() {
       await tester.pump(const Duration(milliseconds: 200));
       await tester.pump();
       _naTela('TM04');
-      expect(find.textContaining('quando houver conexão'), findsOneWidget);
+      expect(find.text('Enviando…'), findsOneWidget);
+      expect(find.textContaining('guardado'), findsNothing);
 
       app.diario.responder();
       await tester.pump();
@@ -433,6 +433,144 @@ void main() {
         },
       );
     }
+  });
+
+  group('reenvio do mesmo registro (§23: o UUID do aparelho evita '
+      'duplicidade)', () {
+    final tentarDeNovo = find.byKey(const Key('tentar-de-novo'));
+    String tituloDaTm04(WidgetTester tester) =>
+        tester.widget<Text>(find.byKey(const Key('titulo-confirmacao'))).data!;
+
+    testWidgets('falha no formulário: "Tentar de novo" reenvia o mesmo UUID; '
+        'o próximo registro ganha outro', (tester) async {
+      final diario = DiarioControlavel(ModoDoDiario.falha);
+      await abrirAppDoPaciente(
+        tester,
+        em: Rotas.pacienteDiario,
+        diario: diario,
+      );
+      final toques = ContadorDeToques(tester);
+      await preencherDiario(toques);
+      await toques.tocar(botaoEnviar);
+      _naTela('TM03');
+      expect(
+        find.descendant(of: botaoEnviar, matching: find.text('Tentar de novo')),
+        findsOneWidget,
+      );
+
+      diario.modo = ModoDoDiario.comConexao;
+      await toques.tocar(botaoEnviar);
+      _naTela('TM04');
+      expect(diario.enviados, hasLength(2));
+      expect(diario.enviados[1].id, diario.enviados[0].id);
+
+      await toques.tocar(find.byKey(const Key('voltar-ao-inicio')));
+      await toques.tocar(find.byKey(const Key('aba-diario')));
+      await preencherDiario(toques);
+      await toques.tocar(botaoEnviar);
+      expect(diario.enviados, hasLength(3));
+      expect(diario.enviados[2].id, isNot(diario.enviados[0].id));
+    });
+
+    testWidgets('TM05: envio crítico que falha mostra "Não conseguimos '
+        'enviar", mantém 188/192 e "Tentar de novo" reenvia o mesmo '
+        'registro', (tester) async {
+      final diario = DiarioControlavel(ModoDoDiario.lento);
+      await abrirAppDoPaciente(
+        tester,
+        em: Rotas.pacienteDiario,
+        diario: diario,
+      );
+      final toques = ContadorDeToques(tester);
+      await preencherDiario(toques, intensidade: 'Crítica');
+      await toques.tocar(botaoEnviar);
+      _naTela('TM05');
+      expect(tentarDeNovo, findsNothing, reason: 'ainda enviando');
+
+      diario.falharPendente();
+      await tester.pumpAndSettle();
+      expect(find.text('Não conseguimos enviar'), findsOneWidget);
+      expect(find.byKey(const Key('ligar-188')), findsOneWidget);
+      expect(find.byKey(const Key('ligar-192')), findsOneWidget);
+      expect(falaEmAvisado, findsNothing);
+      expect(tentarDeNovo, findsOneWidget);
+
+      await toques.tocar(tentarDeNovo);
+      expect(diario.enviados, hasLength(2));
+      expect(diario.enviados[1], diario.enviados[0], reason: 'mesmo registro');
+      expect(find.text('Envio pendente'), findsOneWidget);
+      expect(tentarDeNovo, findsNothing);
+
+      diario.responder();
+      await tester.pumpAndSettle();
+      expect(find.text('Seu profissional foi avisado.'), findsOneWidget);
+      _naTela('TM05');
+    });
+
+    testWidgets('TM04: enquanto o envio não resolve diz "Enviando…" e só '
+        'volta sozinha 3 s depois da resposta', (tester) async {
+      final diario = DiarioControlavel(ModoDoDiario.lento);
+      await abrirAppDoPaciente(
+        tester,
+        em: Rotas.pacienteDiario,
+        diario: diario,
+      );
+      await preencherDiario(ContadorDeToques(tester));
+      await tester.ensureVisible(botaoEnviar);
+      await tester.tap(botaoEnviar);
+      await tester.pump(prazoDeResposta);
+      await tester.pump();
+      _naTela('TM04');
+      expect(tituloDaTm04(tester), 'Enviando…');
+      expect(find.textContaining('guardado'), findsNothing);
+      expect(find.textContaining('abre sozinha'), findsNothing);
+
+      await tester.pump(const Duration(seconds: 10));
+      _naTela('TM04');
+
+      diario.responder();
+      // Sem quadro agendado, o primeiro pump só roda a resposta.
+      await tester.pump();
+      await tester.pump();
+      expect(tituloDaTm04(tester), 'Registro enviado!');
+      await tester.pump(const Duration(milliseconds: 2900));
+      _naTela('TM04');
+      await tester.pump(const Duration(milliseconds: 200));
+      await tester.pumpAndSettle();
+      expect(localDe(tester), Rotas.pacienteInicio);
+    });
+
+    testWidgets('TM04: falha depois do prazo não volta sozinha; "Tentar de '
+        'novo" reenvia o mesmo registro', (tester) async {
+      final diario = DiarioControlavel(ModoDoDiario.lento);
+      await abrirAppDoPaciente(
+        tester,
+        em: Rotas.pacienteDiario,
+        diario: diario,
+      );
+      await preencherDiario(ContadorDeToques(tester));
+      await tester.ensureVisible(botaoEnviar);
+      await tester.tap(botaoEnviar);
+      await tester.pump(prazoDeResposta);
+      await tester.pump();
+      diario.falharPendente();
+      await tester.pump();
+      expect(tituloDaTm04(tester), 'Registro não enviado');
+
+      await tester.pump(const Duration(seconds: 10));
+      await tester.pumpAndSettle();
+      _naTela('TM04');
+
+      diario.modo = ModoDoDiario.comConexao;
+      await ContadorDeToques(tester).tocar(tentarDeNovo, assentar: false);
+      await tester.pump();
+      expect(diario.enviados, hasLength(2));
+      expect(diario.enviados[1], diario.enviados[0], reason: 'mesmo registro');
+      expect(tituloDaTm04(tester), 'Registro enviado!');
+      await tester.pump(esperaDaConfirmacao);
+      await tester.pumpAndSettle();
+      expect(localDe(tester), Rotas.pacienteInicio);
+    });
   });
 
   group('voltar do Android nas abas (§21)', () {

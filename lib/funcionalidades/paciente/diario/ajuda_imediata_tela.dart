@@ -20,7 +20,9 @@ import 'resultado_provisorio.dart';
 /// (envio confirmado e alerta criado pelo servidor, §19, §23). Na fila, ainda
 /// sem resposta ou em link direto: "Envio pendente", com os contatos de
 /// emergência mantidos em destaque. A tela abre antes da resposta e se
-/// atualiza quando ela chega ([ResultadoProvisorio]).
+/// atualiza quando ela chega ([ResultadoProvisorio]). Se o envio falhar:
+/// "Não conseguimos enviar", com "Tentar de novo" (o mesmo registro), e o
+/// 188/192 continuam em destaque — o registro nunca se perde em silêncio.
 ///
 /// "Ciente" faz `context.go(Rotas.pacienteInicio)`; o voltar do Android tem o
 /// mesmo efeito (roteador). A `Key('TM05')` no Scaffold raiz faz parte do
@@ -84,11 +86,27 @@ class AjudaImediataTela extends StatelessWidget {
                 const SizedBox(height: MedidasTerae.espacoGrande),
                 AcompanharEnvio(
                   envio: envio,
-                  construtor: (context, envio, andamento) => _SituacaoDoAviso(
-                    avisada: envio?.equipeAvisada ?? false,
-                    andamento: andamento,
-                    semEnvio: envio == null,
-                  ),
+                  construtor: (context, envio, andamento, tentarDeNovo) =>
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          _SituacaoDoAviso(
+                            avisada: envio?.equipeAvisada ?? false,
+                            andamento: andamento,
+                            semEnvio: envio == null,
+                          ),
+                          if (tentarDeNovo != null) ...[
+                            const SizedBox(height: MedidasTerae.espaco),
+                            BotaoGrande(
+                              key: const Key('tentar-de-novo'),
+                              rotulo: 'Tentar de novo',
+                              icone: Icons.refresh,
+                              variante: VarianteBotao.secundario,
+                              aoTocar: tentarDeNovo,
+                            ),
+                          ],
+                        ],
+                      ),
                 ),
                 const SizedBox(height: MedidasTerae.espacoGrande),
                 BotaoGrande(
@@ -162,7 +180,9 @@ class _SituacaoDoAvisoState extends State<_SituacaoDoAviso> {
       icone = Icons.check_circle;
       cores = const ParDeCores(CoresTerae.clinico700, CoresTerae.clinico50);
     } else {
-      titulo = 'Envio pendente';
+      titulo = widget.andamento == AndamentoDoEnvio.falhou && !widget.semEnvio
+          ? 'Não conseguimos enviar'
+          : 'Envio pendente';
       detalhe = switch (widget.andamento) {
         _ when widget.semEnvio =>
           'Se precisar, ligue agora para um dos contatos acima.',
@@ -170,8 +190,8 @@ class _SituacaoDoAvisoState extends State<_SituacaoDoAviso> {
           'Estamos enviando seu registro. Enquanto isso, se precisar, ligue '
               'para um dos contatos acima.',
         AndamentoDoEnvio.falhou =>
-          'Não conseguimos enviar seu registro agora. Se precisar, ligue '
-              'para um dos contatos acima.',
+          'Seu registro ainda não chegou à equipe. Toque em "Tentar de '
+              'novo". Se precisar, ligue agora para um dos contatos acima.',
         AndamentoDoEnvio.respondido =>
           'Sem internet agora. Seu registro está guardado e será enviado '
               'quando houver conexão. Se precisar, ligue para um dos '

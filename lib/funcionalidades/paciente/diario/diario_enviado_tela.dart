@@ -17,13 +17,15 @@ import 'resultado_provisorio.dart';
 const Duration esperaDaConfirmacao = Duration(seconds: 3);
 
 /// TM04 — Diário enviado. RFM05. Tela cheia, fora das abas: confirmação e
-/// resumo do que foi enviado. Volta sozinha ao Início em 3 s — exceto com
-/// `MediaQuery.accessibleNavigation` (leitor de tela, D10, WCAG 2.2.1), que
-/// mostra só o botão "Voltar ao início". O voltar do Android já leva ao
-/// Início (roteador).
+/// resumo do que foi enviado. Volta sozinha ao Início 3 s depois que o envio
+/// responde — exceto com `MediaQuery.accessibleNavigation` (leitor de tela,
+/// D10, WCAG 2.2.1), que mostra só o botão "Voltar ao início". O voltar do
+/// Android já leva ao Início (roteador).
 ///
 /// Com o registro na fila (`naFila`, §19): "será enviado quando houver
-/// conexão" — nunca "chegou à equipe".
+/// conexão" — nunca "chegou à equipe". Enquanto o envio provisório não
+/// responde: "Enviando…", sem volta automática. Se falhar: a falha, com
+/// "Tentar de novo" (o mesmo registro), e a tela não volta sozinha.
 ///
 /// A `Key('TM04')` no Scaffold raiz faz parte do contrato (testes de
 /// navegação).
@@ -41,11 +43,25 @@ class _DiarioEnviadoTelaState extends State<DiarioEnviadoTela> {
   Timer? _volta;
   bool _semVoltaAutomatica = false;
 
+  /// O envio já respondeu (ou não há envio a esperar)?
+  late bool _respondido = widget.envio is! ResultadoProvisorio;
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     _semVoltaAutomatica = MediaQuery.accessibleNavigationOf(context);
-    if (_semVoltaAutomatica) {
+    _armarVolta();
+  }
+
+  void _aoMudarAndamento(AndamentoDoEnvio andamento) {
+    _respondido = andamento == AndamentoDoEnvio.respondido;
+    _armarVolta();
+  }
+
+  /// A volta de 3 s só corre com o envio respondido e sem navegação
+  /// acessível.
+  void _armarVolta() {
+    if (_semVoltaAutomatica || !_respondido) {
       _volta?.cancel();
       _volta = null;
     } else {
@@ -75,7 +91,8 @@ class _DiarioEnviadoTelaState extends State<DiarioEnviadoTela> {
             padding: MedidasTerae.paddingTela,
             child: AcompanharEnvio(
               envio: widget.envio,
-              construtor: (context, envio, andamento) {
+              aoMudarAndamento: _aoMudarAndamento,
+              construtor: (context, envio, andamento, tentarDeNovo) {
                 final naFila = envio != null && !envio.enviado;
                 final (titulo, mensagem) = switch (envio) {
                   null => (
@@ -84,13 +101,13 @@ class _DiarioEnviadoTelaState extends State<DiarioEnviadoTela> {
                   ),
                   _ when andamento == AndamentoDoEnvio.falhou => (
                     'Registro não enviado',
-                    'Não conseguimos enviar seu registro agora. Tente '
-                        'registrar de novo daqui a pouco.',
+                    'Não conseguimos enviar seu registro agora. Toque em '
+                        '"Tentar de novo".',
                   ),
                   _ when andamento == AndamentoDoEnvio.aguardando => (
-                    'Registro guardado',
-                    'A internet está lenta. Seu registro está guardado no '
-                        'aparelho e será enviado quando houver conexão.',
+                    'Enviando…',
+                    'A internet está lenta. Estamos enviando seu registro; '
+                        'espere só um pouco.',
                   ),
                   _ when naFila => (
                     'Registro guardado',
@@ -135,7 +152,17 @@ class _DiarioEnviadoTelaState extends State<DiarioEnviadoTela> {
                       _Resumo(registro: envio.registro),
                     ],
                     const SizedBox(height: MedidasTerae.espacoGrande),
-                    if (!_semVoltaAutomatica) ...[
+                    if (tentarDeNovo != null) ...[
+                      BotaoGrande(
+                        key: const Key('tentar-de-novo'),
+                        rotulo: 'Tentar de novo',
+                        icone: Icons.refresh,
+                        aoTocar: tentarDeNovo,
+                      ),
+                      const SizedBox(height: MedidasTerae.espacoPequeno),
+                    ],
+                    if (!_semVoltaAutomatica &&
+                        andamento == AndamentoDoEnvio.respondido) ...[
                       Text(
                         'A tela inicial abre sozinha em instantes.',
                         textAlign: TextAlign.center,
