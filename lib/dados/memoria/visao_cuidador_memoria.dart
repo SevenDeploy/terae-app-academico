@@ -13,8 +13,9 @@ import 'regras.dart';
 /// Visão do cuidador (RFM08; TM08, TM11, TM12) com o RNFM05 na camada de
 /// dados: toda chamada confere o vínculo ativo entre a conta e o paciente
 /// (sem ele, `acessoNegado`) e devolve só as cópias reduzidas — Paciente sem
-/// CPF nem nascimento, Agendamento sem motivo do retorno, alerta como
-/// [AvisoDeAlerta]. Registro do diário, marco e consentimento não saem daqui.
+/// CPF nem nascimento, Agendamento sem motivo do retorno, receita sem
+/// orientação nem prescritor, alerta como [AvisoDeAlerta]. Registro do
+/// diário, marco e consentimento não saem daqui.
 class VisaoCuidadorMemoria implements RepositorioVisaoCuidador {
   VisaoCuidadorMemoria(this._memoria);
 
@@ -73,7 +74,7 @@ class VisaoCuidadorMemoria implements RepositorioVisaoCuidador {
     required String pacienteId,
   }) async {
     await _autorizado(contaCuidadorId, pacienteId);
-    return _e.receitaVigente(pacienteId, _memoria.hoje());
+    return _e.receitaVigente(pacienteId, _memoria.hoje())?.paraCuidador();
   }
 
   @override

@@ -450,6 +450,28 @@ void main() {
       expect(ag.paraCuidador().toMap()['motivoRetorno'], isNull);
       expect(ag.paraCuidador().dataHora, ag.dataHora);
     });
+
+    test(
+      'ReceitaUsoContinuo.paraCuidador tira a orientação e o prescritor',
+      () {
+        final receita = ReceitaUsoContinuo(
+          id: 'r',
+          pacienteId: 'p',
+          profissionalId: 'pr',
+          orientacao: 'Tomar depois do café.',
+          vigenciaInicio: DataCivil(2026, 9, 1),
+          vigenciaFim: DataCivil(2026, 10, 31),
+          dataRenovacao: DataCivil(2026, 10, 8),
+        );
+        final copia = receita.paraCuidador();
+        expect(copia.orientacao, isNull);
+        expect(copia.profissionalId, isNull);
+        expect(copia.vigenteEm(DataCivil(2026, 10, 2)), isTrue);
+        expect(copia.dataRenovacao, receita.dataRenovacao);
+        expect(copia.toMap().keys, receita.toMap().keys, reason: 'mesmo mapa');
+        expect(ReceitaUsoContinuo.fromMap(copia.toMap()), copia);
+      },
+    );
   });
 
   group('os 11 enums do §22 (grafia do docx)', () {

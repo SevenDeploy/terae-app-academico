@@ -336,7 +336,8 @@ class _OrientacaoVigente extends StatelessWidget {
           if (receita == null)
             Text('Nenhuma receita em uso no momento.', style: textos.bodyMedium)
           else ...[
-            Text(receita.orientacao, style: textos.bodyMedium),
+            if (receita.orientacao case final orientacao?)
+              Text(orientacao, style: textos.bodyMedium),
             for (final item in itens) ...[
               const Divider(height: MedidasTerae.espacoGrande),
               ItemDaReceita(item: item),

@@ -363,6 +363,7 @@ class EstadoMemoria {
         'profissional da receita',
         r.id,
       );
+      _exigir(r.orientacao != null, 'orientação da receita', r.id);
     }
     for (final i in itensMedicacao.values) {
       _exigir(receitas.containsKey(i.receitaId), 'receita do item', i.id);

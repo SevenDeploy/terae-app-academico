@@ -51,7 +51,8 @@ MotivoRecusa.x)` com `.mensagem` simples (`falhas.dart`); nenhuma implementaçã
 
 **Modelos e enums** — 12 classes imutáveis em `lib/dados/modelos/` com os campos da Figura 3, `fromMap`/`toMap`
 (chave = nome do campo; enum pelo `name`; instante ISO UTC `Z`; data civil `AAAA-MM-DD`; erro = `FormatException`),
-`==`, `copyWith` só nos campos de situação, `Paciente.paraCuidador()` e `Agendamento.paraCuidador()`. 11 enums em
+`==`, `copyWith` só nos campos de situação, `Paciente.paraCuidador()`, `Agendamento.paraCuidador()` e
+`ReceitaUsoContinuo.paraCuidador()` (sem `orientacao` nem `profissionalId`, anuláveis por isso — RNFM05). 11 enums em
 `lib/dados/enums/` com a grafia do docx e `.rotulo` em linguagem simples (`Intensidade.ehCritica`).
 
 **Núcleo** — `tempo/relogio.dart`: `Relogio.agora()` (UTC; `RelogioSistema`, `RelogioFixo` p/ teste),

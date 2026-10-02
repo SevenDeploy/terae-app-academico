@@ -12,47 +12,68 @@ import 'package:terae_app/nucleo/uuid.dart';
 import 'memoria_apoio.dart';
 
 /// Tudo o que a visão do cuidador devolve para [conta] sobre [paciente],
-/// como mapas.
-Future<List<Mapa>> _tudoQueVolta(
+/// como mapas, com o tipo de cada objeto.
+Future<List<(String, Mapa)>> _tudoQueVolta(
   MemoriaDemonstracao m,
   String conta,
   String paciente,
 ) async {
   final visao = m.repositorios.visaoCuidador;
-  final saida = <Mapa>[];
+  final saida = <(String, Mapa)>[];
   final p = await visao.pacienteAcompanhado(
     contaCuidadorId: conta,
     pacienteId: paciente,
   );
-  saida.add(p.toMap());
+  saida.add(('Paciente', p.toMap()));
   final consultas = await visao.consultas(
     contaCuidadorId: conta,
     pacienteId: paciente,
   );
   for (final c in consultas) {
-    saida.add(c.toMap());
-    saida.add((await visao.profissional(c.profissionalId)).toMap());
+    saida.add(('Agendamento', c.toMap()));
+    final profissional = await visao.profissional(c.profissionalId);
+    saida.add(('ProfissionalSaude', profissional.toMap()));
   }
   final receita = await visao.receitaVigente(
     contaCuidadorId: conta,
     pacienteId: paciente,
   );
   if (receita != null) {
-    saida.add(receita.toMap());
+    saida.add(('ReceitaUsoContinuo', receita.toMap()));
     final itens = await visao.itensDaReceita(
       contaCuidadorId: conta,
       pacienteId: paciente,
       receitaId: receita.id,
     );
-    saida.addAll(itens.map((i) => i.toMap()));
+    saida.addAll(itens.map((i) => ('ItemMedicacao', i.toMap())));
   }
   final alertas = await visao.alertas(
     contaCuidadorId: conta,
     pacienteId: paciente,
   );
-  saida.addAll(alertas.map((a) => a.toMap()));
+  saida.addAll(alertas.map((a) => ('AvisoDeAlerta', a.toMap())));
   return saida;
 }
+
+/// RNFM05 — lista branca: as únicas chaves que podem chegar preenchidas ao
+/// aparelho do cuidador, por tipo. É o que a TM08, a TM11 e a TM12 mostram
+/// ou usam (vigência para os próximos dias, ids para buscar o resto); o
+/// profissional da consulta vai com o mínimo público do §23. Campo novo num
+/// modelo fica fora da cópia até entrar aqui de propósito.
+const Map<String, Set<String>> _permitidasAoCuidador = {
+  'Paciente': {'id', 'profissionalRefId', 'nome', 'ativo'},
+  'Agendamento': {'id', 'pacienteId', 'profissionalId', 'dataHora', 'situacao'},
+  'ProfissionalSaude': {'id', 'nome', 'registroConselho', 'especialidade'},
+  'ReceitaUsoContinuo': {
+    'id',
+    'pacienteId',
+    'vigenciaInicio',
+    'vigenciaFim',
+    'dataRenovacao',
+  },
+  'ItemMedicacao': {'id', 'receitaId', 'medicamento', 'posologia', 'horarios'},
+  'AvisoDeAlerta': {'emitidoEm', 'cienteEm'},
+};
 
 /// Todas as chamadas da visão que conferem o vínculo.
 List<Future<Object?> Function()> _chamadasComVinculo(
@@ -121,8 +142,8 @@ void main() {
     expect(alertas.single.cienteEm, isNotNull, reason: 'alerta antigo, ciente');
   });
 
-  test('RNFM05: nada do que volta tem CPF, nascimento, motivo do retorno '
-      'nem conteúdo do registro', () async {
+  test('RNFM05: cada objeto que volta só tem chaves da lista branca, sem '
+      'conteúdo do registro', () async {
     final m = memoriaDeTeste();
     // Um alerta novo, com observação, para haver o que vazar.
     final enviado = await m.repositorios.diario.enviar(
@@ -139,30 +160,22 @@ void main() {
     );
     expect(enviado.equipeAvisada, isTrue);
 
-    final mapas = await _tudoQueVolta(m, contaRegina, idAna);
-    expect(mapas, isNotEmpty);
-    const nulos = ['cpf', 'dataNascimento', 'motivoRetorno', 'contaId'];
-    const proibidas = [
-      'registroId',
-      'regraDisparada',
-      'intensidade',
-      'adesao',
-      'sintomaPredominante',
-      'observacao',
-      'situacaoEnvio',
-      'registradoEm',
-      'qualidade',
-      'versaoTermo',
-      'canalAutorizado',
-      'textoSimples',
-    ];
-    for (final mapa in mapas) {
-      for (final chave in nulos) {
-        expect(mapa[chave], isNull, reason: '$chave em $mapa');
-      }
-      for (final chave in proibidas) {
-        expect(mapa.containsKey(chave), isFalse, reason: '$chave em $mapa');
-      }
+    final objetos = await _tudoQueVolta(m, contaRegina, idAna);
+    expect(
+      objetos.map((o) => o.$1).toSet(),
+      _permitidasAoCuidador.keys.toSet(),
+      reason: 'todo tipo da lista branca foi conferido',
+    );
+    for (final (tipo, mapa) in objetos) {
+      final preenchidas = {
+        for (final e in mapa.entries)
+          if (e.value != null) e.key,
+      };
+      expect(
+        preenchidas.difference(_permitidasAoCuidador[tipo]!),
+        isEmpty,
+        reason: '$tipo fora da lista branca: $mapa',
+      );
       for (final valor in mapa.values) {
         expect(
           '$valor',
