@@ -35,6 +35,7 @@ class BotaoGrande extends StatelessWidget {
   final bool larguraTotal;
 
   static const TextStyle _texto = TextStyle(
+    fontFamily: 'Lexend',
     fontSize: 18,
     fontWeight: FontWeight.w600,
     height: 1.25,

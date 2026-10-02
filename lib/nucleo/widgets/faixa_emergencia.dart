@@ -256,7 +256,11 @@ class _LigarState extends State<_Ligar> {
                 constraints: const BoxConstraints(
                   minHeight: MedidasTerae.alturaMinimaBotao,
                 ),
-                child: Center(widthFactor: 1, child: widget.child),
+                child: Center(
+                  widthFactor: 1,
+                  heightFactor: 1,
+                  child: widget.child,
+                ),
               ),
             ),
           ),
