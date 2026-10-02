@@ -1,0 +1,43 @@
+name: terae_app
+description: "Terae — app acadêmico do paciente (Dispositivos Móveis, UNEMAT 2026). Não é o app do Terae produção."
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.13.5
+  flutter: ">=3.47.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  go_router: ^18.0.2
+  intl: ^0.20.3
+  provider: ^6.1.5+1
+  # Único acréscimo ao §24 da Atividade 3: ligar para CVV 188 / SAMU 192 com um toque (TM00, TM05).
+  url_launcher: ^6.3.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/dados/
+
+  fonts:
+    - family: Lexend
+      fonts:
+        - asset: assets/fonts/Lexend-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/Lexend-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Lexend-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Lexend-Bold.ttf
+          weight: 700
