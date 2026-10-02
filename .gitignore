@@ -46,3 +46,6 @@ app.*.map.json
 
 # Widget Preview related
 .widget_preview/
+
+# Diferenças de golden que falharam (flutter test grava ao lado do teste)
+test/**/failures/

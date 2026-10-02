@@ -186,7 +186,7 @@ IconData _iconeDaAdesao(Adesao a) => switch (a) {
 };
 
 IconData _iconeDaIntensidade(Intensidade i) => switch (i) {
-  Intensidade.leve => Icons.sentiment_satisfied_alt,
+  Intensidade.leve => Icons.sentiment_satisfied,
   Intensidade.moderada => Icons.sentiment_neutral,
   Intensidade.grave => Icons.sentiment_dissatisfied,
   Intensidade.critica => Icons.warning_amber,
