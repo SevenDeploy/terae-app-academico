@@ -190,6 +190,19 @@ void main() {
       expect(lista.first.situacaoEnvio, SituacaoEnvio.naFila);
     });
 
+    test('já enviado, reenviado sem conexão: não volta para a fila', () async {
+      final m = memoriaDeTeste();
+      final registro = _registro(idAna, Intensidade.critica);
+      final primeiro = await m.repositorios.diario.enviar(registro);
+      await _semConexao(m, sem: true);
+      final antes = m.estado.paraMapa();
+      final segundo = await m.repositorios.diario.enviar(registro);
+      expect(segundo.registro, primeiro.registro);
+      expect(segundo.equipeAvisada, isTrue);
+      expect(m.estado.fila, isEmpty);
+      expect(m.estado.paraMapa(), antes);
+    });
+
     test('enviar de novo na fila não duplica', () async {
       final m = memoriaDeTeste();
       await _semConexao(m, sem: true);
