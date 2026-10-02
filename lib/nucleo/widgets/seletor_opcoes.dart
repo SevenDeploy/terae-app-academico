@@ -11,6 +11,7 @@ class OpcaoSeletor<T> {
     required this.rotulo,
     this.icone,
     this.cores,
+    this.habilitada = true,
   });
 
   final T valor;
@@ -19,6 +20,11 @@ class OpcaoSeletor<T> {
 
   /// Cores quando selecionada; sem elas, azul (primaria700/primaria50).
   final ParDeCores? cores;
+
+  /// `false`: a opção aparece esmaecida, não responde ao toque e o leitor de
+  /// tela a anuncia como desativada (TM09: criança não é titular). A tela
+  /// explica o porquê ao lado.
+  final bool habilitada;
 }
 
 /// Grupo de botões grandes de escolha única — adesão (3) e intensidade (4) da
@@ -73,7 +79,9 @@ class SeletorOpcoes<T> extends StatelessWidget {
                       ? _BotaoOpcao<T>(
                           opcao: daLinha[j],
                           selecionada: daLinha[j].valor == valor,
-                          aoTocar: () => aoMudar(daLinha[j].valor),
+                          aoTocar: daLinha[j].habilitada
+                              ? () => aoMudar(daLinha[j].valor)
+                              : null,
                         )
                       : const SizedBox.shrink(),
                 ),
@@ -117,7 +125,9 @@ class _BotaoOpcao<T> extends StatefulWidget {
 
   final OpcaoSeletor<T> opcao;
   final bool selecionada;
-  final VoidCallback aoTocar;
+
+  /// `null` = opção desativada.
+  final VoidCallback? aoTocar;
 
   @override
   State<_BotaoOpcao<T>> createState() => _BotaoOpcaoState<T>();
@@ -132,7 +142,12 @@ class _BotaoOpcaoState<T> extends State<_BotaoOpcao<T>> {
         widget.opcao.cores ??
         const ParDeCores(CoresTerae.primaria700, CoresTerae.primaria50);
     final sel = widget.selecionada;
-    final corTexto = sel ? cores.texto : CoresTerae.neutro700;
+    final habilitada = widget.aoTocar != null;
+    final corTexto = sel
+        ? cores.texto
+        : habilitada
+        ? CoresTerae.neutro700
+        : CoresTerae.neutro600;
     final BorderSide borda;
     if (_focada) {
       borda = const BorderSide(
@@ -147,9 +162,14 @@ class _BotaoOpcaoState<T> extends State<_BotaoOpcao<T>> {
       child: Semantics(
         button: true,
         selected: sel,
+        enabled: habilitada,
         inMutuallyExclusiveGroup: true,
         child: Material(
-          color: sel ? cores.fundo : CoresTerae.branco,
+          color: sel
+              ? cores.fundo
+              : habilitada
+              ? CoresTerae.branco
+              : CoresTerae.neutro100,
           shape: RoundedRectangleBorder(borderRadius: raio, side: borda),
           clipBehavior: Clip.antiAlias,
           child: InkWell(

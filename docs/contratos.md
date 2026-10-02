@@ -33,7 +33,9 @@ sessao, relogio, lancador, localInicial)` em `lib/app.dart`; `main.dart` só cri
 MotivoRecusa.x)` com `.mensagem` simples (`falhas.dart`); nenhuma implementação pode ser `Listenable`.
 - `RepositorioAutenticacao`: `identidadesNoAparelho(Provedor)`, `entrar(IdentidadeProvedor) → VinculosDaConta`,
   `conferirCodigoPaciente({codigo, cpf, dataNascimento: DataCivil}) → ConviteConferido`, `ativarPaciente({codigo, cpf,
-  dataNascimento, qualidade, canalAutorizado, versaoTermo, identidade})`, `conferirConviteCuidador({codigo, cpf})`,
+  dataNascimento, qualidade, canalAutorizado, versaoTermo, identidade})` (paciente com menos de 12 anos hoje, no dia
+  da clínica, só `responsavelLegal`; senão `MotivoRecusa.criancaComoTitular` — ECA art. 2º, LGPD art. 14 § 1º; regra
+  pura em `dados/regras/consentimento.dart`, usada também pela TM09), `conferirConviteCuidador({codigo, cpf})`,
   `aceitarConviteCuidador({codigo, cpf, identidade})`. `VinculosDaConta(conta, pacientes, acompanhados)`.
 - `RepositorioPaciente`: `paciente`, `profissional`, `proximaConsulta`, `agendamentos`, `receitaVigente`,
   `itensDaReceita(receitaId)`, `marcos`.
@@ -57,7 +59,8 @@ MotivoRecusa.x)` com `.mensagem` simples (`falhas.dart`); nenhuma implementaçã
 (`cpfValido`, `mascararCpf`, `formatarCpf`, `somenteDigitos`) e `FormatadorCpf`; `uuid.dart` (`gerarUuidV4`).
 Tema: `temaTerae()`, `CoresTerae` (`daIntensidade`, `daAdesao` → `ParDeCores`), `MedidasTerae`. Widgets:
 `BotaoGrande(rotulo, aoTocar, icone, variante)`, `Cartao(child, aoTocar)`, `SeletorOpcoes<T>(rotulo, opcoes:
-[OpcaoSeletor], valor, aoMudar, colunas)`, `FaixaEmergencia(destaque)` (chaves `ligar-188`, `ligar-192`),
+[OpcaoSeletor(valor, rotulo, icone, cores, habilitada)], valor, aoMudar, colunas)` (`habilitada: false` = opção
+indisponível, sem toque e anunciada desativada), `FaixaEmergencia(destaque)` (chaves `ligar-188`, `ligar-192`),
 `SeloAcademico`.
 
 **Testes** — `test/apoio/dubles.dart` (dublês que lançam `UnimplementedError`: estenda e sobrescreva; personas

@@ -53,9 +53,15 @@ class AutenticacaoFake extends AutenticacaoDuble {
     this.recusaPorCodigo = const {},
     this.recusaNaEntrada = const {},
     this.recusaNoPasso3,
-  }) : contas = contas ?? [idAna, idRegina, idNova];
+    DataCivil? nascimentoDoCadastro,
+  }) : contas = contas ?? [idAna, idRegina, idNova],
+       nascimentoDoCadastro = nascimentoDoCadastro ?? nascimentoDaPaciente;
 
   final List<IdentidadeProvedor> contas;
+
+  /// Nascimento do paciente no cadastro da clínica (padrão: o de Ana, 16
+  /// anos em 2/10/2026); o passo 1 só confere com ele.
+  final DataCivil nascimentoDoCadastro;
 
   /// Recusa forçada por código (ex.: `codigoJaUsado`, `codigoExpirado`).
   final Map<String, MotivoRecusa> recusaPorCodigo;
@@ -116,7 +122,7 @@ class AutenticacaoFake extends AutenticacaoDuble {
     if (cpf != cpfEsperado) {
       throw const RecusaDeRegra(MotivoRecusa.cpfNaoConfere);
     }
-    if (tipo == TipoConvite.paciente && nascimento != nascimentoDaPaciente) {
+    if (tipo == TipoConvite.paciente && nascimento != nascimentoDoCadastro) {
       throw const RecusaDeRegra(MotivoRecusa.nascimentoNaoConfere);
     }
     return ConviteConferido(

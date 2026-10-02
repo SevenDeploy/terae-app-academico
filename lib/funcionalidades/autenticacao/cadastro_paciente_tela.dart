@@ -22,7 +22,8 @@ import 'widgets_entrada.dart';
 /// TM09 — Cadastro do paciente/família (RFM09). O app não cria paciente
 /// (RF07): ativa a conta de quem já é paciente da clínica, em três passos —
 /// (1) código de seis caracteres, CPF e nascimento do paciente; (2) quem vai
-/// usar, o próprio paciente ou o responsável legal (LGPD art. 14, § 1º);
+/// usar, o próprio paciente ou o responsável legal (LGPD art. 14, § 1º) —
+/// criança (menos de 12 anos, ECA art. 2º) só pelo responsável legal;
 /// (3) termo de consentimento em linguagem simples, com versão, canal
 /// autorizado (R05) e aceite, seguido de "Continuar com Google".
 ///
@@ -222,6 +223,7 @@ class _CadastroPacienteState extends State<_CadastroPaciente> {
             OpcaoSeletor(
               valor: q,
               rotulo: q.rotulo,
+              habilitada: c.qualidadePermitida(q),
               icone: switch (q) {
                 QualidadeConsentimento.titular => Icons.person_outline,
                 QualidadeConsentimento.responsavelLegal =>
@@ -232,8 +234,12 @@ class _CadastroPacienteState extends State<_CadastroPaciente> {
       ),
       const SizedBox(height: MedidasTerae.espaco),
       Text(
-        'Se o paciente for criança ou adolescente, quem usa o aplicativo e '
-        'aceita o termo é a mãe, o pai ou o responsável legal.',
+        c.pacienteEhCrianca
+            ? 'Como o paciente tem menos de 12 anos, quem usa o aplicativo e '
+                  'aceita o termo é a mãe, o pai ou o responsável legal.'
+            : 'Se o paciente for criança (menos de 12 anos), quem usa o '
+                  'aplicativo e aceita o termo é a mãe, o pai ou o '
+                  'responsável legal.',
         style: textos.bodyMedium?.copyWith(color: CoresTerae.neutro600),
       ),
     ];

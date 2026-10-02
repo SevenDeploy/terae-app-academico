@@ -6,6 +6,7 @@ import 'package:terae_app/dados/repositorios/falhas.dart';
 import 'package:terae_app/funcionalidades/autenticacao/cadastro_controlador.dart';
 import 'package:terae_app/nucleo/rotas/rotas.dart';
 import 'package:terae_app/nucleo/sessao/sessao.dart';
+import 'package:terae_app/nucleo/tempo/data_civil.dart';
 
 import '../publico/apoio_telas.dart';
 import 'apoio_autenticacao.dart';
@@ -202,6 +203,113 @@ void main() {
     expect(find.text(MotivoRecusa.codigoJaUsado.mensagem), findsOneWidget);
     expect(find.text('K7Q2M9'), findsOneWidget, reason: 'o campo é mantido');
     expect(sessao.entradas, isEmpty);
+  });
+
+  group('criança (menos de 12 anos) só pelo responsável legal '
+      '(ECA art. 2º; LGPD art. 14 § 1º)', () {
+    const explicacaoCrianca =
+        'Como o paciente tem menos de 12 anos, quem usa o aplicativo e aceita '
+        'o termo é a mãe, o pai ou o responsável legal.';
+    final titular = find.text(QualidadeConsentimento.titular.rotulo);
+
+    testWidgets('Miguel (7 anos): "o próprio paciente" fica indisponível, '
+        'com explicação; ativa pelo responsável', (tester) async {
+      final semantica = tester.ensureSemantics();
+      final autenticacao = AutenticacaoFake(
+        nascimentoDoCadastro: DataCivil(2019, 3, 8),
+      );
+      await _abrir(tester, autenticacao);
+      await _passo1(tester, nascimento: '08032019');
+      _noPasso(2);
+      expect(
+        tester.getSemantics(titular),
+        isSemantics(hasEnabledState: true, isEnabled: false, isSelected: false),
+      );
+      expect(find.text(explicacaoCrianca), findsOneWidget);
+
+      await _tocar(tester, titular);
+      expect(
+        _habilitado(tester, _continuar),
+        isFalse,
+        reason: 'tocar no indisponível não escolhe',
+      );
+      await _passo2(tester);
+      await _passo3(tester);
+      expect(
+        autenticacao.ativacoes.single.qualidade,
+        QualidadeConsentimento.responsavelLegal,
+      );
+      semantica.dispose();
+    });
+
+    for (final (nascimento, digitado, crianca) in [
+      (DataCivil(2014, 10, 3), '03102014', true),
+      (DataCivil(2014, 10, 2), '02102014', false),
+    ]) {
+      testWidgets(
+        'nascido em $nascimento: ${crianca ? '11 anos e 364 dias, '
+                  'indisponível' : '12 anos no dia do aniversário, disponível'}',
+        (tester) async {
+          final semantica = tester.ensureSemantics();
+          await _abrir(
+            tester,
+            AutenticacaoFake(nascimentoDoCadastro: nascimento),
+          );
+          await _passo1(tester, nascimento: digitado);
+          expect(
+            tester.getSemantics(titular),
+            isSemantics(hasEnabledState: true, isEnabled: !crianca),
+          );
+          await _tocar(tester, titular);
+          expect(_habilitado(tester, _continuar), !crianca);
+          semantica.dispose();
+        },
+      );
+    }
+
+    testWidgets('adolescente (16) escolhe o próprio paciente; o aviso fala '
+        'só de criança', (tester) async {
+      final autenticacao = AutenticacaoFake();
+      await _abrir(tester, autenticacao);
+      await _passo1(tester);
+      expect(
+        find.text(
+          'Se o paciente for criança (menos de 12 anos), quem usa o aplicativo '
+          'e aceita o termo é a mãe, o pai ou o responsável legal.',
+        ),
+        findsOneWidget,
+      );
+      expect(find.textContaining('adolescente'), findsNothing);
+      expect(find.text(explicacaoCrianca), findsNothing);
+      await _tocar(tester, titular);
+      await _tocar(tester, _continuar);
+      await _passo3(tester);
+      expect(
+        autenticacao.ativacoes.single.qualidade,
+        QualidadeConsentimento.titular,
+      );
+    });
+
+    testWidgets('recusa criancaComoTitular no passo 3 volta ao passo 2 sem '
+        'escolha', (tester) async {
+      final sessao = SessaoEspia();
+      await _abrir(
+        tester,
+        AutenticacaoFake(recusaNoPasso3: MotivoRecusa.criancaComoTitular),
+        sessao: sessao,
+      );
+      await _passo1(tester);
+      await _tocar(tester, titular);
+      await _tocar(tester, _continuar);
+      await _passo3(tester);
+      _noPasso(2);
+      expect(
+        find.text(MotivoRecusa.criancaComoTitular.mensagem),
+        findsOneWidget,
+      );
+      expect(_habilitado(tester, _continuar), isFalse);
+      expect(sessao.entradas, isEmpty);
+    });
   });
 
   testWidgets('voltar do Android e o botão Voltar recuam um passo', (

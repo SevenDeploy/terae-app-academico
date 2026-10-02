@@ -24,6 +24,14 @@ enum MotivoRecusa {
   contaSemAcesso('Esta conta ainda não tem acesso. Use o primeiro acesso.'),
   contaInativa('Esta conta está desativada. Fale com a clínica.'),
   pacienteInativo('Este cadastro está inativo na clínica.'),
+
+  /// TM09 passo 2 — paciente com menos de 12 anos (criança, ECA art. 2º) não
+  /// é titular: quem aceita é um dos pais ou o responsável legal (LGPD art.
+  /// 14, § 1º).
+  criancaComoTitular(
+    'O paciente tem menos de 12 anos. Quem aceita o termo é a mãe, o pai ou '
+    'o responsável legal.',
+  ),
   acessoNegado('Você não tem acesso a estas informações.'),
   semConexao('Sem internet agora. Tente de novo quando a conexão voltar.');
 

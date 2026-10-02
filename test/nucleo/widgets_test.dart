@@ -101,6 +101,47 @@ void main() {
       semantica.dispose();
     });
 
+    testWidgets('opção indisponível não responde e é anunciada desativada', (
+      tester,
+    ) async {
+      final semantica = tester.ensureSemantics();
+      final escolhas = <Adesao>[];
+      await tester.pumpWidget(
+        _app(
+          SeletorOpcoes<Adesao>(
+            rotulo: 'Pergunta',
+            valor: null,
+            aoMudar: escolhas.add,
+            opcoes: [
+              for (final a in Adesao.values)
+                OpcaoSeletor(
+                  valor: a,
+                  rotulo: a.rotulo,
+                  habilitada: a != Adesao.nenhuma,
+                ),
+            ],
+          ),
+        ),
+      );
+      expect(
+        tester.getSemantics(find.text(Adesao.nenhuma.rotulo)),
+        isSemantics(
+          isButton: true,
+          hasEnabledState: true,
+          isEnabled: false,
+          hasTapAction: false,
+        ),
+      );
+      expect(
+        tester.getSemantics(find.text(Adesao.total.rotulo)),
+        isSemantics(hasEnabledState: true, isEnabled: true, hasTapAction: true),
+      );
+      await tester.tap(find.text(Adesao.nenhuma.rotulo));
+      await tester.tap(find.text(Adesao.total.rotulo));
+      expect(escolhas, [Adesao.total]);
+      semantica.dispose();
+    });
+
     testWidgets('cada opção tem ao menos 64 de altura', (tester) async {
       await tester.pumpWidget(_app(const _SeletorDeAdesao()));
       for (final a in Adesao.values) {
