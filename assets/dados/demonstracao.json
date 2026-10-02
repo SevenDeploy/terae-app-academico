@@ -1,1 +1,99 @@
-{}
+{
+  "versao": 1,
+  "descricao": "Dados FICTÍCIOS de demonstração do terae_app (projeto acadêmico, UNEMAT 2026). Cada coleção usa o formato de mapa dos modelos (§22). Datas relativas ao dia de hoje no horário da clínica (D9): {\"emDias\": n} é data civil; {\"emDias\": n, \"hora\": \"HH:mm\"} é instante. Coleções em ordem de criação.",
+  "identidades": [
+    {"provedor": "google", "idProvedor": "google-ana-lucia-martins", "email": "ana.lucia.martins@exemplo.test", "nomeExibicao": "Ana Lúcia Martins"},
+    {"provedor": "google", "idProvedor": "google-patricia-andrade-neves", "email": "patricia.neves@exemplo.test", "nomeExibicao": "Patrícia Andrade Neves"},
+    {"provedor": "google", "idProvedor": "google-regina-martins", "email": "regina.martins@exemplo.test", "nomeExibicao": "Regina Martins"},
+    {"provedor": "google", "idProvedor": "google-joao-pedro-assis", "email": "joao.pedro.assis@exemplo.test", "nomeExibicao": "João Pedro Assis"},
+    {"provedor": "google", "idProvedor": "google-paulo-martins", "email": "paulo.martins@exemplo.test", "nomeExibicao": "Paulo Martins"}
+  ],
+  "profissionais": [
+    {"id": "d0000000-0000-4000-8000-000000000001", "nome": "Dra. Helena Prado", "registroConselho": "CRM-MT 18234", "especialidade": "Psiquiatria"},
+    {"id": "d0000000-0000-4000-8000-000000000002", "nome": "Dra. Larissa Fontes Andrade", "registroConselho": "CREFITO-9 30125-TO", "especialidade": "Terapia ocupacional"}
+  ],
+  "contas": [
+    {"id": "c0000000-0000-4000-8000-000000000001", "nomeExibicao": "Ana Lúcia Martins", "email": "ana.lucia.martins@exemplo.test", "idProvedor": "google-ana-lucia-martins", "situacao": "ativa", "ultimoAcessoEm": {"emDias": -1, "hora": "20:38"}},
+    {"id": "c0000000-0000-4000-8000-000000000002", "nomeExibicao": "Patrícia Andrade Neves", "email": "patricia.neves@exemplo.test", "idProvedor": "google-patricia-andrade-neves", "situacao": "ativa", "ultimoAcessoEm": {"emDias": -2, "hora": "19:05"}},
+    {"id": "c0000000-0000-4000-8000-000000000003", "nomeExibicao": "Regina Martins", "email": "regina.martins@exemplo.test", "idProvedor": "google-regina-martins", "situacao": "ativa", "ultimoAcessoEm": {"emDias": -3, "hora": "12:10"}}
+  ],
+  "pacientes": [
+    {"id": "a0000000-0000-4000-8000-000000000001", "contaId": "c0000000-0000-4000-8000-000000000001", "profissionalRefId": "d0000000-0000-4000-8000-000000000001", "nome": "Ana Lúcia Martins", "cpf": "41850372608", "dataNascimento": "2010-05-12", "ativo": true},
+    {"id": "a0000000-0000-4000-8000-000000000002", "contaId": "c0000000-0000-4000-8000-000000000002", "profissionalRefId": "d0000000-0000-4000-8000-000000000002", "nome": "Miguel Andrade Neves", "cpf": "73026415952", "dataNascimento": "2019-03-08", "ativo": true},
+    {"id": "a0000000-0000-4000-8000-000000000003", "contaId": "c0000000-0000-4000-8000-000000000002", "profissionalRefId": "d0000000-0000-4000-8000-000000000002", "nome": "Laura Andrade Neves", "cpf": "26481709369", "dataNascimento": "2022-06-15", "ativo": true},
+    {"id": "a0000000-0000-4000-8000-000000000004", "contaId": null, "profissionalRefId": "d0000000-0000-4000-8000-000000000001", "nome": "João Pedro Assis", "cpf": "58304921642", "dataNascimento": "1999-07-19", "ativo": true}
+  ],
+  "consentimentos": [
+    {"id": "cc000000-0000-4000-8000-000000000001", "pacienteId": "a0000000-0000-4000-8000-000000000002", "contaId": "c0000000-0000-4000-8000-000000000002", "qualidade": "responsavelLegal", "versaoTermo": "1.0", "canalAutorizado": "email", "aceitoEm": {"emDias": -66, "hora": "20:58"}, "revogadoEm": null},
+    {"id": "cc000000-0000-4000-8000-000000000002", "pacienteId": "a0000000-0000-4000-8000-000000000001", "contaId": "c0000000-0000-4000-8000-000000000001", "qualidade": "titular", "versaoTermo": "1.0", "canalAutorizado": "aplicativo", "aceitoEm": {"emDias": -48, "hora": "19:18"}, "revogadoEm": null},
+    {"id": "cc000000-0000-4000-8000-000000000003", "pacienteId": "a0000000-0000-4000-8000-000000000003", "contaId": "c0000000-0000-4000-8000-000000000002", "qualidade": "responsavelLegal", "versaoTermo": "1.0", "canalAutorizado": "email", "aceitoEm": {"emDias": -6, "hora": "21:12"}, "revogadoEm": null}
+  ],
+  "convites": [
+    {"id": "e0000000-0000-4000-8000-000000000001", "pacienteId": "a0000000-0000-4000-8000-000000000002", "codigo": "M5C2TG", "tipo": "paciente", "cpfConvidado": "73026415952", "expiraEm": {"emDias": -53, "hora": "23:59"}, "usadoEm": {"emDias": -66, "hora": "20:58"}},
+    {"id": "e0000000-0000-4000-8000-000000000002", "pacienteId": "a0000000-0000-4000-8000-000000000001", "codigo": "R2D8NZ", "tipo": "paciente", "cpfConvidado": "41850372608", "expiraEm": {"emDias": -35, "hora": "23:59"}, "usadoEm": {"emDias": -48, "hora": "19:18"}},
+    {"id": "e0000000-0000-4000-8000-000000000003", "pacienteId": "a0000000-0000-4000-8000-000000000001", "codigo": "G8B5VA", "tipo": "cuidador", "cpfConvidado": "60937184500", "expiraEm": {"emDias": -38, "hora": "23:59"}, "usadoEm": {"emDias": -44, "hora": "18:40"}},
+    {"id": "e0000000-0000-4000-8000-000000000004", "pacienteId": "a0000000-0000-4000-8000-000000000004", "codigo": "H3T9WB", "tipo": "paciente", "cpfConvidado": "58304921642", "expiraEm": {"emDias": -3, "hora": "23:59"}, "usadoEm": null},
+    {"id": "e0000000-0000-4000-8000-000000000005", "pacienteId": "a0000000-0000-4000-8000-000000000003", "codigo": "F6W3HY", "tipo": "paciente", "cpfConvidado": "26481709369", "expiraEm": {"emDias": 6, "hora": "23:59"}, "usadoEm": {"emDias": -6, "hora": "21:12"}},
+    {"id": "e0000000-0000-4000-8000-000000000006", "pacienteId": "a0000000-0000-4000-8000-000000000001", "codigo": "P4X9RC", "tipo": "cuidador", "cpfConvidado": "84712056371", "expiraEm": {"emDias": 5, "hora": "23:59"}, "usadoEm": null},
+    {"id": "e0000000-0000-4000-8000-000000000007", "pacienteId": "a0000000-0000-4000-8000-000000000004", "codigo": "K7M4QX", "tipo": "paciente", "cpfConvidado": "58304921642", "expiraEm": {"emDias": 12, "hora": "23:59"}, "usadoEm": null}
+  ],
+  "vinculos": [
+    {"id": "b0000000-0000-4000-8000-000000000001", "pacienteId": "a0000000-0000-4000-8000-000000000001", "contaCuidadorId": "c0000000-0000-4000-8000-000000000003", "conviteId": "e0000000-0000-4000-8000-000000000003", "nome": "Regina Martins", "situacao": "ativo", "autorizadoEm": {"emDias": -44, "hora": "18:40"}, "revogadoEm": null},
+    {"id": "b0000000-0000-4000-8000-000000000002", "pacienteId": "a0000000-0000-4000-8000-000000000001", "contaCuidadorId": null, "conviteId": "e0000000-0000-4000-8000-000000000006", "nome": "Paulo Martins", "situacao": "pendente", "autorizadoEm": null, "revogadoEm": null}
+  ],
+  "agendamentos": [
+    {"id": "ad000000-0000-4000-8000-000000000001", "pacienteId": "a0000000-0000-4000-8000-000000000001", "profissionalId": "d0000000-0000-4000-8000-000000000001", "dataHora": {"emDias": -49, "hora": "14:00"}, "motivoRetorno": "Primeira consulta — avaliação inicial", "situacao": "realizado"},
+    {"id": "ad000000-0000-4000-8000-000000000002", "pacienteId": "a0000000-0000-4000-8000-000000000001", "profissionalId": "d0000000-0000-4000-8000-000000000001", "dataHora": {"emDias": -21, "hora": "14:00"}, "motivoRetorno": "Retorno — ajuste da medicação", "situacao": "realizado"},
+    {"id": "ad000000-0000-4000-8000-000000000003", "pacienteId": "a0000000-0000-4000-8000-000000000001", "profissionalId": "d0000000-0000-4000-8000-000000000001", "dataHora": {"emDias": 5, "hora": "14:00"}, "motivoRetorno": "Retorno — reavaliação do tratamento", "situacao": "agendado"},
+    {"id": "ad000000-0000-4000-8000-000000000004", "pacienteId": "a0000000-0000-4000-8000-000000000002", "profissionalId": "d0000000-0000-4000-8000-000000000002", "dataHora": {"emDias": -11, "hora": "09:00"}, "motivoRetorno": "Sessão de terapia ocupacional", "situacao": "realizado"},
+    {"id": "ad000000-0000-4000-8000-000000000005", "pacienteId": "a0000000-0000-4000-8000-000000000002", "profissionalId": "d0000000-0000-4000-8000-000000000002", "dataHora": {"emDias": -4, "hora": "09:00"}, "motivoRetorno": "Sessão de terapia ocupacional", "situacao": "realizado"},
+    {"id": "ad000000-0000-4000-8000-000000000006", "pacienteId": "a0000000-0000-4000-8000-000000000002", "profissionalId": "d0000000-0000-4000-8000-000000000002", "dataHora": {"emDias": 3, "hora": "09:00"}, "motivoRetorno": "Sessão de terapia ocupacional", "situacao": "agendado"},
+    {"id": "ad000000-0000-4000-8000-000000000007", "pacienteId": "a0000000-0000-4000-8000-000000000003", "profissionalId": "d0000000-0000-4000-8000-000000000002", "dataHora": {"emDias": 10, "hora": "10:30"}, "motivoRetorno": "Primeira avaliação de terapia ocupacional", "situacao": "agendado"},
+    {"id": "ad000000-0000-4000-8000-000000000008", "pacienteId": "a0000000-0000-4000-8000-000000000004", "profissionalId": "d0000000-0000-4000-8000-000000000001", "dataHora": {"emDias": -14, "hora": "10:00"}, "motivoRetorno": "Consulta — avaliação do humor", "situacao": "realizado"},
+    {"id": "ad000000-0000-4000-8000-000000000009", "pacienteId": "a0000000-0000-4000-8000-000000000004", "profissionalId": "d0000000-0000-4000-8000-000000000001", "dataHora": {"emDias": 2, "hora": "10:00"}, "motivoRetorno": "Retorno de acompanhamento próximo", "situacao": "agendado"}
+  ],
+  "receitas": [
+    {"id": "e1000000-0000-4000-8000-000000000001", "pacienteId": "a0000000-0000-4000-8000-000000000001", "profissionalId": "d0000000-0000-4000-8000-000000000001", "orientacao": "Tome 1 comprimido de sertralina 50 mg todo dia às 8h, com água. Não pare nem mude a dose por conta própria: fale antes com a Dra. Helena.", "vigenciaInicio": {"emDias": -21}, "vigenciaFim": {"emDias": 69}, "dataRenovacao": {"emDias": 6}},
+    {"id": "e1000000-0000-4000-8000-000000000002", "pacienteId": "a0000000-0000-4000-8000-000000000004", "profissionalId": "d0000000-0000-4000-8000-000000000001", "orientacao": "Tome 1 comprimido de escitalopram 10 mg todo dia às 9h. Se esquecer, não tome dois de uma vez.", "vigenciaInicio": {"emDias": -14}, "vigenciaFim": {"emDias": 76}, "dataRenovacao": {"emDias": 16}}
+  ],
+  "itensMedicacao": [
+    {"id": "e2000000-0000-4000-8000-000000000001", "receitaId": "e1000000-0000-4000-8000-000000000001", "medicamento": "Sertralina", "posologia": "50 mg, 1 comprimido", "horarios": ["08:00"]},
+    {"id": "e2000000-0000-4000-8000-000000000002", "receitaId": "e1000000-0000-4000-8000-000000000002", "medicamento": "Escitalopram", "posologia": "10 mg, 1 comprimido", "horarios": ["09:00"]}
+  ],
+  "marcos": [
+    {"id": "f0000000-0000-4000-8000-000000000001", "pacienteId": "a0000000-0000-4000-8000-000000000001", "tipo": "orientacao", "data": {"emDias": -49}, "titulo": "Começo do acompanhamento", "textoSimples": "Você e a Dra. Helena combinaram consultas regulares e o uso do diário entre elas."},
+    {"id": "f0000000-0000-4000-8000-000000000002", "pacienteId": "a0000000-0000-4000-8000-000000000001", "tipo": "reavaliacao", "data": {"emDias": -21}, "titulo": "Reavaliação", "textoSimples": "Vocês viram como foram as primeiras semanas e ajustaram a medicação."},
+    {"id": "f0000000-0000-4000-8000-000000000003", "pacienteId": "a0000000-0000-4000-8000-000000000001", "tipo": "orientacao", "data": {"emDias": -14}, "titulo": "Rotina de sono", "textoSimples": "Tente dormir e acordar no mesmo horário e deixe o celular longe da cama à noite."},
+    {"id": "f0000000-0000-4000-8000-000000000004", "pacienteId": "a0000000-0000-4000-8000-000000000001", "tipo": "proximoPasso", "data": {"emDias": 5}, "titulo": "Decidir os próximos passos", "textoSimples": "Na consulta, você e a Dra. Helena vão olhar o seu diário juntas e decidir se o tratamento continua igual."},
+    {"id": "f0000000-0000-4000-8000-000000000005", "pacienteId": "a0000000-0000-4000-8000-000000000002", "tipo": "reavaliacao", "data": {"emDias": -11}, "titulo": "Como o Miguel está indo", "textoSimples": "A Dra. Larissa viu que o Miguel já se concentra por mais tempo nas brincadeiras."},
+    {"id": "f0000000-0000-4000-8000-000000000006", "pacienteId": "a0000000-0000-4000-8000-000000000002", "tipo": "orientacao", "data": {"emDias": -4}, "titulo": "Atividade para casa", "textoSimples": "Brinquem juntos de massinha por 10 minutos, três vezes por semana: ajuda a fortalecer as mãos."},
+    {"id": "f0000000-0000-4000-8000-000000000007", "pacienteId": "a0000000-0000-4000-8000-000000000002", "tipo": "proximoPasso", "data": {"emDias": 3}, "titulo": "Vestir a camiseta sozinho", "textoSimples": "Nas próximas sessões, o objetivo é o Miguel conseguir vestir a camiseta sem ajuda."},
+    {"id": "f0000000-0000-4000-8000-000000000008", "pacienteId": "a0000000-0000-4000-8000-000000000003", "tipo": "proximoPasso", "data": {"emDias": 10}, "titulo": "Conhecer a Laura", "textoSimples": "Na primeira avaliação, a Dra. Larissa vai conhecer a Laura brincando. Leve um brinquedo de que ela goste."},
+    {"id": "f0000000-0000-4000-8000-000000000009", "pacienteId": "a0000000-0000-4000-8000-000000000004", "tipo": "reavaliacao", "data": {"emDias": -14}, "titulo": "Avaliação do humor", "textoSimples": "Você e a Dra. Helena conversaram sobre o seu humor nas últimas semanas e começaram o escitalopram."},
+    {"id": "f0000000-0000-4000-8000-000000000010", "pacienteId": "a0000000-0000-4000-8000-000000000004", "tipo": "proximoPasso", "data": {"emDias": 2}, "titulo": "Diário todos os dias", "textoSimples": "Até o retorno, registre o diário todo dia: assim a Dra. Helena acompanha como você está."}
+  ],
+  "registros": [
+    {"id": "dd000000-0000-4000-8000-000000000001", "pacienteId": "a0000000-0000-4000-8000-000000000001", "registradoEm": {"emDias": -14, "hora": "20:30"}, "adesao": "parcial", "intensidade": "grave", "sintomaPredominante": "Tristeza", "observacao": null, "situacaoEnvio": "enviado"},
+    {"id": "dd000000-0000-4000-8000-000000000002", "pacienteId": "a0000000-0000-4000-8000-000000000001", "registradoEm": {"emDias": -13, "hora": "21:00"}, "adesao": "parcial", "intensidade": "grave", "sintomaPredominante": "Tristeza", "observacao": "Fiquei triste quase o dia todo.", "situacaoEnvio": "enviado"},
+    {"id": "dd000000-0000-4000-8000-000000000003", "pacienteId": "a0000000-0000-4000-8000-000000000001", "registradoEm": {"emDias": -12, "hora": "20:45"}, "adesao": "total", "intensidade": "moderada", "sintomaPredominante": "Ansiedade", "observacao": null, "situacaoEnvio": "enviado"},
+    {"id": "dd000000-0000-4000-8000-000000000004", "pacienteId": "a0000000-0000-4000-8000-000000000001", "registradoEm": {"emDias": -11, "hora": "21:10"}, "adesao": "total", "intensidade": "moderada", "sintomaPredominante": "Sono ruim", "observacao": "Acordei várias vezes de madrugada.", "situacaoEnvio": "enviado"},
+    {"id": "dd000000-0000-4000-8000-000000000005", "pacienteId": "a0000000-0000-4000-8000-000000000001", "registradoEm": {"emDias": -10, "hora": "20:20"}, "adesao": "total", "intensidade": "moderada", "sintomaPredominante": "Ansiedade", "observacao": null, "situacaoEnvio": "enviado"},
+    {"id": "dd000000-0000-4000-8000-000000000006", "pacienteId": "a0000000-0000-4000-8000-000000000001", "registradoEm": {"emDias": -8, "hora": "20:40"}, "adesao": "total", "intensidade": "moderada", "sintomaPredominante": "Cansaço", "observacao": null, "situacaoEnvio": "enviado"},
+    {"id": "dd000000-0000-4000-8000-000000000007", "pacienteId": "a0000000-0000-4000-8000-000000000001", "registradoEm": {"emDias": -7, "hora": "21:05"}, "adesao": "total", "intensidade": "leve", "sintomaPredominante": "Cansaço", "observacao": null, "situacaoEnvio": "enviado"},
+    {"id": "dd000000-0000-4000-8000-000000000008", "pacienteId": "a0000000-0000-4000-8000-000000000001", "registradoEm": {"emDias": -6, "hora": "20:30"}, "adesao": "parcial", "intensidade": "moderada", "sintomaPredominante": "Ansiedade", "observacao": null, "situacaoEnvio": "enviado"},
+    {"id": "dd000000-0000-4000-8000-000000000009", "pacienteId": "a0000000-0000-4000-8000-000000000001", "registradoEm": {"emDias": -5, "hora": "20:50"}, "adesao": "total", "intensidade": "leve", "sintomaPredominante": "Sono ruim", "observacao": null, "situacaoEnvio": "enviado"},
+    {"id": "dd000000-0000-4000-8000-000000000010", "pacienteId": "a0000000-0000-4000-8000-000000000001", "registradoEm": {"emDias": -4, "hora": "21:00"}, "adesao": "total", "intensidade": "leve", "sintomaPredominante": "Cansaço", "observacao": "Fui à escola e me senti melhor.", "situacaoEnvio": "enviado"},
+    {"id": "dd000000-0000-4000-8000-000000000011", "pacienteId": "a0000000-0000-4000-8000-000000000001", "registradoEm": {"emDias": -3, "hora": "20:35"}, "adesao": "total", "intensidade": "leve", "sintomaPredominante": "Ansiedade", "observacao": null, "situacaoEnvio": "enviado"},
+    {"id": "dd000000-0000-4000-8000-000000000012", "pacienteId": "a0000000-0000-4000-8000-000000000001", "registradoEm": {"emDias": -2, "hora": "20:15"}, "adesao": "total", "intensidade": "leve", "sintomaPredominante": "Cansaço", "observacao": null, "situacaoEnvio": "enviado"},
+    {"id": "dd000000-0000-4000-8000-000000000013", "pacienteId": "a0000000-0000-4000-8000-000000000001", "registradoEm": {"emDias": -1, "hora": "20:40"}, "adesao": "total", "intensidade": "leve", "sintomaPredominante": "Cansaço", "observacao": null, "situacaoEnvio": "enviado"},
+    {"id": "dd000000-0000-4000-8000-000000000014", "pacienteId": "a0000000-0000-4000-8000-000000000004", "registradoEm": {"emDias": -8, "hora": "09:30"}, "adesao": "total", "intensidade": "leve", "sintomaPredominante": "Cansaço", "observacao": null, "situacaoEnvio": "enviado"},
+    {"id": "dd000000-0000-4000-8000-000000000015", "pacienteId": "a0000000-0000-4000-8000-000000000004", "registradoEm": {"emDias": -6, "hora": "09:15"}, "adesao": "parcial", "intensidade": "moderada", "sintomaPredominante": "Tristeza", "observacao": null, "situacaoEnvio": "enviado"},
+    {"id": "dd000000-0000-4000-8000-000000000016", "pacienteId": "a0000000-0000-4000-8000-000000000004", "registradoEm": {"emDias": -4, "hora": "09:40"}, "adesao": "parcial", "intensidade": "moderada", "sintomaPredominante": "Sono ruim", "observacao": null, "situacaoEnvio": "enviado"},
+    {"id": "dd000000-0000-4000-8000-000000000017", "pacienteId": "a0000000-0000-4000-8000-000000000004", "registradoEm": {"emDias": -3, "hora": "22:10"}, "adesao": "nenhuma", "intensidade": "grave", "sintomaPredominante": "Tristeza", "observacao": null, "situacaoEnvio": "enviado"},
+    {"id": "dd000000-0000-4000-8000-000000000018", "pacienteId": "a0000000-0000-4000-8000-000000000004", "registradoEm": {"emDias": -2, "hora": "09:20"}, "adesao": "parcial", "intensidade": "moderada", "sintomaPredominante": "Tristeza", "observacao": null, "situacaoEnvio": "enviado"},
+    {"id": "dd000000-0000-4000-8000-000000000019", "pacienteId": "a0000000-0000-4000-8000-000000000004", "registradoEm": {"emDias": -1, "hora": "21:30"}, "adesao": "parcial", "intensidade": "grave", "sintomaPredominante": "Tristeza", "observacao": "Dia muito difícil.", "situacaoEnvio": "enviado"}
+  ],
+  "alertas": [
+    {"id": "aa000000-0000-4000-8000-000000000001", "registroId": "dd000000-0000-4000-8000-000000000002", "regraDisparada": "graveConsecutivo", "emitidoEm": {"emDias": -13, "hora": "21:00"}, "cienteEm": {"emDias": -12, "hora": "08:20"}}
+  ]
+}
