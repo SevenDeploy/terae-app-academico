@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 
 import 'app.dart';
+import 'dados/memoria/memoria_demonstracao.dart';
 import 'dados/repositorios/repositorios.dart';
 import 'nucleo/sessao/sessao.dart';
 import 'nucleo/tempo/relogio.dart';
@@ -16,10 +17,9 @@ Future<void> main() async {
 }
 
 /// Único ponto que conhece a implementação dos contratos (§22: trocar a
-/// fonte de dados não muda nenhuma tela). Onda 2: o agente `dados` troca este
-/// corpo pela carga de `lib/dados/memoria/` com `assets/dados/demonstracao.json`.
+/// fonte de dados não muda nenhuma tela): a memória carregada de
+/// `assets/dados/demonstracao.json`, com as datas relativas a hoje (D9).
 Future<Repositorios> _criarRepositorios(Relogio relogio) async {
-  throw UnimplementedError(
-    'Implementação em memória ainda não existe (lib/dados/memoria/, onda 2).',
-  );
+  final memoria = await MemoriaDemonstracao.carregar(relogio: relogio);
+  return memoria.repositorios;
 }
