@@ -68,6 +68,7 @@ class MemoriaDemonstracao {
 
   /// D11 — falta de conexão simulada: o diário vai para a fila (`naFila`).
   /// Só o diário depende dela; as demais operações seguem respondendo.
+  /// Religar pelo `ControleDemonstracao` também reenvia a fila.
   bool semConexao = false;
 
   /// O estado atual (troca de instância a cada [reiniciar]).

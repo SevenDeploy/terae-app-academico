@@ -46,7 +46,8 @@ MotivoRecusa.x)` com `.mensagem` simples (`falhas.dart`); nenhuma implementaçã
 - `RepositorioVisaoCuidador` (RNFM05; sem vínculo ativo → `acessoNegado`): com `{contaCuidadorId, pacienteId}`,
   `pacienteAcompanhado`, `consultas`, `receitaVigente`, `itensDaReceita(+receitaId)`, `alertas → [AvisoDeAlerta(
   emitidoEm, cienteEm)]`; e `profissional(id)`. Já devolvem as cópias reduzidas.
-- `ControleDemonstracao` (D11): `semConexao`, `definirSemConexao({semConexao})`, `reiniciarDados()`.
+- `ControleDemonstracao` (D11): `semConexao`, `definirSemConexao({semConexao})` (religar reenvia a fila antes de
+  responder; o alerta de um crítico que estava nela nasce aí), `reiniciarDados()`.
 
 **Modelos e enums** — 12 classes imutáveis em `lib/dados/modelos/` com os campos da Figura 3, `fromMap`/`toMap`
 (chave = nome do campo; enum pelo `name`; instante ISO UTC `Z`; data civil `AAAA-MM-DD`; erro = `FormatException`),

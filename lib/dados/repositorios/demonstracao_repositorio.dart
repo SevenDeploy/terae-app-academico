@@ -4,8 +4,10 @@
 abstract interface class ControleDemonstracao {
   bool get semConexao;
 
-  /// Liga ou desliga a falta de conexão simulada. Ao religar, a fila não é
-  /// reenviada sozinha: quem quiser chama `RepositorioDiario.reenviarFila`.
+  /// Liga ou desliga a falta de conexão simulada. Ao religar
+  /// (`semConexao: false`), reenvia a fila (`RepositorioDiario.reenviarFila`)
+  /// antes de responder, na ordem do aparelho; o alerta de um crítico que
+  /// estava na fila nasce nesse momento (§19).
   Future<void> definirSemConexao({required bool semConexao});
 
   /// Volta aos dados de demonstração iniciais (datas relativas a hoje, D9).
