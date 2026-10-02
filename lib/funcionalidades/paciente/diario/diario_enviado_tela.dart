@@ -75,14 +75,19 @@ class _DiarioEnviadoTelaState extends State<DiarioEnviadoTela> {
             padding: MedidasTerae.paddingTela,
             child: AcompanharEnvio(
               envio: widget.envio,
-              construtor: (context, envio, {required aguardando}) {
+              construtor: (context, envio, andamento) {
                 final naFila = envio != null && !envio.enviado;
                 final (titulo, mensagem) = switch (envio) {
                   null => (
                     'Tudo certo',
                     'Volte ao início para continuar cuidando de você.',
                   ),
-                  _ when aguardando => (
+                  _ when andamento == AndamentoDoEnvio.falhou => (
+                    'Registro não enviado',
+                    'Não conseguimos enviar seu registro agora. Tente '
+                        'registrar de novo daqui a pouco.',
+                  ),
+                  _ when andamento == AndamentoDoEnvio.aguardando => (
                     'Registro guardado',
                     'A internet está lenta. Seu registro está guardado no '
                         'aparelho e será enviado quando houver conexão.',
@@ -101,7 +106,10 @@ class _DiarioEnviadoTelaState extends State<DiarioEnviadoTela> {
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    _Selo(naFila: naFila),
+                    _Selo(
+                      naFila: naFila,
+                      falhou: andamento == AndamentoDoEnvio.falhou,
+                    ),
                     const SizedBox(height: MedidasTerae.espaco),
                     Semantics(
                       header: true,
@@ -156,9 +164,10 @@ class _DiarioEnviadoTelaState extends State<DiarioEnviadoTela> {
 }
 
 class _Selo extends StatelessWidget {
-  const _Selo({required this.naFila});
+  const _Selo({required this.naFila, required this.falhou});
 
   final bool naFila;
+  final bool falhou;
 
   @override
   Widget build(BuildContext context) {
@@ -172,7 +181,11 @@ class _Selo extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.all(20),
             child: Icon(
-              naFila ? Icons.cloud_upload_outlined : Icons.check_circle_outline,
+              falhou
+                  ? Icons.error_outline
+                  : naFila
+                  ? Icons.cloud_upload_outlined
+                  : Icons.check_circle_outline,
               size: 56,
               color: cores.texto,
             ),

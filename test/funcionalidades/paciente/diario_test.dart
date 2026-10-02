@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:terae_app/dados/enums/adesao.dart';
 import 'package:terae_app/dados/enums/intensidade.dart';
 import 'package:terae_app/dados/enums/situacao_envio.dart';
+import 'package:terae_app/funcionalidades/paciente/diario/diario_controlador.dart';
 import 'package:terae_app/nucleo/rotas/rotas.dart';
 import 'package:terae_app/nucleo/uuid.dart';
 
@@ -230,6 +231,12 @@ void main() {
       _naTela('TM05');
       expect(find.text('Envio pendente'), findsOneWidget);
       expect(falaEmAvisado, findsNothing);
+      // Falha inesperada: não promete que ficou guardado.
+      expect(find.textContaining('guardado'), findsNothing);
+      expect(
+        find.textContaining('Não conseguimos enviar seu registro'),
+        findsOneWidget,
+      );
     });
 
     testWidgets('"Ciente" leva ao Início', (tester) async {
@@ -284,6 +291,28 @@ void main() {
       app.diario.responder();
       await tester.pump();
       expect(find.text('Registro enviado!'), findsOneWidget);
+    });
+
+    testWidgets('falha depois do prazo: TM04 não promete que ficou guardado', (
+      tester,
+    ) async {
+      final app = await abrirAppDoPaciente(
+        tester,
+        em: Rotas.pacienteDiario,
+        diario: DiarioControlavel(ModoDoDiario.lento),
+      );
+      await preencherDiario(ContadorDeToques(tester));
+      await tester.ensureVisible(botaoEnviar);
+      await tester.tap(botaoEnviar);
+      await tester.pump(prazoDeResposta);
+      await tester.pump();
+      _naTela('TM04');
+
+      app.diario.falharPendente();
+      await tester.pump();
+      expect(find.text('Registro não enviado'), findsOneWidget);
+      expect(find.textContaining('guardado'), findsNothing);
+      expect(falaEmAvisado, findsNothing);
     });
 
     testWidgets('volta sozinha ao Início em 3 s', (tester) async {

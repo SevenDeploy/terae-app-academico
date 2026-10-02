@@ -84,12 +84,11 @@ class AjudaImediataTela extends StatelessWidget {
                 const SizedBox(height: MedidasTerae.espacoGrande),
                 AcompanharEnvio(
                   envio: envio,
-                  construtor: (context, envio, {required aguardando}) =>
-                      _SituacaoDoAviso(
-                        avisada: envio?.equipeAvisada ?? false,
-                        aguardando: aguardando,
-                        semEnvio: envio == null,
-                      ),
+                  construtor: (context, envio, andamento) => _SituacaoDoAviso(
+                    avisada: envio?.equipeAvisada ?? false,
+                    andamento: andamento,
+                    semEnvio: envio == null,
+                  ),
                 ),
                 const SizedBox(height: MedidasTerae.espacoGrande),
                 BotaoGrande(
@@ -112,12 +111,12 @@ class AjudaImediataTela extends StatelessWidget {
 class _SituacaoDoAviso extends StatefulWidget {
   const _SituacaoDoAviso({
     required this.avisada,
-    required this.aguardando,
+    required this.andamento,
     required this.semEnvio,
   });
 
   final bool avisada;
-  final bool aguardando;
+  final AndamentoDoEnvio andamento;
   final bool semEnvio;
 
   @override
@@ -164,14 +163,20 @@ class _SituacaoDoAvisoState extends State<_SituacaoDoAviso> {
       cores = const ParDeCores(CoresTerae.clinico700, CoresTerae.clinico50);
     } else {
       titulo = 'Envio pendente';
-      detalhe = widget.aguardando
-          ? 'Estamos enviando seu registro. Enquanto isso, se precisar, ligue '
-                'para um dos contatos acima.'
-          : widget.semEnvio
-          ? 'Se precisar, ligue agora para um dos contatos acima.'
-          : 'Sem internet agora. Seu registro está guardado e será enviado '
-                'quando houver conexão. Se precisar, ligue para um dos '
-                'contatos acima.';
+      detalhe = switch (widget.andamento) {
+        _ when widget.semEnvio =>
+          'Se precisar, ligue agora para um dos contatos acima.',
+        AndamentoDoEnvio.aguardando =>
+          'Estamos enviando seu registro. Enquanto isso, se precisar, ligue '
+              'para um dos contatos acima.',
+        AndamentoDoEnvio.falhou =>
+          'Não conseguimos enviar seu registro agora. Se precisar, ligue '
+              'para um dos contatos acima.',
+        AndamentoDoEnvio.respondido =>
+          'Sem internet agora. Seu registro está guardado e será enviado '
+              'quando houver conexão. Se precisar, ligue para um dos '
+              'contatos acima.',
+      };
       icone = Icons.schedule;
       cores = const ParDeCores(CoresTerae.aviso900, CoresTerae.aviso50);
     }

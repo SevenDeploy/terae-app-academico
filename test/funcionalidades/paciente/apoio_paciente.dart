@@ -212,6 +212,10 @@ class DiarioControlavel extends DiarioDuble {
     completer.complete(enviadoDe(registro));
   }
 
+  /// Faz o envio lento mais antigo falhar de um jeito inesperado.
+  void falharPendente() =>
+      _pendentes.removeAt(0).$2.completeError(StateError('falha tardia'));
+
   @override
   Future<ResultadoEnvio> enviar(RegistroDiario registro) async {
     enviados.add(registro);

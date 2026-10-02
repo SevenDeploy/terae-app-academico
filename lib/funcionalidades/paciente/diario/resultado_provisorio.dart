@@ -22,10 +22,23 @@ class ResultadoProvisorio extends ResultadoEnvio {
   final Future<ResultadoEnvio> definitivo;
 }
 
-/// Mostra o envio e se refaz quando um [ResultadoProvisorio] confirma.
+/// Em que pé está o envio que a TM04/TM05 mostram.
+enum AndamentoDoEnvio {
+  /// Ainda sem resposta do repositório ([ResultadoProvisorio]).
+  aguardando,
+
+  /// O repositório respondeu: enviado ou na fila (`naFila`).
+  respondido,
+
+  /// O repositório falhou de um jeito inesperado: nada garante que o
+  /// registro ficou guardado, então a tela não diz que ficou.
+  falhou,
+}
+
+/// Mostra o envio e se refaz quando um [ResultadoProvisorio] responde.
 ///
-/// [construtor] recebe o resultado atual (nulo em link direto) e se ainda
-/// espera a resposta.
+/// [construtor] recebe o resultado atual (nulo em link direto) e o
+/// [AndamentoDoEnvio].
 class AcompanharEnvio extends StatefulWidget {
   const AcompanharEnvio({
     super.key,
@@ -36,9 +49,9 @@ class AcompanharEnvio extends StatefulWidget {
   final ResultadoEnvio? envio;
   final Widget Function(
     BuildContext context,
-    ResultadoEnvio? envio, {
-    required bool aguardando,
-  })
+    ResultadoEnvio? envio,
+    AndamentoDoEnvio andamento,
+  )
   construtor;
 
   @override
@@ -47,7 +60,7 @@ class AcompanharEnvio extends StatefulWidget {
 
 class _AcompanharEnvioState extends State<AcompanharEnvio> {
   ResultadoEnvio? _atual;
-  bool _aguardando = false;
+  AndamentoDoEnvio _andamento = AndamentoDoEnvio.respondido;
 
   @override
   void initState() {
@@ -63,25 +76,28 @@ class _AcompanharEnvioState extends State<AcompanharEnvio> {
 
   void _acompanhar(ResultadoEnvio? envio) {
     _atual = envio;
-    _aguardando = envio is ResultadoProvisorio;
-    if (envio is! ResultadoProvisorio) return;
+    if (envio is! ResultadoProvisorio) {
+      _andamento = AndamentoDoEnvio.respondido;
+      return;
+    }
+    _andamento = AndamentoDoEnvio.aguardando;
     envio.definitivo.then(
       (resposta) {
         if (!mounted || !identical(widget.envio, envio)) return;
         setState(() {
           _atual = resposta;
-          _aguardando = false;
+          _andamento = AndamentoDoEnvio.respondido;
         });
       },
       onError: (Object _) {
-        // Sem resposta: continua "envio pendente", nunca "avisado".
+        // Continua sem confirmação: "envio pendente", nunca "avisado".
         if (!mounted || !identical(widget.envio, envio)) return;
-        setState(() => _aguardando = false);
+        setState(() => _andamento = AndamentoDoEnvio.falhou);
       },
     );
   }
 
   @override
   Widget build(BuildContext context) =>
-      widget.construtor(context, _atual, aguardando: _aguardando);
+      widget.construtor(context, _atual, _andamento);
 }
