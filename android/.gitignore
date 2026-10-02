@@ -12,3 +12,6 @@ GeneratedPluginRegistrant.java
 key.properties
 **/*.keystore
 **/*.jks
+
+# Daemon do compilador Kotlin (gerado pelo Gradle)
+.kotlin/
