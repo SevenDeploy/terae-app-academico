@@ -75,4 +75,5 @@ C:\src\flutter\bin\flutter.bat test
 C:\src\flutter\bin\flutter.bat build apk --debug
 ```
 
-_Decisões do projeto (D1–D11), rastreabilidade e ajustes da Atividade 3 entram ao fim da implementação._
+Estado, decisões (D1–D11 e as da revisão) e pendências: [`docs/estado.md`](docs/estado.md). Contratos internos:
+[`docs/contratos.md`](docs/contratos.md). Capturas das telas: [`docs/capturas/`](docs/capturas/).
