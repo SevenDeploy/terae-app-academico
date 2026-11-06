@@ -12,15 +12,14 @@ import '../../nucleo/widgets/botao_grande.dart';
 import '../../nucleo/widgets/cartao.dart';
 import 'cadastro_controlador.dart';
 import 'campos_cadastro.dart';
-import 'escolha_de_conta.dart';
 import 'widgets_cadastro.dart';
 import 'widgets_entrada.dart';
 
 /// TM10 — Cadastro do cuidador (RFM09, §7.4). Transforma o convite feito pelo
-/// paciente na TM07 em acesso restrito, em três passos: (1) código do convite
-/// e CPF do cuidador, que tem de ser o informado pelo paciente; (2) quadro "o
-/// que você verá / o que não verá" (RNFM05); (3) aceite do termo de acesso e
-/// "Continuar com Google".
+/// paciente na TM07 em acesso restrito, em quatro passos: (1) código do
+/// convite e CPF do cuidador, que tem de ser o informado pelo paciente; (2)
+/// quadro "o que você verá / o que não verá" (RNFM05); (3) aceite do termo de
+/// acesso; (4) "Crie seu acesso", com nome, e-mail e senha (D14).
 ///
 /// Estado em `CadastroCuidadorControlador`; depois do aceite o roteador leva à
 /// TM08 — a tela não navega.
@@ -43,6 +42,7 @@ const List<String> _nomesDosPassos = [
   'Código do convite',
   'O que você verá',
   'Termo de acesso',
+  'Seu acesso',
 ];
 
 class _CadastroCuidador extends StatefulWidget {
@@ -55,11 +55,16 @@ class _CadastroCuidador extends StatefulWidget {
 class _CadastroCuidadorState extends State<_CadastroCuidador> {
   final _codigo = TextEditingController();
   final _cpf = TextEditingController();
+  final _nome = TextEditingController();
+  final _email = TextEditingController();
+  final _senha = TextEditingController();
+  final _confirmacao = TextEditingController();
 
   @override
   void dispose() {
-    _codigo.dispose();
-    _cpf.dispose();
+    for (final c in [_codigo, _cpf, _nome, _email, _senha, _confirmacao]) {
+      c.dispose();
+    }
     super.dispose();
   }
 
@@ -69,11 +74,12 @@ class _CadastroCuidadorState extends State<_CadastroCuidador> {
   Future<void> _conferir() =>
       _controlador.conferir(codigo: _codigo.text, cpf: _cpf.text);
 
-  Future<void> _aceitar(Provedor provedor) async {
-    final controlador = _controlador;
-    final conta = await escolherConta(context, controlador, provedor);
-    if (conta != null) await controlador.aceitar(conta);
-  }
+  Future<void> _aceitar() => _controlador.aceitar(
+    nome: _nome.text,
+    email: _email.text,
+    senha: _senha.text,
+    confirmacao: _confirmacao.text,
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -83,7 +89,8 @@ class _CadastroCuidadorState extends State<_CadastroCuidador> {
     final (conteudo, acoes) = switch (c.passo) {
       1 => (_passo1(c), _acoesDoPasso1(c)),
       2 => (_passo2(nome, primeiroNome), _acoesDoPasso2(c)),
-      _ => (_passo3(c, primeiroNome), _acoesDoPasso3(c)),
+      3 => (_passo3(c, primeiroNome), _acoesDoPasso3(c)),
+      _ => (_passo4(c), _acoesDoPasso4(c)),
     };
     return MolduraDoCadastro(
       chaveDaTela: const Key('TM10'),
@@ -240,8 +247,36 @@ class _CadastroCuidadorState extends State<_CadastroCuidador> {
   }
 
   List<Widget> _acoesDoPasso3(CadastroCuidadorControlador c) => [
-    BotoesDeProvedor(
-      aoEscolher: c.podeAceitar ? (p) => unawaited(_aceitar(p)) : null,
+    BotaoGrande(
+      key: const Key('continuar'),
+      rotulo: 'Continuar',
+      aoTocar: c.podeAceitar ? c.irParaAcesso : null,
+    ),
+    BotaoGrande(
+      key: const Key('voltar-passo'),
+      rotulo: 'Voltar',
+      variante: VarianteBotao.secundario,
+      aoTocar: c.ocupado ? null : c.voltar,
+    ),
+  ];
+
+  List<Widget> _passo4(CadastroCuidadorControlador c) => [
+    FormularioDeAcesso(
+      nome: _nome,
+      email: _email,
+      senha: _senha,
+      confirmacao: _confirmacao,
+      cadastro: c,
+      aoConcluir: () => unawaited(_aceitar()),
+    ),
+  ];
+
+  List<Widget> _acoesDoPasso4(CadastroCuidadorControlador c) => [
+    BotaoGrande(
+      key: const Key('criar-acesso'),
+      rotulo: 'Criar acesso e entrar',
+      icone: Icons.login,
+      aoTocar: c.ocupado ? null : () => unawaited(_aceitar()),
     ),
     BotaoGrande(
       key: const Key('voltar-passo'),

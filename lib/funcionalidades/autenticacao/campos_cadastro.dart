@@ -6,6 +6,7 @@ library;
 
 import 'package:flutter/services.dart';
 
+import '../../dados/repositorios/autenticacao_repositorio.dart';
 import '../../dados/repositorios/falhas.dart';
 import '../../nucleo/tempo/data_civil.dart';
 import '../../nucleo/validacao/cpf.dart';
@@ -72,6 +73,25 @@ String? erroDoNascimento(String texto, DataCivil hoje) {
   }
   return null;
 }
+
+/// D14 — conferência local do e-mail; `null` quando tem a forma de um.
+String? erroDoEmail(String texto) {
+  if (texto.trim().isEmpty) return 'Digite o e-mail.';
+  return emailBemFormado(texto) ? null : MotivoRecusa.emailInvalido.mensagem;
+}
+
+/// D14 — conferência local da senha de quem entra (TM01): só não vazia.
+String? erroDaSenhaDeEntrada(String texto) =>
+    texto.isEmpty ? 'Digite a senha.' : null;
+
+/// D14 — conferência local da senha nova (TM09/TM10, passo 4).
+String? erroDaSenhaNova(String texto) => texto.length < tamanhoMinimoDaSenha
+    ? MotivoRecusa.senhaFraca.mensagem
+    : null;
+
+/// D14 — a confirmação tem de repetir a senha nova.
+String? erroDaConfirmacao(String senha, String confirmacao) =>
+    senha == confirmacao ? null : 'As duas senhas não são iguais.';
 
 /// Aplica [normalizarCodigo] enquanto a pessoa digita.
 class FormatadorCodigo extends TextInputFormatter {

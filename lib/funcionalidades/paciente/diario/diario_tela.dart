@@ -2,21 +2,22 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
-import '../../../dados/enums/adesao.dart';
-import '../../../dados/enums/intensidade.dart';
 import '../../../dados/repositorios/diario_repositorio.dart';
+import '../../../nucleo/rotas/rotas.dart';
 import '../../../nucleo/sessao/sessao.dart';
 import '../../../nucleo/tema/cores.dart';
 import '../../../nucleo/tema/tema.dart';
 import '../../../nucleo/tempo/relogio.dart';
+import '../../../nucleo/widgets/aviso_de_conexao.dart';
 import '../../../nucleo/widgets/botao_grande.dart';
-import '../../../nucleo/widgets/seletor_opcoes.dart';
 import '../componentes_paciente.dart';
+import 'campos_do_diario.dart';
 import 'diario_controlador.dart';
 
 /// TM03 — Diário. RFM03/RFM04, RNFM02. Aba 2: adesão (3 opções), intensidade
 /// (4 níveis, cor de severidade sempre com o nome), sintoma predominante
-/// escolhido entre opções, observação opcional e "Enviar".
+/// escolhido entre opções, observação opcional e "Enviar". O botão
+/// "Meus registros" no canto abre a TM13 (Atividade 4).
 ///
 /// O estado mora no [DiarioControlador], criado aqui e mantido pela pilha da
 /// aba (o preenchimento sobrevive à troca de aba). Ao enviar, navega com
@@ -65,75 +66,27 @@ class _FormularioDoDiario extends StatelessWidget {
     final textos = Theme.of(context).textTheme;
     return CorpoDaTela(
       children: [
-        const CabecalhoDaTela(
+        const AvisoDeConexao(),
+        CabecalhoDaTela(
           titulo: 'Como você está hoje?',
           subtitulo:
               'Suas respostas ajudam sua equipe a cuidar melhor de você.',
-        ),
-        const SizedBox(height: MedidasTerae.espacoGrande),
-        SeletorOpcoes<Adesao>(
-          key: const Key('seletor-adesao'),
-          rotulo: 'E os seus remédios de hoje?',
-          valor: c.adesao,
-          aoMudar: c.escolherAdesao,
-          opcoes: [
-            for (final a in Adesao.values)
-              OpcaoSeletor(
-                valor: a,
-                rotulo: a.rotulo,
-                icone: _iconeDaAdesao(a),
-                cores: CoresTerae.daAdesao(a),
-              ),
-          ],
-        ),
-        const SizedBox(height: MedidasTerae.espacoGrande),
-        SeletorOpcoes<Intensidade>(
-          key: const Key('seletor-intensidade'),
-          rotulo: 'Qual a intensidade do que você sente hoje?',
-          colunas: 2,
-          valor: c.intensidade,
-          aoMudar: c.escolherIntensidade,
-          opcoes: [
-            for (final i in Intensidade.values)
-              OpcaoSeletor(
-                valor: i,
-                rotulo: i.rotulo,
-                icone: _iconeDaIntensidade(i),
-                cores: CoresTerae.daIntensidade(i),
-              ),
-          ],
-        ),
-        if (c.intensidade?.ehCritica ?? false) ...[
-          const SizedBox(height: MedidasTerae.espacoPequeno),
-          Text(
-            'Ao enviar, vamos mostrar na hora os contatos de ajuda.',
-            style: textos.bodySmall?.copyWith(color: CoresTerae.sevCritica),
+          acao: IconButton(
+            key: const Key('abrir-registros'),
+            tooltip: 'Meus registros',
+            icon: const Icon(Icons.history),
+            onPressed: () => context.push(Rotas.pacienteRegistros),
           ),
-        ],
-        const SizedBox(height: MedidasTerae.espacoGrande),
-        SeletorOpcoes<String>(
-          key: const Key('seletor-sintoma'),
-          rotulo: 'O que mais incomoda hoje?',
-          colunas: 2,
-          valor: c.sintoma,
-          aoMudar: c.escolherSintoma,
-          opcoes: [
-            for (final s in sintomasDoDiario) OpcaoSeletor(valor: s, rotulo: s),
-          ],
         ),
         const SizedBox(height: MedidasTerae.espacoGrande),
-        TextField(
-          key: const Key('campo-observacao'),
-          controller: c.observacao,
-          minLines: 3,
-          maxLines: 6,
-          maxLength: 500,
-          textCapitalization: TextCapitalization.sentences,
-          decoration: const InputDecoration(
-            labelText: 'Quer contar mais alguma coisa? (opcional)',
-            hintText: 'Escreva com suas palavras, se quiser.',
-            alignLabelWithHint: true,
-          ),
+        CamposDoDiario(
+          adesao: c.adesao,
+          intensidade: c.intensidade,
+          sintoma: c.sintoma,
+          observacao: c.observacao,
+          aoMudarAdesao: c.escolherAdesao,
+          aoMudarIntensidade: c.escolherIntensidade,
+          aoMudarSintoma: c.escolherSintoma,
         ),
         const SizedBox(height: MedidasTerae.espaco),
         if (c.erro case final erro?) ...[
@@ -183,19 +136,6 @@ class _FormularioDoDiario extends StatelessWidget {
     );
   }
 }
-
-IconData _iconeDaAdesao(Adesao a) => switch (a) {
-  Adesao.total => Icons.check_circle_outline,
-  Adesao.parcial => Icons.remove_circle_outline,
-  Adesao.nenhuma => Icons.cancel_outlined,
-};
-
-IconData _iconeDaIntensidade(Intensidade i) => switch (i) {
-  Intensidade.leve => Icons.sentiment_satisfied,
-  Intensidade.moderada => Icons.sentiment_neutral,
-  Intensidade.grave => Icons.sentiment_dissatisfied,
-  Intensidade.critica => Icons.warning_amber,
-};
 
 /// "a", "a e b", "a, b e c".
 String _juntar(List<String> partes) {

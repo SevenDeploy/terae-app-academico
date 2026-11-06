@@ -2,7 +2,8 @@
 ///
 /// A tela mostra [MotivoRecusa.mensagem], já em linguagem simples (RNFM01).
 /// Sem conexão no envio do diário NÃO é recusa: o registro vai para a fila
-/// (`naFila`, §19).
+/// (`naFila`, §19). A correção e a exclusão do diário (D17) seguem a mesma
+/// fila.
 enum MotivoRecusa {
   codigoInexistente(
     'Não encontramos esse código. Confira as letras e os números.',
@@ -33,7 +34,33 @@ enum MotivoRecusa {
     'o responsável legal.',
   ),
   acessoNegado('Você não tem acesso a estas informações.'),
-  semConexao('Sem internet agora. Tente de novo quando a conexão voltar.');
+  semConexao('Sem internet agora. Tente de novo quando a conexão voltar.'),
+
+  /// TM01 — e-mail ou senha não conferem (D14). Não diz qual dos dois, para
+  /// não revelar quem tem conta.
+  credenciaisInvalidas(
+    'E-mail ou senha não conferem. Confira e tente de novo.',
+  ),
+
+  /// TM09/TM10 passo 4 — o e-mail já tem acesso, com outra senha.
+  emailJaCadastrado(
+    'Este e-mail já tem acesso ao Terae. Use a mesma senha dele ou outro '
+    'e-mail.',
+  ),
+  emailInvalido('Confira o e-mail: ele precisa ter @ e um domínio.'),
+
+  /// O Firebase bloqueia por um tempo depois de várias tentativas erradas.
+  muitasTentativas(
+    'Muitas tentativas seguidas. Espere alguns minutos e tente de novo.',
+  ),
+  senhaFraca('A senha precisa ter pelo menos 8 caracteres.'),
+
+  /// TM14 — D17: só no mesmo dia em que o registro foi feito.
+  edicaoEncerrada(
+    'Este registro é de outro dia e não pode mais ser mudado. Se precisar, '
+    'conte na próxima consulta.',
+  ),
+  registroInexistente('Não encontramos este registro.');
 
   const MotivoRecusa(this.mensagem);
 

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "725925300496",
+    "project_id": "terae-app-academico",
+    "storage_bucket": "terae-app-academico.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:725925300496:android:c64feaa86d76e0bfd4bd95",
+        "android_client_info": {
+          "package_name": "br.edu.unemat.terae_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAhPFn7yXXbE_ZNg6-hj-qbjl-SS8BJ4aY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

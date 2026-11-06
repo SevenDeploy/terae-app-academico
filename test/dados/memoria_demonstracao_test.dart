@@ -37,7 +37,7 @@ void main() {
     await r.autenticacao.aceitarConviteCuidador(
       codigo: codigoPaulo,
       cpf: cpfPaulo,
-      identidade: identidadeDe(m, 'Paulo Martins'),
+      acesso: identidadeDe(m, 'Paulo Martins'),
     );
     await r.autenticacao.ativarPaciente(
       codigo: codigoJoao,
@@ -46,9 +46,9 @@ void main() {
       qualidade: QualidadeConsentimento.titular,
       canalAutorizado: CanalAutorizado.email,
       versaoTermo: '1.0',
-      identidade: identidadeDe(m, 'João Pedro Assis'),
+      acesso: identidadeDe(m, 'João Pedro Assis'),
     );
-    await r.autenticacao.entrar(identidadeDe(m, 'Ana Lúcia Martins'));
+    await r.autenticacao.entrarCom(identidadeDe(m, 'Ana Lúcia Martins'));
     await r.demonstracao.definirSemConexao(semConexao: true);
     await r.diario.enviar(_registro(idJoao, Intensidade.grave));
     expect(m.estado.paraMapa(), isNot(inicial));
@@ -118,7 +118,7 @@ void main() {
     expect(find.byKey(const Key('TM00')), findsOneWidget);
 
     // A Patrícia entra pela memória e cai na seleção de perfil.
-    final vinculos = await memoria.repositorios.autenticacao.entrar(
+    final vinculos = await memoria.repositorios.autenticacao.entrarCom(
       identidadeDe(memoria, 'Patrícia Andrade Neves'),
     );
     sessao.entrar(vinculos);

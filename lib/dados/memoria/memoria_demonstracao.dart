@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:math';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 import '../../nucleo/tempo/data_civil.dart';
@@ -8,6 +9,7 @@ import '../../nucleo/tempo/relogio.dart';
 import '../../nucleo/uuid.dart';
 import '../conversao_mapa.dart';
 import '../repositorios/repositorios.dart';
+import '../sincronizacao/situacao_sincronizacao.dart';
 import 'autenticacao_memoria.dart';
 import 'cuidadores_memoria.dart';
 import 'demonstracao_memoria.dart';
@@ -66,10 +68,33 @@ class MemoriaDemonstracao {
   final Random _aleatorio;
   late EstadoMemoria _estado;
 
+  bool _semConexao = false;
+
   /// D11 — falta de conexão simulada: o diário vai para a fila (`naFila`).
   /// Só o diário depende dela; as demais operações seguem respondendo.
   /// Religar pelo `ControleDemonstracao` também reenvia a fila.
-  bool semConexao = false;
+  bool get semConexao => _semConexao;
+
+  set semConexao(bool valor) {
+    _semConexao = valor;
+    atualizarConexao();
+  }
+
+  final ValueNotifier<SituacaoSincronizacao> _conexao = ValueNotifier(
+    const SituacaoSincronizacao(),
+  );
+
+  /// Para o aviso "Sem conexão" das telas (D16): a conexão simulada e o
+  /// tamanho da fila.
+  ValueListenable<SituacaoSincronizacao> get conexao => _conexao;
+
+  /// Recalcula [conexao] depois de mexer na fila ou na conexão.
+  void atualizarConexao() {
+    _conexao.value = SituacaoSincronizacao(
+      online: !_semConexao,
+      pendentes: _estado.fila.length,
+    );
+  }
 
   /// O estado atual (troca de instância a cada [reiniciar]).
   EstadoMemoria get estado => _estado;
@@ -82,6 +107,7 @@ class MemoriaDemonstracao {
     cuidadores: CuidadoresMemoria(this),
     visaoCuidador: VisaoCuidadorMemoria(this),
     demonstracao: DemonstracaoMemoria(this),
+    conexao: conexao,
   );
 
   EstadoMemoria _carregar() =>

@@ -15,7 +15,6 @@ import '../../nucleo/widgets/botao_grande.dart';
 import '../../nucleo/widgets/seletor_opcoes.dart';
 import 'cadastro_controlador.dart';
 import 'campos_cadastro.dart';
-import 'escolha_de_conta.dart';
 import 'widgets_cadastro.dart';
 import 'widgets_entrada.dart';
 
@@ -25,7 +24,8 @@ import 'widgets_entrada.dart';
 /// usar, o próprio paciente ou o responsável legal (LGPD art. 14, § 1º) —
 /// criança (menos de 12 anos, ECA art. 2º) só pelo responsável legal;
 /// (3) termo de consentimento em linguagem simples, com versão, canal
-/// autorizado (R05) e aceite, seguido de "Continuar com Google".
+/// autorizado (R05) e aceite; (4) "Crie seu acesso", com nome, e-mail e
+/// senha (D14).
 ///
 /// Estado em `CadastroPacienteControlador`; depois da ativação o roteador leva
 /// ao Início — a tela não navega.
@@ -49,6 +49,7 @@ const List<String> _nomesDosPassos = [
   'Código da clínica',
   'Quem vai usar',
   'Termo de consentimento',
+  'Seu acesso',
 ];
 
 /// Termo de consentimento, versão [versaoTermoConsentimento]. Mudou o texto,
@@ -91,12 +92,24 @@ class _CadastroPacienteState extends State<_CadastroPaciente> {
   final _codigo = TextEditingController();
   final _cpf = TextEditingController();
   final _nascimento = TextEditingController();
+  final _nome = TextEditingController();
+  final _email = TextEditingController();
+  final _senha = TextEditingController();
+  final _confirmacao = TextEditingController();
 
   @override
   void dispose() {
-    _codigo.dispose();
-    _cpf.dispose();
-    _nascimento.dispose();
+    for (final c in [
+      _codigo,
+      _cpf,
+      _nascimento,
+      _nome,
+      _email,
+      _senha,
+      _confirmacao,
+    ]) {
+      c.dispose();
+    }
     super.dispose();
   }
 
@@ -109,10 +122,17 @@ class _CadastroPacienteState extends State<_CadastroPaciente> {
     nascimento: _nascimento.text,
   );
 
-  Future<void> _ativar(Provedor provedor) async {
-    final controlador = _controlador;
-    final conta = await escolherConta(context, controlador, provedor);
-    if (conta != null) await controlador.ativar(conta);
+  Future<void> _ativar() => _controlador.ativar(
+    nome: _nome.text,
+    email: _email.text,
+    senha: _senha.text,
+    confirmacao: _confirmacao.text,
+  );
+
+  /// Passo 3 → 4, sugerindo o nome do paciente quando é ele quem usa.
+  void _irParaAcesso(CadastroPacienteControlador c) {
+    if (_nome.text.isEmpty) _nome.text = c.nomeSugerido;
+    c.irParaAcesso();
   }
 
   @override
@@ -121,7 +141,8 @@ class _CadastroPacienteState extends State<_CadastroPaciente> {
     final (conteudo, acoes) = switch (c.passo) {
       1 => (_passo1(c), _acoesDoPasso1(c)),
       2 => (_passo2(c), _acoesDoPasso2(c)),
-      _ => (_passo3(c), _acoesDoPasso3(c)),
+      3 => (_passo3(c), _acoesDoPasso3(c)),
+      _ => (_passo4(c), _acoesDoPasso4(c)),
     };
     return MolduraDoCadastro(
       chaveDaTela: const Key('TM09'),
@@ -306,8 +327,36 @@ class _CadastroPacienteState extends State<_CadastroPaciente> {
   }
 
   List<Widget> _acoesDoPasso3(CadastroPacienteControlador c) => [
-    BotoesDeProvedor(
-      aoEscolher: c.podeAtivar ? (p) => unawaited(_ativar(p)) : null,
+    BotaoGrande(
+      key: const Key('continuar'),
+      rotulo: 'Continuar',
+      aoTocar: c.podeAtivar ? () => _irParaAcesso(c) : null,
+    ),
+    BotaoGrande(
+      key: const Key('voltar-passo'),
+      rotulo: 'Voltar',
+      variante: VarianteBotao.secundario,
+      aoTocar: c.ocupado ? null : c.voltar,
+    ),
+  ];
+
+  List<Widget> _passo4(CadastroPacienteControlador c) => [
+    FormularioDeAcesso(
+      nome: _nome,
+      email: _email,
+      senha: _senha,
+      confirmacao: _confirmacao,
+      cadastro: c,
+      aoConcluir: () => unawaited(_ativar()),
+    ),
+  ];
+
+  List<Widget> _acoesDoPasso4(CadastroPacienteControlador c) => [
+    BotaoGrande(
+      key: const Key('criar-acesso'),
+      rotulo: 'Criar acesso e entrar',
+      icone: Icons.login,
+      aoTocar: c.ocupado ? null : () => unawaited(_ativar()),
     ),
     BotaoGrande(
       key: const Key('voltar-passo'),

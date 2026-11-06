@@ -144,6 +144,40 @@ void main() {
     expect(falhas, isEmpty);
   });
 
+  test(
+    'telas não falam com SQLite, Firebase nem sincronizador (Atividade 4)',
+    () {
+      const camadas = [
+        'dados/local/',
+        'dados/remoto/',
+        'dados/persistente/',
+        'dados/sincronizacao/',
+        'package:sqflite',
+        'package:shared_preferences',
+        'package:cloud_firestore',
+        'package:firebase_',
+        'package:connectivity_plus',
+      ];
+      final falhas = _importacoesProibidas(
+        _em('funcionalidades/'),
+        (i) =>
+            camadas.any(i.startsWith) &&
+            i != 'dados/sincronizacao/situacao_sincronizacao.dart',
+      );
+      expect(falhas, isEmpty);
+    },
+  );
+
+  test('só main.dart monta a persistência real', () {
+    final falhas = _importacoesProibidas(
+      _fontes.where(
+        (f) => f.caminho != 'main.dart' && !f.caminho.startsWith('dados/'),
+      ),
+      (i) => i.startsWith('dados/persistente/'),
+    );
+    expect(falhas, isEmpty);
+  });
+
   group('rotas só por rotas.dart (§24)', () {
     test('nenhum caminho de rota escrito à mão', () {
       // Qualquer texto que comece com "/" e um nome: '/paciente', '/x'…

@@ -169,13 +169,13 @@ Future<void> abrirPoliticaDePrivacidade(BuildContext context) =>
 const List<(String, String)> _politica = [
   (
     'Projeto acadêmico',
-    'Este aplicativo é um trabalho da UNEMAT. Os dados são de demonstração '
-        'e ficam só na memória do aparelho enquanto ele está aberto.',
+    'Este aplicativo é um trabalho da UNEMAT. Os dados são fictícios, de '
+        'demonstração, e ficam num serviço de nuvem só da disciplina.',
   ),
   (
-    'Sem senha',
-    'O Terae não pede nem guarda senha. Você entra com a conta do Google ou '
-        'da Apple que já usa.',
+    'A sua senha',
+    'Você entra com e-mail e senha. A senha não fica guardada no celular: '
+        'quem confere é o serviço de login.',
   ),
   (
     'Quem vê os seus dados',

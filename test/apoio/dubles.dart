@@ -6,6 +6,7 @@
 library;
 
 import 'package:terae_app/dados/enums/canal_autorizado.dart';
+import 'package:terae_app/dados/enums/intensidade.dart';
 import 'package:terae_app/dados/enums/qualidade_consentimento.dart';
 import 'package:terae_app/dados/enums/situacao_conta.dart';
 import 'package:terae_app/dados/modelos/agendamento.dart';
@@ -32,11 +33,16 @@ Never _naoUsado() => throw UnimplementedError('dublê: método não usado');
 
 class AutenticacaoDuble implements RepositorioAutenticacao {
   @override
-  Future<List<IdentidadeProvedor>> identidadesNoAparelho(Provedor provedor) =>
-      _naoUsado();
+  Future<VinculosDaConta> entrar({
+    required String email,
+    required String senha,
+  }) => _naoUsado();
 
   @override
-  Future<VinculosDaConta> entrar(IdentidadeProvedor identidade) => _naoUsado();
+  Future<VinculosDaConta?> sessaoGuardada() => _naoUsado();
+
+  @override
+  Future<void> sair() => _naoUsado();
 
   @override
   Future<ConviteConferido> conferirCodigoPaciente({
@@ -53,7 +59,7 @@ class AutenticacaoDuble implements RepositorioAutenticacao {
     required QualidadeConsentimento qualidade,
     required CanalAutorizado canalAutorizado,
     required String versaoTermo,
-    required IdentidadeProvedor identidade,
+    required NovoAcesso acesso,
   }) => _naoUsado();
 
   @override
@@ -66,7 +72,7 @@ class AutenticacaoDuble implements RepositorioAutenticacao {
   Future<VinculosDaConta> aceitarConviteCuidador({
     required String codigo,
     required String cpf,
-    required IdentidadeProvedor identidade,
+    required NovoAcesso acesso,
   }) => _naoUsado();
 }
 
@@ -104,7 +110,23 @@ class DiarioDuble implements RepositorioDiario {
   Future<List<RegistroDiario>> registros(String pacienteId) => _naoUsado();
 
   @override
+  Future<List<RegistroDiario>> buscar(
+    String pacienteId, {
+    String texto = '',
+    Set<Intensidade> intensidades = const {},
+  }) => _naoUsado();
+
+  @override
+  Future<RegistroDiario> registro(String registroId) => _naoUsado();
+
+  @override
   Future<Alerta?> alertaDoRegistro(String registroId) => _naoUsado();
+
+  @override
+  Future<ResultadoEnvio> atualizar(RegistroDiario corrigido) => _naoUsado();
+
+  @override
+  Future<RegistroDiario> excluir(String registroId) => _naoUsado();
 }
 
 class CuidadoresDuble implements RepositorioCuidadores {
@@ -197,7 +219,7 @@ ContaUsuario contaDe(String id, String nome) => ContaUsuario(
   id: id,
   nomeExibicao: nome,
   email: '$id@exemplo.test',
-  idProvedor: 'google-$id',
+  idProvedor: 'uid-$id',
   situacao: SituacaoConta.ativa,
 );
 

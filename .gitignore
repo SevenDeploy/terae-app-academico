@@ -49,3 +49,14 @@ app.*.map.json
 
 # Diferenças de golden que falharam (flutter test grava ao lado do teste)
 test/**/failures/
+
+# Atividade 4: segredos ficam fora do git (a chave da conta de serviço mora
+# fora do projeto; a senha de demonstração do Firebase, no .env)
+.env
+.env.*
+!.env.exemplo
+ferramentas/node_modules/
+
+# Log do Firebase CLI
+firebase-debug.log
+firestore-debug.log

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:terae_app/dados/repositorios/autenticacao_repositorio.dart';
 import 'package:terae_app/dados/repositorios/falhas.dart';
 import 'package:terae_app/nucleo/rotas/rotas.dart';
 import 'package:terae_app/nucleo/sessao/sessao.dart';
@@ -8,7 +9,6 @@ import '../publico/apoio_telas.dart';
 import 'apoio_autenticacao.dart';
 
 final Finder _continuar = find.byKey(const Key('continuar'));
-final Finder _google = find.byKey(const Key('continuar-google'));
 
 Future<void> _abrir(
   WidgetTester tester,
@@ -42,10 +42,23 @@ Future<void> _passo1(
   await _tocar(tester, _continuar);
 }
 
+/// Passos 3 e 4: aceite, "Continuar" e o acesso de Regina.
 Future<void> _aceitarEContinuar(WidgetTester tester) async {
   await _tocar(tester, find.byKey(const Key('aceite-termo')));
-  await _tocar(tester, _google);
-  await _tocar(tester, find.byKey(Key('conta-${idRegina.idProvedor}')));
+  await _tocar(tester, _continuar);
+  await _criarAcesso(tester, idRegina);
+}
+
+/// Passo 4 (D14): nome, e-mail, senha e confirmação, e "Criar acesso".
+Future<void> _criarAcesso(WidgetTester tester, NovoAcesso acesso) async {
+  await tester.enterText(find.byKey(const Key('campo-nome')), acesso.nome);
+  await tester.enterText(find.byKey(const Key('campo-email')), acesso.email);
+  await tester.enterText(find.byKey(const Key('campo-senha')), acesso.senha);
+  await tester.enterText(
+    find.byKey(const Key('campo-confirmacao')),
+    acesso.senha,
+  );
+  await _tocar(tester, find.byKey(const Key('criar-acesso')));
 }
 
 bool _habilitado(WidgetTester tester, Finder botao) => tester
@@ -57,14 +70,14 @@ bool _habilitado(WidgetTester tester, Finder botao) => tester
 void _noPasso(int passo) {
   expect(find.byKey(const Key('TM10')), findsOneWidget);
   expect(
-    find.textContaining('Passo $passo de 3'),
+    find.textContaining('Passo $passo de 4'),
     findsOneWidget,
     reason: 'esperava o passo $passo',
   );
 }
 
 void main() {
-  testWidgets('avança pelos três passos e aceita com a conta escolhida', (
+  testWidgets('avança pelos quatro passos e aceita com o acesso criado', (
     tester,
   ) async {
     final sessao = SessaoEspia();
@@ -82,7 +95,7 @@ void main() {
 
     await _tocar(tester, _continuar);
     _noPasso(3);
-    expect(_habilitado(tester, _google), isFalse);
+    expect(_habilitado(tester, _continuar), isFalse);
 
     await _aceitarEContinuar(tester);
     expect(autenticacao.aceites, [idRegina]);
@@ -155,7 +168,7 @@ void main() {
     });
   });
 
-  testWidgets('limite de dois no aceite: fica no passo 3 com a mensagem', (
+  testWidgets('limite de dois no aceite: fica no passo 4 com a mensagem', (
     tester,
   ) async {
     final sessao = SessaoEspia();
@@ -167,7 +180,7 @@ void main() {
     await _passo1(tester);
     await _tocar(tester, _continuar);
     await _aceitarEContinuar(tester);
-    _noPasso(3);
+    _noPasso(4);
     expect(find.text(MotivoRecusa.limiteDeCuidadores.mensagem), findsOneWidget);
     expect(sessao.entradas, isEmpty);
   });

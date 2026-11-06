@@ -39,6 +39,10 @@ Mapa lerDemonstracao(String texto) {
   return valor;
 }
 
+/// Senha de todas as contas da demonstração (D14, D19), na memória e na
+/// semente do Firebase (`ferramentas/semear-firebase.mjs`). Dados fictícios.
+const String senhaDeDemonstracao = 'terae2026';
+
 final RegExp _formatoHora = RegExp(r'^([01]\d|2[0-3]):([0-5]\d)$');
 
 /// D9 — troca, em qualquer profundidade de [valor], cada data relativa pela
@@ -89,7 +93,6 @@ String _dataRelativa(Mapa relativa, DataCivil hoje) {
 const Set<String> _chavesConhecidas = {
   'versao',
   'descricao',
-  'identidades',
   'profissionais',
   'contas',
   'pacientes',
@@ -120,20 +123,6 @@ List<Mapa> _entradas(Mapa dados, String chave) {
   return entradas;
 }
 
-IdentidadeProvedor _identidadeDoMapa(Mapa mapa) => IdentidadeProvedor(
-  provedor: lerEnum(mapa, 'provedor', Provedor.values),
-  idProvedor: lerCampo<String>(mapa, 'idProvedor'),
-  email: lerCampo<String>(mapa, 'email'),
-  nomeExibicao: lerCampo<String>(mapa, 'nomeExibicao'),
-);
-
-Mapa _identidadeParaMapa(IdentidadeProvedor i) => {
-  'provedor': i.provedor.name,
-  'idProvedor': i.idProvedor,
-  'email': i.email,
-  'nomeExibicao': i.nomeExibicao,
-};
-
 FormatException _inconsistente(String descricao, [Object? fonte]) =>
     FormatException('Demonstração inconsistente: $descricao', fonte);
 
@@ -155,7 +144,6 @@ class EstadoMemoria {
       throw FormatException('Coleção desconhecida', desconhecidas.join(', '));
     }
     final d = resolverDatasRelativas(dados, hoje) as Mapa;
-    identidades.addAll(_entradas(d, 'identidades').map(_identidadeDoMapa));
     _carregar(
       d,
       'profissionais',
@@ -164,6 +152,9 @@ class EstadoMemoria {
       (x) => x.id,
     );
     _carregar(d, 'contas', contas, ContaUsuario.fromMap, (x) => x.id);
+    for (final c in contas.values) {
+      senhas[c.id] = senhaDeDemonstracao;
+    }
     _carregar(d, 'pacientes', pacientes, Paciente.fromMap, (x) => x.id);
     _carregar(
       d,
@@ -202,8 +193,10 @@ class EstadoMemoria {
     }
   }
 
-  /// D5 — contas do provedor "no aparelho" (folha "Escolha uma conta").
-  final List<IdentidadeProvedor> identidades = [];
+  /// D14 — senha de cada conta (id da conta → senha), como o provedor de
+  /// autenticação guardaria. Só existe no "servidor simulado"; o aparelho
+  /// nunca grava senha (RNFM04).
+  final Map<String, String> senhas = {};
   final Map<String, ProfissionalSaude> profissionais = {};
   final Map<String, ContaUsuario> contas = {};
   final Map<String, Paciente> pacientes = {};
@@ -215,10 +208,12 @@ class EstadoMemoria {
   final Map<String, ItemMedicacao> itensMedicacao = {};
   final Map<String, MarcoJornada> marcos = {};
 
-  /// Registros que o servidor recebeu (`enviado`). Nunca editados (§23).
+  /// Registros que o servidor recebeu (`enviado`), na última versão
+  /// confirmada (D17: corrigido ou excluído no mesmo dia).
   final Map<String, RegistroDiario> registros = {};
 
-  /// Fila de envio do aparelho (`naFila`), na ordem em que entrou.
+  /// Fila de envio do aparelho (`naFila`), na ordem em que entrou: registros
+  /// novos e correções ou exclusões ainda não confirmadas (D17).
   final Map<String, RegistroDiario> fila = {};
   final Map<String, Alerta> alertas = {};
 
@@ -406,9 +401,11 @@ class EstadoMemoria {
       pacientes[pacienteId] ??
       (throw const RecusaDeRegra(MotivoRecusa.acessoNegado));
 
-  ContaUsuario? contaDoProvedor(String idProvedor) {
+  /// A conta do [email] (comparado sem espaços e minúsculo), se houver.
+  ContaUsuario? contaDoEmail(String email) {
+    final procurado = normalizarEmail(email);
     for (final c in contas.values) {
-      if (c.idProvedor == idProvedor) return c;
+      if (normalizarEmail(c.email) == procurado) return c;
     }
     return null;
   }
@@ -511,11 +508,12 @@ class EstadoMemoria {
   );
 
   /// §7.1 — registro do mesmo paciente que o servidor recebeu imediatamente
-  /// antes de [registro] (pelo `registradoEm`).
+  /// antes de [registro] (pelo `registradoEm`). Excluído não conta (D17).
   RegistroDiario? registroAnterior(RegistroDiario registro) {
     RegistroDiario? anterior;
     for (final r in registros.values) {
       if (r.pacienteId != registro.pacienteId || r.id == registro.id) continue;
+      if (r.excluido) continue;
       if (!r.registradoEm.isBefore(registro.registradoEm)) continue;
       if (anterior == null || r.registradoEm.isAfter(anterior.registradoEm)) {
         anterior = r;
@@ -547,7 +545,7 @@ class EstadoMemoria {
   /// Retrato de tudo, no formato dos mapas — para comparar estados em teste
   /// (ex.: `reiniciarDados` volta ao inicial).
   Mapa paraMapa() => {
-    'identidades': [for (final i in identidades) _identidadeParaMapa(i)],
+    'senhas': {...senhas},
     'profissionais': [for (final x in profissionais.values) x.toMap()],
     'contas': [for (final x in contas.values) x.toMap()],
     'pacientes': [for (final x in pacientes.values) x.toMap()],

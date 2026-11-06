@@ -1,6 +1,5 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:terae_app/dados/repositorios/autenticacao_repositorio.dart';
 import 'package:terae_app/dados/repositorios/falhas.dart';
 import 'package:terae_app/nucleo/rotas/rotas.dart';
 import 'package:terae_app/nucleo/sessao/sessao.dart';
@@ -9,8 +8,9 @@ import '../../apoio/dubles.dart';
 import '../publico/apoio_telas.dart';
 import 'apoio_autenticacao.dart';
 
-final Finder _google = find.byKey(const Key('continuar-google'));
-final Finder _apple = find.byKey(const Key('continuar-apple'));
+final Finder _email = find.byKey(const Key('campo-email'));
+final Finder _senha = find.byKey(const Key('campo-senha'));
+final Finder _botaoEntrar = find.byKey(const Key('entrar'));
 
 Future<void> _abrirEntrar(
   WidgetTester tester, {
@@ -23,47 +23,40 @@ Future<void> _abrirEntrar(
   await tester.pumpAndSettle();
 }
 
-Future<void> _escolherConta(WidgetTester tester, IdentidadeProvedor id) async {
-  await tester.tap(_google);
-  await tester.pumpAndSettle();
-  expect(find.text('Escolha uma conta'), findsOneWidget);
-  await tester.tap(find.byKey(Key('conta-${id.idProvedor}')));
+/// Preenche e-mail e senha e toca em "Entrar".
+Future<void> _entrarCom(WidgetTester tester, String email, String senha) async {
+  await tester.enterText(_email, email);
+  await tester.enterText(_senha, senha);
+  await tester.ensureVisible(_botaoEntrar);
+  await tester.tap(_botaoEntrar);
   await tester.pumpAndSettle();
 }
 
 void main() {
   group('/entrar', () {
-    testWidgets('Google abre "Escolha uma conta" e entra com a escolhida', (
-      tester,
-    ) async {
+    testWidgets('e-mail e senha entram com a conta (D14)', (tester) async {
       final sessao = SessaoEspia();
       final autenticacao = AutenticacaoFake();
       await _abrirEntrar(tester, sessao: sessao, autenticacao: autenticacao);
       expect(find.byKey(const Key('TM01')), findsOneWidget);
-      expect(find.textContaining('não guarda senha'), findsOneWidget);
+      expect(find.textContaining('não fica guardada'), findsOneWidget);
 
-      await tester.tap(_google);
-      await tester.pumpAndSettle();
-      expect(autenticacao.pedidosDeContas, [Provedor.google]);
-      expect(find.text('Regina'), findsOneWidget);
-      expect(find.text('c-regina@exemplo.test'), findsOneWidget);
-
-      await tester.tap(find.byKey(Key('conta-${idRegina.idProvedor}')));
-      await tester.pumpAndSettle();
-      expect(autenticacao.entradas, [idRegina]);
+      await _entrarCom(tester, ' ${idRegina.email} ', idRegina.senha);
+      expect(autenticacao.entradas, [idRegina.email], reason: 'sem espaços');
       expect(sessao.entradas, hasLength(1));
       expect(sessao.entradas.single.conta.id, 'c-regina');
-      expect(find.text('Escolha uma conta'), findsNothing);
     });
 
-    testWidgets('fechar a folha não entra', (tester) async {
+    testWidgets('campo vazio ou e-mail mal formado: erro no campo, sem '
+        'chamar o repositório', (tester) async {
       final sessao = SessaoEspia();
       final autenticacao = AutenticacaoFake();
       await _abrirEntrar(tester, sessao: sessao, autenticacao: autenticacao);
-      await tester.tap(_google);
-      await tester.pumpAndSettle();
-      await tester.tap(find.byTooltip('Fechar'));
-      await tester.pumpAndSettle();
+      await _entrarCom(tester, '', '');
+      expect(find.text('Digite o e-mail.'), findsOneWidget);
+      expect(find.text('Digite a senha.'), findsOneWidget);
+      await _entrarCom(tester, 'regina.sem.arroba', idRegina.senha);
+      expect(find.text(MotivoRecusa.emailInvalido.mensagem), findsOneWidget);
       expect(autenticacao.entradas, isEmpty);
       expect(sessao.entradas, isEmpty);
     });
@@ -76,8 +69,25 @@ void main() {
         sessao: Sessao(),
         autenticacao: AutenticacaoFake(),
       );
-      await _escolherConta(tester, idRegina);
+      await _entrarCom(tester, idRegina.email, idRegina.senha);
       expect(find.byKey(const Key('TM08')), findsOneWidget);
+    });
+
+    testWidgets('senha errada mostra a recusa e não abre sessão', (
+      tester,
+    ) async {
+      final sessao = SessaoEspia();
+      await _abrirEntrar(
+        tester,
+        sessao: sessao,
+        autenticacao: AutenticacaoFake(),
+      );
+      await _entrarCom(tester, idRegina.email, '${idRegina.senha}-errada');
+      expect(
+        find.text(MotivoRecusa.credenciaisInvalidas.mensagem),
+        findsOneWidget,
+      );
+      expect(sessao.entradas, isEmpty);
     });
 
     testWidgets('conta sem acesso mostra a recusa e não abre sessão', (
@@ -88,46 +98,27 @@ void main() {
         tester,
         sessao: sessao,
         autenticacao: AutenticacaoFake(
-          recusaNaEntrada: {idNova.idProvedor: MotivoRecusa.contaSemAcesso},
+          recusaNaEntrada: {idNova.email: MotivoRecusa.contaSemAcesso},
         ),
       );
-      await _escolherConta(tester, idNova);
+      await _entrarCom(tester, idNova.email, idNova.senha);
       expect(find.text(MotivoRecusa.contaSemAcesso.mensagem), findsOneWidget);
       expect(sessao.entradas, isEmpty);
     });
 
-    testWidgets('fora do iOS, só Google', (tester) async {
-      await _abrirEntrar(tester, sessao: Sessao());
-      expect(_google, findsOneWidget);
-      expect(_apple, findsNothing);
-    });
-
-    testWidgets('no iOS, também "Continuar com Apple" (diretriz 4.8)', (
+    testWidgets('a senha fica oculta e "Mostrar senha" a revela', (
       tester,
     ) async {
-      debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
-      try {
-        final autenticacao = AutenticacaoFake(
-          contas: [
-            identidadeDe('c-ana', 'Ana Lúcia', provedor: Provedor.apple),
-          ],
-        );
-        await _abrirEntrar(
-          tester,
-          sessao: SessaoEspia(),
-          autenticacao: autenticacao,
-        );
-        expect(_google, findsOneWidget);
-        expect(_apple, findsOneWidget);
-        expect(find.text('Continuar com Apple'), findsOneWidget);
-
-        await tester.tap(_apple);
-        await tester.pumpAndSettle();
-        expect(autenticacao.pedidosDeContas, [Provedor.apple]);
-        expect(find.text('Ana Lúcia'), findsOneWidget);
-      } finally {
-        debugDefaultTargetPlatformOverride = null;
-      }
+      await _abrirEntrar(tester, sessao: Sessao());
+      await tester.enterText(_senha, idAna.senha);
+      await tester.pump();
+      TextField campo() => tester.widget<TextField>(
+        find.descendant(of: _senha, matching: find.byType(TextField)),
+      );
+      expect(campo().obscureText, isTrue);
+      await tester.tap(find.byTooltip('Mostrar senha'));
+      await tester.pump();
+      expect(campo().obscureText, isFalse);
     });
 
     testWidgets('o atalho do primeiro acesso leva à TM09', (tester) async {
@@ -140,7 +131,7 @@ void main() {
       expect(find.byKey(const Key('TM09')), findsOneWidget);
     });
 
-    testWidgets('sem estouro com fonte 2× em 360×800, com a folha aberta', (
+    testWidgets('sem estouro com fonte 2× em 360×800, com a recusa', (
       tester,
     ) async {
       telaPequena(tester);
@@ -148,19 +139,11 @@ void main() {
         tester,
         sessao: SessaoEspia(),
         autenticacao: AutenticacaoFake(
-          recusaNaEntrada: {idNova.idProvedor: MotivoRecusa.contaSemAcesso},
+          recusaNaEntrada: {idNova.email: MotivoRecusa.contaSemAcesso},
         ),
       );
       semEstouro(tester);
-      await tester.ensureVisible(_google);
-      await tester.tap(_google);
-      await tester.pumpAndSettle();
-      semEstouro(tester);
-      final conta = find.byKey(Key('conta-${idNova.idProvedor}'));
-      await tester.ensureVisible(conta);
-      await tester.pumpAndSettle();
-      await tester.tap(conta);
-      await tester.pumpAndSettle();
+      await _entrarCom(tester, idNova.email, idNova.senha);
       expect(find.byKey(const Key('aviso-recusa')), findsOneWidget);
       semEstouro(tester);
     });
@@ -172,9 +155,6 @@ void main() {
         sessao: SessaoEspia(),
         autenticacao: AutenticacaoFake(),
       );
-      await conferirAlvosDeToque(tester);
-      await tester.tap(_google);
-      await tester.pumpAndSettle();
       await conferirAlvosDeToque(tester);
       semantica.dispose();
     });
@@ -197,7 +177,7 @@ void main() {
       expect(find.text('Miguel Andrade Neves'), findsOneWidget);
       expect(find.text('Cuidador'), findsOneWidget);
       expect(find.text('Ana Lúcia Martins'), findsOneWidget);
-      expect(_google, findsNothing);
+      expect(_botaoEntrar, findsNothing);
     });
 
     testWidgets('tocar num perfil chama escolherPerfil com ele', (

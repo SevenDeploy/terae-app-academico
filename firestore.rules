@@ -1,0 +1,197 @@
+rules_version = '2';
+
+// Regras do Cloud Firestore do projeto ACADÊMICO terae-app-academico
+// (Dispositivos Móveis, UNEMAT 2026; Atividade 4, D12). Não é o Terae produção.
+//
+// Sem Cloud Functions (plano Spark), o servidor que a Atividade 3 previa é
+// substituído por estas regras: elas conferem quem lê e grava cada documento
+// e garantem, no próprio servidor, o que o aparelho não pode decidir sozinho
+// (D18): o código de convite é de uso único, o paciente só se liga à conta
+// que usou o código no mesmo lote, no máximo dois cuidadores ativos (§7.4),
+// o cuidador lê só as cópias reduzidas (RNFM05), alerta só nasce de registro
+// grave ou crítico e nada é apagado (§23).
+//
+// Publicar: firebase deploy --only firestore:rules
+
+service cloud.firestore {
+  match /databases/{db}/documents {
+
+    function logado() {
+      return request.auth != null;
+    }
+
+    function uid() {
+      return request.auth.uid;
+    }
+
+    function paciente(pid) {
+      return get(/databases/$(db)/documents/pacientes/$(pid)).data;
+    }
+
+    function pacienteDepois(pid) {
+      return getAfter(/databases/$(db)/documents/pacientes/$(pid)).data;
+    }
+
+    function ehTitular(pid) {
+      return logado() && paciente(pid).contaId == uid();
+    }
+
+    function ehCuidador(pid) {
+      return logado() && uid() in paciente(pid).cuidadoresAtivos;
+    }
+
+    function soMudam(campos) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(campos);
+    }
+
+    // O convite [codigo] do paciente [pid] e do [tipo] estava em aberto e
+    // passa a usado neste mesmo lote.
+    function conviteUsadoNoLote(codigo, pid, tipo) {
+      let antes = get(/databases/$(db)/documents/convites/$(codigo)).data;
+      let depois = getAfter(/databases/$(db)/documents/convites/$(codigo)).data;
+      return antes.pacienteId == pid && antes.tipo == tipo
+        && antes.usadoEm == null && depois.usadoEm != null
+        && !antes.get('revogado', false);
+    }
+
+    // ------------------------------------------------------------- contas
+    match /contas/{conta} {
+      allow read: if logado() && uid() == conta;
+      allow create: if logado() && uid() == conta
+        && request.resource.data.id == conta
+        && request.resource.data.situacao == 'ativa';
+      // A própria pessoa atualiza nome, último acesso; a situação é da clínica.
+      allow update: if logado() && uid() == conta
+        && soMudam(['nomeExibicao', 'ultimoAcessoEm', 'email']);
+      allow delete: if false;
+    }
+
+    match /profissionais/{id} {
+      allow read: if logado();
+    }
+
+    // ----------------------------------------------------------- convites
+    // O primeiro acesso confere o código antes de haver conta: o documento
+    // não tem CPF nem nascimento, só o hash (cpfHash, nascimentoHash).
+    match /convites/{codigo} {
+      allow get: if true;
+      allow list: if false;
+      allow create: if logado()
+        && request.resource.data.tipo == 'cuidador'
+        && request.resource.data.codigo == codigo
+        && request.resource.data.usadoEm == null
+        && ehTitular(request.resource.data.pacienteId);
+      allow update: if logado() && (
+        (resource.data.usadoEm == null && soMudam(['usadoEm']))
+        || (ehTitular(resource.data.pacienteId) && soMudam(['revogado']))
+      );
+      allow delete: if false;
+    }
+
+    // ---------------------------------------------------------- pacientes
+    match /pacientes/{pid} {
+      allow get: if ehTitular(pid) || ehCuidador(pid);
+      allow list: if logado()
+        && (resource.data.contaId == uid() || uid() in resource.data.cuidadoresAtivos);
+
+      // Ativação (TM09): liga a conta pelo código usado no mesmo lote.
+      // Cuidador (TM10): entra em cuidadoresAtivos pelo convite usado, no
+      // máximo dois (§7.4). Revogar (TM07): o titular tira da lista.
+      allow update: if logado() && (
+        (resource.data.contaId == null
+          && request.resource.data.contaId == uid()
+          && soMudam(['contaId', 'ativadoPorConvite'])
+          && conviteUsadoNoLote(request.resource.data.ativadoPorConvite, pid, 'paciente'))
+        || (soMudam(['cuidadoresAtivos', 'ativadoPorConvite'])
+          && request.resource.data.cuidadoresAtivos.size() <= 2
+          && (ehTitular(pid)
+            || (request.resource.data.cuidadoresAtivos.toSet()
+                  .difference(resource.data.cuidadoresAtivos.toSet()) == [uid()].toSet()
+                && conviteUsadoNoLote(request.resource.data.ativadoPorConvite, pid, 'cuidador'))))
+      );
+      allow create, delete: if false;
+
+      // CPF e nascimento: só o titular.
+      match /privado/{documento} {
+        allow read: if ehTitular(pid);
+      }
+
+      // Item principal (D13, D17): o titular cria e corrige; nunca apaga.
+      match /registros/{rid} {
+        allow read: if ehTitular(pid);
+        allow create, update: if ehTitular(pid)
+          && request.resource.data.id == rid
+          && request.resource.data.pacienteId == pid
+          && request.resource.data.situacaoEnvio == 'enviado';
+        allow delete: if false;
+      }
+
+      // D18: alerta só de registro grave ou crítico confirmado no mesmo lote.
+      match /alertas/{aid} {
+        allow read: if ehTitular(pid);
+        allow create, update: if ehTitular(pid)
+          && getAfter(/databases/$(db)/documents/pacientes/$(pid)/registros/$(request.resource.data.registroId))
+               .data.intensidade in ['grave', 'critica'];
+        allow delete: if false;
+      }
+
+      // O que o cuidador sabe do alerta: só data e ciência (RNFM05).
+      match /avisosCuidador/{aid} {
+        allow read: if ehTitular(pid) || ehCuidador(pid);
+        allow create, update: if ehTitular(pid)
+          && existsAfter(/databases/$(db)/documents/pacientes/$(pid)/alertas/$(aid))
+          && request.resource.data.keys().hasOnly(['id', 'emitidoEm', 'cienteEm']);
+        allow delete: if false;
+      }
+
+      // Convites completos (com o CPF) que o titular gerou na TM07.
+      match /convites/{cid} {
+        allow read: if ehTitular(pid);
+        allow create: if ehTitular(pid) && request.resource.data.pacienteId == pid;
+        allow update, delete: if false;
+      }
+
+      // Cópias completas: só o titular lê; quem grava é a clínica (semente).
+      match /{colecao}/{id} {
+        allow read: if ehTitular(pid)
+          && colecao in ['agendamentos', 'receitas', 'itensMedicacao', 'marcos'];
+      }
+
+      // Cópias reduzidas do cuidador (sem motivo do retorno, orientação nem
+      // prescritor).
+      match /{colecao}/{id} {
+        allow read: if (ehTitular(pid) || ehCuidador(pid))
+          && colecao in ['agendaCuidador', 'receitaCuidador', 'itensCuidador'];
+      }
+    }
+
+    // ----------------------------------------------------------- vínculos
+    match /vinculos/{vid} {
+      allow read: if ehTitular(resource.data.pacienteId);
+      allow create: if ehTitular(request.resource.data.pacienteId)
+        && request.resource.data.situacao == 'pendente'
+        && request.resource.data.contaCuidadorId == null;
+      allow update: if
+        // Revogar (TM07).
+        (ehTitular(resource.data.pacienteId)
+          && request.resource.data.situacao == 'revogado'
+          && soMudam(['situacao', 'revogadoEm']))
+        // Aceitar (TM10): o uid entra em cuidadoresAtivos no mesmo lote.
+        || (logado() && resource.data.situacao == 'pendente'
+          && request.resource.data.situacao == 'ativo'
+          && request.resource.data.contaCuidadorId == uid()
+          && soMudam(['situacao', 'contaCuidadorId', 'autorizadoEm'])
+          && uid() in pacienteDepois(resource.data.pacienteId).cuidadoresAtivos);
+      allow delete: if false;
+    }
+
+    // ----------------------------------------------------- consentimentos
+    match /consentimentos/{id} {
+      allow read: if logado() && resource.data.contaId == uid();
+      allow create: if logado()
+        && request.resource.data.contaId == uid()
+        && pacienteDepois(request.resource.data.pacienteId).contaId == uid();
+      allow update, delete: if false;
+    }
+  }
+}

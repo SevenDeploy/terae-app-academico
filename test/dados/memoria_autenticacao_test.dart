@@ -18,7 +18,7 @@ Future<VinculosDaConta> _ativarJoao(
   MemoriaDemonstracao m, {
   String codigo = codigoJoao,
   String versaoTermo = '1.0',
-  IdentidadeProvedor? identidade,
+  NovoAcesso? identidade,
 }) => m.repositorios.autenticacao.ativarPaciente(
   codigo: codigo,
   cpf: formatarCpf(cpfJoao),
@@ -26,7 +26,7 @@ Future<VinculosDaConta> _ativarJoao(
   qualidade: QualidadeConsentimento.titular,
   canalAutorizado: CanalAutorizado.aplicativo,
   versaoTermo: versaoTermo,
-  identidade: identidade ?? identidadeDe(m, 'João Pedro Assis'),
+  acesso: identidade ?? identidadeDe(m, 'João Pedro Assis'),
 );
 
 /// Acrescenta ao cenário um código da clínica (tipo paciente) ainda não usado.
@@ -50,27 +50,39 @@ String _novoCodigoDaClinica(
 
 void main() {
   group('entrar (RFM01, TM01)', () {
-    test('identidades no aparelho por provedor (D5)', () async {
+    test(
+      'e-mail sem conta ou senha errada: credenciaisInvalidas (D14)',
+      () async {
+        final m = memoriaDeTeste();
+        final auth = m.repositorios.autenticacao;
+        final ana = identidadeDe(m, 'Ana Lúcia Martins');
+        await recusaSemGravar(
+          m,
+          () => auth.entrar(email: ana.email, senha: '${ana.senha}-errada'),
+          MotivoRecusa.credenciaisInvalidas,
+        );
+        await recusaSemGravar(
+          m,
+          () => auth.entrarCom(identidadeNova),
+          MotivoRecusa.credenciaisInvalidas,
+        );
+        // E-mail com maiúscula e espaço entra igual.
+        final v = await auth.entrar(
+          email: '  ${ana.email.toUpperCase()} ',
+          senha: ana.senha,
+        );
+        expect(v.conta.id, contaAna);
+      },
+    );
+
+    test('a memória não guarda sessão entre aberturas', () async {
       final m = memoriaDeTeste();
-      final google = await m.repositorios.autenticacao.identidadesNoAparelho(
-        Provedor.google,
-      );
-      expect(google.map((i) => i.nomeExibicao), [
-        'Ana Lúcia Martins',
-        'Patrícia Andrade Neves',
-        'Regina Martins',
-        'João Pedro Assis',
-        'Paulo Martins',
-      ]);
-      expect(
-        await m.repositorios.autenticacao.identidadesNoAparelho(Provedor.apple),
-        isEmpty,
-      );
+      expect(await m.repositorios.autenticacao.sessaoGuardada(), isNull);
     });
 
     test('Ana: um perfil paciente/família, cópia completa', () async {
       final m = memoriaDeTeste();
-      final v = await m.repositorios.autenticacao.entrar(
+      final v = await m.repositorios.autenticacao.entrarCom(
         identidadeDe(m, 'Ana Lúcia Martins'),
       );
       expect(v.conta.id, contaAna);
@@ -85,7 +97,7 @@ void main() {
       'Patrícia: dois perfis (Miguel e Laura) → seleção de perfil',
       () async {
         final m = memoriaDeTeste();
-        final v = await m.repositorios.autenticacao.entrar(
+        final v = await m.repositorios.autenticacao.entrarCom(
           identidadeDe(m, 'Patrícia Andrade Neves'),
         );
         expect(v.pacientes.map((p) => p.id), [idMiguel, idLaura]);
@@ -97,7 +109,7 @@ void main() {
 
     test('Regina: perfil cuidador com a cópia sem CPF e nascimento', () async {
       final m = memoriaDeTeste();
-      final v = await m.repositorios.autenticacao.entrar(
+      final v = await m.repositorios.autenticacao.entrarCom(
         identidadeDe(m, 'Regina Martins'),
       );
       expect(v.pacientes, isEmpty);
@@ -110,26 +122,24 @@ void main() {
       expect(sessao.perfilAtivo!.papel, Papel.cuidador);
     });
 
-    test('sem conta ou sem vínculo ativo: contaSemAcesso', () async {
-      final m = memoriaDeTeste();
-      final auth = m.repositorios.autenticacao;
-      await recusaSemGravar(
-        m,
-        () => auth.entrar(identidadeDe(m, 'João Pedro Assis')),
-        MotivoRecusa.contaSemAcesso,
-      );
-      await recusaSemGravar(
-        m,
-        () => auth.entrar(identidadeNova),
-        MotivoRecusa.contaSemAcesso,
-      );
-      await m.repositorios.cuidadores.revogar(vinculoRegina);
-      await recusaSemGravar(
-        m,
-        () => auth.entrar(identidadeDe(m, 'Regina Martins')),
-        MotivoRecusa.contaSemAcesso,
-      );
-    });
+    test(
+      'sem conta: credenciaisInvalidas; sem vínculo ativo: contaSemAcesso',
+      () async {
+        final m = memoriaDeTeste();
+        final auth = m.repositorios.autenticacao;
+        await recusaSemGravar(
+          m,
+          () => auth.entrarCom(identidadeDe(m, 'João Pedro Assis')),
+          MotivoRecusa.credenciaisInvalidas,
+        );
+        await m.repositorios.cuidadores.revogar(vinculoRegina);
+        await recusaSemGravar(
+          m,
+          () => auth.entrarCom(identidadeDe(m, 'Regina Martins')),
+          MotivoRecusa.contaSemAcesso,
+        );
+      },
+    );
 
     test('paciente inativo não dá perfil', () async {
       final dados = dadosDaDemonstracao();
@@ -137,7 +147,7 @@ void main() {
       final m = memoriaDeTeste(dados: dados);
       await recusaSemGravar(
         m,
-        () => m.repositorios.autenticacao.entrar(
+        () => m.repositorios.autenticacao.entrarCom(
           identidadeDe(m, 'Ana Lúcia Martins'),
         ),
         MotivoRecusa.contaSemAcesso,
@@ -150,7 +160,7 @@ void main() {
       final m = memoriaDeTeste(dados: dados);
       await recusaSemGravar(
         m,
-        () => m.repositorios.autenticacao.entrar(
+        () => m.repositorios.autenticacao.entrarCom(
           identidadeDe(m, 'Regina Martins'),
         ),
         MotivoRecusa.contaInativa,
@@ -245,9 +255,10 @@ void main() {
       final v = await _ativarJoao(m, versaoTermo: '1.0');
 
       final conta = v.conta;
-      expect(conta.idProvedor, identidade.idProvedor);
+      expect(conta.idProvedor, conta.id, reason: 'uid do provedor');
       expect(conta.email, identidade.email);
-      expect(conta.nomeExibicao, identidade.nomeExibicao);
+      expect(conta.nomeExibicao, identidade.nome);
+      expect(m.estado.senhas[conta.id], identidade.senha);
       expect(conta.situacao, SituacaoConta.ativa);
       expect(conta.ultimoAcessoEm, agoraDaMemoria);
       expect(uuidV4Valido(conta.id), isTrue);
@@ -275,7 +286,7 @@ void main() {
         MotivoRecusa.codigoJaUsado,
       );
       // E a conta agora entra pelo TM01.
-      final entrou = await m.repositorios.autenticacao.entrar(identidade);
+      final entrou = await m.repositorios.autenticacao.entrarCom(identidade);
       expect(entrou.pacientes.single.id, idJoao);
     });
 
@@ -296,7 +307,7 @@ void main() {
         qualidade: QualidadeConsentimento.responsavelLegal,
         canalAutorizado: CanalAutorizado.impresso,
         versaoTermo: '1.1',
-        identidade: identidadeDe(m, 'Patrícia Andrade Neves'),
+        acesso: identidadeDe(m, 'Patrícia Andrade Neves'),
       );
       final ultimo = m.estado.consentimentos.values.last;
       expect(ultimo.qualidade, QualidadeConsentimento.responsavelLegal);
@@ -304,7 +315,7 @@ void main() {
       expect(ultimo.contaId, contaPatricia);
     });
 
-    test('reaproveita a conta do mesmo idProvedor', () async {
+    test('reaproveita a conta do mesmo e-mail com a mesma senha', () async {
       final dados = dadosDaDemonstracao();
       _novoCodigoDaClinica(
         dados,
@@ -346,7 +357,7 @@ void main() {
         qualidade: QualidadeConsentimento.titular,
         canalAutorizado: CanalAutorizado.email,
         versaoTermo: '2.0',
-        identidade: identidadeDe(m, 'Ana Lúcia Martins'),
+        acesso: identidadeDe(m, 'Ana Lúcia Martins'),
       );
       final daAna = m.estado.consentimentos.values
           .where((c) => c.pacienteId == idAna)
@@ -388,7 +399,53 @@ void main() {
       },
     );
 
-    test('conta inativa do mesmo provedor não ativa', () async {
+    test('e-mail já usado com outra senha: emailJaCadastrado (D14)', () async {
+      final m = memoriaDeTeste();
+      final regina = identidadeDe(m, 'Regina Martins');
+      await recusaSemGravar(
+        m,
+        () => _ativarJoao(
+          m,
+          identidade: NovoAcesso(
+            nome: 'João',
+            email: regina.email,
+            senha: '${regina.senha}-outra',
+          ),
+        ),
+        MotivoRecusa.emailJaCadastrado,
+      );
+    });
+
+    test('e-mail mal formado e senha curta recusam sem gravar (D14)', () async {
+      final m = memoriaDeTeste();
+      final joao = identidadeDe(m, 'João Pedro Assis');
+      await recusaSemGravar(
+        m,
+        () => _ativarJoao(
+          m,
+          identidade: NovoAcesso(
+            nome: joao.nome,
+            email: 'joao.sem.arroba',
+            senha: joao.senha,
+          ),
+        ),
+        MotivoRecusa.emailInvalido,
+      );
+      await recusaSemGravar(
+        m,
+        () => _ativarJoao(
+          m,
+          identidade: NovoAcesso(
+            nome: joao.nome,
+            email: joao.email,
+            senha: joao.senha.substring(0, tamanhoMinimoDaSenha - 1),
+          ),
+        ),
+        MotivoRecusa.senhaFraca,
+      );
+    });
+
+    test('conta inativa do mesmo e-mail não ativa', () async {
       final dados = dadosDaDemonstracao();
       itemDe(dados, 'contas', contaRegina)['situacao'] = 'inativa';
       final m = memoriaDeTeste(dados: dados);
@@ -421,7 +478,7 @@ void main() {
           qualidade: qualidade,
           canalAutorizado: CanalAutorizado.aplicativo,
           versaoTermo: '1.0',
-          identidade: identidadeNova,
+          acesso: identidadeNova,
         );
       }
 
@@ -446,7 +503,7 @@ void main() {
               qualidade: qualidade,
               canalAutorizado: CanalAutorizado.aplicativo,
               versaoTermo: '1.0',
-              identidade: identidadeNova,
+              acesso: identidadeNova,
             );
 
         await recusaSemGravar(
@@ -574,7 +631,7 @@ void main() {
         () => auth.aceitarConviteCuidador(
           codigo: codigoPaulo,
           cpf: cpfPaulo,
-          identidade: identidadeDe(m, 'Paulo Martins'),
+          acesso: identidadeDe(m, 'Paulo Martins'),
         ),
         MotivoRecusa.codigoExpirado,
       );
@@ -589,9 +646,9 @@ void main() {
         final v = await auth.aceitarConviteCuidador(
           codigo: codigoPaulo,
           cpf: cpfPaulo,
-          identidade: paulo,
+          acesso: paulo,
         );
-        expect(v.conta.idProvedor, paulo.idProvedor);
+        expect(v.conta.email, paulo.email);
         expect(v.pacientes, isEmpty);
         final ana = v.acompanhados.single;
         expect(ana.id, idAna);
@@ -610,11 +667,11 @@ void main() {
           () => auth.aceitarConviteCuidador(
             codigo: codigoPaulo,
             cpf: cpfPaulo,
-            identidade: paulo,
+            acesso: paulo,
           ),
           MotivoRecusa.codigoJaUsado,
         );
-        expect((await auth.entrar(paulo)).acompanhados.single.id, idAna);
+        expect((await auth.entrarCom(paulo)).acompanhados.single.id, idAna);
       },
     );
 
@@ -634,7 +691,7 @@ void main() {
         () => auth.aceitarConviteCuidador(
           codigo: codigoPaulo,
           cpf: cpfPaulo,
-          identidade: identidadeDe(m, 'Paulo Martins'),
+          acesso: identidadeDe(m, 'Paulo Martins'),
         ),
         MotivoRecusa.conviteRevogado,
       );
@@ -692,7 +749,7 @@ void main() {
         () => auth.aceitarConviteCuidador(
           codigo: codigoPaulo,
           cpf: cpfPaulo,
-          identidade: identidadeDe(m, 'Paulo Martins'),
+          acesso: identidadeDe(m, 'Paulo Martins'),
         ),
         MotivoRecusa.limiteDeCuidadores,
       );
@@ -701,7 +758,7 @@ void main() {
       final v = await auth.aceitarConviteCuidador(
         codigo: codigoPaulo,
         cpf: cpfPaulo,
-        identidade: identidadeDe(m, 'Paulo Martins'),
+        acesso: identidadeDe(m, 'Paulo Martins'),
       );
       expect(v.acompanhados.single.id, idAna);
     });

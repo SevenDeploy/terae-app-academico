@@ -85,17 +85,34 @@ const List<String> cpfsLivres = [
 
 final DataCivil nascimentoJoao = DataCivil(1999, 7, 19);
 
-/// Identidade "no aparelho" pelo nome de exibição.
-IdentidadeProvedor identidadeDe(MemoriaDemonstracao m, String nome) =>
-    m.estado.identidades.firstWhere((i) => i.nomeExibicao == nome);
+/// E-mail de cada persona da demonstração (as que têm conta e as que ainda
+/// vão criar o acesso no primeiro acesso).
+const Map<String, String> emailDe = {
+  'Ana Lúcia Martins': 'ana.lucia.martins@exemplo.test',
+  'Patrícia Andrade Neves': 'patricia.neves@exemplo.test',
+  'Regina Martins': 'regina.martins@exemplo.test',
+  'João Pedro Assis': 'joao.pedro.assis@exemplo.test',
+  'Paulo Martins': 'paulo.martins@exemplo.test',
+};
 
-/// Identidade de quem não tem nada na demonstração.
-const IdentidadeProvedor identidadeNova = IdentidadeProvedor(
-  provedor: Provedor.google,
-  idProvedor: 'google-pessoa-nova',
+/// O acesso (D14) da persona pelo nome, com a senha de demonstração. Para
+/// quem já tem conta, é o e-mail e a senha dela; para João e Paulo, o acesso
+/// que eles criam no passo 4.
+NovoAcesso identidadeDe(MemoriaDemonstracao m, String nome) =>
+    NovoAcesso(nome: nome, email: emailDe[nome]!, senha: senhaDeDemonstracao);
+
+/// Acesso de quem não tem nada na demonstração (senha de fixture).
+const NovoAcesso identidadeNova = NovoAcesso(
+  nome: 'Pessoa Nova',
   email: 'pessoa.nova@exemplo.test',
-  nomeExibicao: 'Pessoa Nova',
+  senha: 'senha-de-teste-nova',
 );
+
+/// Entra com o e-mail e a senha do [acesso] (D14).
+extension EntrarComAcesso on RepositorioAutenticacao {
+  Future<VinculosDaConta> entrarCom(NovoAcesso acesso) =>
+      entrar(email: acesso.email, senha: acesso.senha);
+}
 
 /// Espera a recusa com este [motivo].
 Matcher recusa(MotivoRecusa motivo) =>

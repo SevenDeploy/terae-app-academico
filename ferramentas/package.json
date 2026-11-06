@@ -1,0 +1,13 @@
+{
+  "name": "terae-app-ferramentas",
+  "private": true,
+  "description": "Ferramentas do terae_app acadêmico (Atividade 4): semente do Firebase terae-app-academico.",
+  "type": "module",
+  "scripts": {
+    "semear": "node semear-firebase.mjs",
+    "reiniciar": "node semear-firebase.mjs --reiniciar"
+  },
+  "dependencies": {
+    "firebase-admin": "^13.0.0"
+  }
+}
