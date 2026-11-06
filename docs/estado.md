@@ -71,7 +71,8 @@ Observação do roteiro: o primeiro login logo depois de instalar pode passar do
 
 ### Pendências da Atividade 4
 
-1. Commit do trabalho (ainda não feito) e, se o dono quiser, o docx "Resumo".
+1. Feito em 06/11: commits `8c10d1b` (código) e `3976154` (documentação), mesclados na `main` local em `a949f38`,
+   sem envio (não há remoto). Se o dono quiser, ainda falta o docx "Resumo".
 2. Passar à equipe a senha de demonstração (está no `.env` do dono) — ou cada um usa o primeiro acesso.
 3. Ajustar a data da versão 4.0 no `gerar_docx.py` (`DATA_DA_VERSAO`) se a entrega não for em 13/11.
 
