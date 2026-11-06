@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
 
+import '../../dados/repositorios/autenticacao_repositorio.dart';
 import '../../nucleo/tema/cores.dart';
 import '../../nucleo/tema/tema.dart';
 import '../../nucleo/widgets/cartao.dart';
 import 'cadastro_controlador.dart';
 import 'widgets_entrada.dart';
 
-/// Moldura dos cadastros em três passos (TM09, TM10): indicador "Passo X de
-/// 3", conteúdo do passo, recusa em linguagem simples e as ações. No passo 2
-/// ou 3, o voltar (Android ou seta da barra) volta um passo em vez de sair.
+/// Moldura dos cadastros em quatro passos (TM09, TM10): indicador "Passo X de
+/// 4", conteúdo do passo, recusa em linguagem simples e as ações. No passo 2
+/// em diante, o voltar (Android ou seta da barra) volta um passo em vez de
+/// sair.
 class MolduraDoCadastro extends StatelessWidget {
   const MolduraDoCadastro({
     super.key,
@@ -76,7 +78,8 @@ class MolduraDoCadastro extends StatelessWidget {
   }
 }
 
-/// Três segmentos e o texto "Passo X de 3 · nome", lido como uma frase só.
+/// Um segmento por passo e o texto "Passo X de 4 · nome", lido como uma
+/// frase só.
 class IndicadorDePassos extends StatelessWidget {
   const IndicadorDePassos({super.key, required this.passo, required this.nome});
 
@@ -189,6 +192,91 @@ class AceiteDoTermo extends StatelessWidget {
       controlAffinity: ListTileControlAffinity.leading,
       contentPadding: EdgeInsets.zero,
       title: Text(rotulo, style: Theme.of(context).textTheme.titleSmall),
+    );
+  }
+}
+
+/// Passo 4 da TM09 e da TM10 — "Crie seu acesso" (D14): nome, e-mail, senha
+/// e confirmação. Os controladores de texto são da tela (sobrevivem à volta
+/// de passo); os erros, do controlador do cadastro.
+class FormularioDeAcesso extends StatelessWidget {
+  const FormularioDeAcesso({
+    super.key,
+    required this.nome,
+    required this.email,
+    required this.senha,
+    required this.confirmacao,
+    required this.cadastro,
+    required this.aoConcluir,
+  });
+
+  final TextEditingController nome;
+  final TextEditingController email;
+  final TextEditingController senha;
+  final TextEditingController confirmacao;
+  final CadastroControlador cadastro;
+  final VoidCallback aoConcluir;
+
+  @override
+  Widget build(BuildContext context) {
+    final textos = Theme.of(context).textTheme;
+    return AutofillGroup(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const TituloDoPasso('Crie seu acesso'),
+          const SizedBox(height: MedidasTerae.espacoPequeno),
+          Text(
+            'Com este e-mail e esta senha você entra no Terae. Se você já '
+            'tem acesso, use o mesmo e-mail e a mesma senha.',
+            style: textos.bodyLarge?.copyWith(color: CoresTerae.neutro600),
+          ),
+          const SizedBox(height: MedidasTerae.espacoGrande),
+          TextField(
+            key: const Key('campo-nome'),
+            controller: nome,
+            textCapitalization: TextCapitalization.words,
+            textInputAction: TextInputAction.next,
+            autofillHints: const [AutofillHints.name],
+            decoration: InputDecoration(
+              labelText: 'Seu nome',
+              errorText: cadastro.erroNome,
+            ),
+          ),
+          const SizedBox(height: MedidasTerae.espaco),
+          CampoDeEmail(
+            key: const Key('campo-email'),
+            controlador: email,
+            erro: cadastro.erroEmail,
+          ),
+          const SizedBox(height: MedidasTerae.espaco),
+          CampoDeSenha(
+            key: const Key('campo-senha'),
+            controlador: senha,
+            rotulo: 'Senha',
+            ajuda: 'Pelo menos $tamanhoMinimoDaSenha caracteres',
+            erro: cadastro.erroSenha,
+            novaSenha: true,
+          ),
+          const SizedBox(height: MedidasTerae.espaco),
+          CampoDeSenha(
+            key: const Key('campo-confirmacao'),
+            controlador: confirmacao,
+            rotulo: 'Repita a senha',
+            erro: cadastro.erroConfirmacao,
+            novaSenha: true,
+            acao: TextInputAction.done,
+            aoConcluir: aoConcluir,
+          ),
+          const SizedBox(height: MedidasTerae.espaco),
+          const CaixaInformativa(
+            icone: Icons.lock_outline,
+            texto:
+                'A senha não fica guardada neste celular. Quem confere a '
+                'senha é o serviço de login do Terae.',
+          ),
+        ],
+      ),
     );
   }
 }

@@ -10,6 +10,7 @@ import '../../nucleo/tema/cores.dart';
 import '../../nucleo/tema/tema.dart';
 import '../../nucleo/tempo/data_civil.dart';
 import '../../nucleo/tempo/relogio.dart';
+import '../../nucleo/widgets/aviso_de_conexao.dart';
 import '../../nucleo/widgets/cartao.dart';
 import 'visao_cuidador_controlador.dart';
 import 'widgets_cuidador.dart';
@@ -63,6 +64,7 @@ class _InicioCuidador extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  const AvisoDeConexao(),
                   Semantics(
                     header: true,
                     child: Text(

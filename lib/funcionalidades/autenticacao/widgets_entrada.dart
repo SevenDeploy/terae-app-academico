@@ -91,3 +91,95 @@ class CaixaInformativa extends StatelessWidget {
     );
   }
 }
+
+/// Campo de senha com "mostrar/ocultar" (D14; TM01, TM09, TM10). O texto
+/// digitado nunca sai do campo a não ser para o repositório (RNFM04).
+class CampoDeSenha extends StatefulWidget {
+  const CampoDeSenha({
+    super.key,
+    required this.controlador,
+    required this.rotulo,
+    this.erro,
+    this.ajuda,
+    this.novaSenha = false,
+    this.acao = TextInputAction.next,
+    this.aoConcluir,
+  });
+
+  final TextEditingController controlador;
+  final String rotulo;
+  final String? erro;
+  final String? ajuda;
+
+  /// Senha nova (cadastro) ou a de quem entra (TM01): muda o preenchimento
+  /// automático sugerido ao gerenciador de senhas do aparelho.
+  final bool novaSenha;
+  final TextInputAction acao;
+  final VoidCallback? aoConcluir;
+
+  @override
+  State<CampoDeSenha> createState() => _CampoDeSenhaState();
+}
+
+class _CampoDeSenhaState extends State<CampoDeSenha> {
+  bool _visivel = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      controller: widget.controlador,
+      obscureText: !_visivel,
+      autocorrect: false,
+      enableSuggestions: false,
+      keyboardType: TextInputType.visiblePassword,
+      textInputAction: widget.acao,
+      autofillHints: [
+        widget.novaSenha ? AutofillHints.newPassword : AutofillHints.password,
+      ],
+      onSubmitted: widget.aoConcluir == null
+          ? null
+          : (_) => widget.aoConcluir!(),
+      decoration: InputDecoration(
+        labelText: widget.rotulo,
+        helperText: widget.ajuda,
+        errorText: widget.erro,
+        suffixIcon: IconButton(
+          tooltip: _visivel ? 'Ocultar senha' : 'Mostrar senha',
+          icon: Icon(_visivel ? Icons.visibility_off : Icons.visibility),
+          onPressed: () => setState(() => _visivel = !_visivel),
+        ),
+      ),
+    );
+  }
+}
+
+/// Campo de e-mail (D14; TM01, TM09, TM10).
+class CampoDeEmail extends StatelessWidget {
+  const CampoDeEmail({
+    super.key,
+    required this.controlador,
+    this.erro,
+    this.rotulo = 'E-mail',
+  });
+
+  final TextEditingController controlador;
+  final String? erro;
+  final String rotulo;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      controller: controlador,
+      keyboardType: TextInputType.emailAddress,
+      autocorrect: false,
+      enableSuggestions: false,
+      textInputAction: TextInputAction.next,
+      autofillHints: const [AutofillHints.email],
+      decoration: InputDecoration(
+        labelText: rotulo,
+        hintText: 'nome@exemplo.com',
+        errorText: erro,
+      ),
+    );
+  }
+}

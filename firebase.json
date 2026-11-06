@@ -1,0 +1,1 @@
+{"firestore":{"rules":"firestore.rules"},"flutter":{"platforms":{"android":{"default":{"projectId":"terae-app-academico","appId":"1:725925300496:android:c64feaa86d76e0bfd4bd95","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"terae-app-academico","configurations":{"android":"1:725925300496:android:c64feaa86d76e0bfd4bd95"}}}}}}

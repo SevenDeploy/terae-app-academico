@@ -10,6 +10,7 @@ import 'dados/repositorios/diario_repositorio.dart';
 import 'dados/repositorios/paciente_repositorio.dart';
 import 'dados/repositorios/repositorios.dart';
 import 'dados/repositorios/visao_cuidador_repositorio.dart';
+import 'dados/sincronizacao/situacao_sincronizacao.dart';
 import 'nucleo/rotas/rotas.dart';
 import 'nucleo/sessao/sessao.dart';
 import 'nucleo/tema/tema.dart';
@@ -21,7 +22,8 @@ import 'roteador.dart';
 ///
 /// Recebe tudo por construtor (o `main.dart` cria; o teste passa dublês) e
 /// disponibiliza por provider, acima do roteador, para qualquer tela:
-/// cada contrato de [Repositorios] pelo próprio tipo, [Relogio],
+/// cada contrato de [Repositorios] pelo próprio tipo, a situação da conexão
+/// (`ConexaoDoApp`, Atividade 4), [Relogio],
 /// [LancadorExterno] e a [Sessao] (`ChangeNotifierProvider`).
 class TeraeApp extends StatefulWidget {
   const TeraeApp({
@@ -68,6 +70,7 @@ class _TeraeAppState extends State<TeraeApp> {
         Provider<RepositorioCuidadores>.value(value: r.cuidadores),
         Provider<RepositorioVisaoCuidador>.value(value: r.visaoCuidador),
         Provider<ControleDemonstracao>.value(value: r.demonstracao),
+        Provider<ConexaoDoApp>.value(value: ConexaoDoApp(r.conexao)),
         Provider<Relogio>.value(value: widget.relogio),
         Provider<LancadorExterno>.value(value: widget.lancador),
         ChangeNotifierProvider<Sessao>.value(value: widget.sessao),

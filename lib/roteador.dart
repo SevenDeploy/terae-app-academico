@@ -15,6 +15,9 @@ import 'funcionalidades/paciente/diario/diario_enviado_tela.dart';
 import 'funcionalidades/paciente/diario/diario_tela.dart';
 import 'funcionalidades/paciente/inicio/inicio_tela.dart';
 import 'funcionalidades/paciente/jornada/jornada_tela.dart';
+import 'funcionalidades/paciente/registros/correcao_tela.dart';
+import 'funcionalidades/paciente/registros/registro_tela.dart';
+import 'funcionalidades/paciente/registros/registros_tela.dart';
 import 'funcionalidades/publico/boas_vindas_tela.dart';
 import 'nucleo/rotas/rotas.dart';
 import 'nucleo/sessao/sessao.dart';
@@ -52,8 +55,9 @@ String? guardaDePerfil(Sessao sessao, String caminho) {
 
 /// GoRouter do app: guarda única, abas do paciente num
 /// `StatefulShellRoute.indexedStack`, TM04/TM05 no navegador raiz (tela cheia,
-/// acima das abas), TM11/TM12 sobre a TM08. Reavalia a guarda a cada mudança
-/// da [sessao].
+/// acima das abas), TM11/TM12 sobre a TM08 e, na Atividade 4, TM13 → TM14 →
+/// TM15 empilhadas sobre as abas. Reavalia a guarda a cada mudança da
+/// [sessao].
 GoRouter criarRoteador({
   required Sessao sessao,
   String localInicial = Rotas.boasVindas,
@@ -155,6 +159,20 @@ GoRouter criarRoteador({
         ],
       ),
       GoRoute(
+        path: Rotas.pacienteRegistros,
+        pageBuilder: (context, state) => _pagina(state, const RegistrosTela()),
+      ),
+      GoRoute(
+        path: Rotas.pacienteRegistro,
+        pageBuilder: (context, state) =>
+            _pagina(state, RegistroTela(registroId: _id(state))),
+      ),
+      GoRoute(
+        path: Rotas.pacienteCorrigirRegistro,
+        pageBuilder: (context, state) =>
+            _pagina(state, CorrecaoTela(registroId: _id(state))),
+      ),
+      GoRoute(
         path: Rotas.cuidadorInicio,
         pageBuilder: (context, state) =>
             _pagina(state, const InicioCuidadorTela()),
@@ -187,6 +205,10 @@ GoRouter criarRoteador({
 /// material_ui; sem isto cairia em página sem transição).
 Page<void> _pagina(GoRouterState state, Widget tela) =>
     MaterialPage<void>(key: state.pageKey, name: state.uri.path, child: tela);
+
+/// O id do registro na consulta (`?id=`) da TM14/TM15; vazio se faltar (a
+/// tela mostra "não encontramos este registro").
+String _id(GoRouterState state) => state.uri.queryParameters['id'] ?? '';
 
 /// O `ResultadoEnvio` passado pelo diário em `extra`; nulo em link direto.
 ResultadoEnvio? _envio(GoRouterState state) {

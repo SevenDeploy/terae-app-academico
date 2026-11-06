@@ -97,9 +97,9 @@ void main() {
     await tester.pumpWidget(montarApp(sessao: Sessao()));
     await tester.pumpAndSettle();
     await _abrirFolha(tester, const Key('politica-privacidade'));
-    expect(find.text('Sem senha'), findsOneWidget);
+    expect(find.text('A sua senha'), findsOneWidget);
     await _fecharFolha(tester);
-    expect(find.text('Sem senha'), findsNothing);
+    expect(find.text('A sua senha'), findsNothing);
   });
 
   group('painel de demonstração (D11)', () {

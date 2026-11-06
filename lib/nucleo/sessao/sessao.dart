@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 
 import '../../dados/modelos/conta_usuario.dart';
@@ -27,6 +29,10 @@ class Perfil {
 
   String get pacienteId => paciente.id;
 
+  /// Identifica o perfil entre aberturas do app (SharedPreferences, D16):
+  /// `papel:pacienteId`. Não leva dado pessoal além do id.
+  String get chave => '${papel.name}:$pacienteId';
+
   @override
   bool operator ==(Object other) =>
       other is Perfil &&
@@ -42,11 +48,24 @@ class Perfil {
 
 /// Conta autenticada, perfis derivados dos vínculos e perfil ativo (RFM01).
 ///
-/// Só memória (D6: nada persiste no aparelho nesta etapa). O roteador escuta
-/// esta classe (`refreshListenable`) e decide a rota a cada mudança: as telas
-/// chamam [entrar], [escolherPerfil], [trocarPerfil] e [sair] e NÃO navegam
-/// depois — a guarda leva ao lugar certo.
+/// O roteador escuta esta classe (`refreshListenable`) e decide a rota a cada
+/// mudança: as telas chamam [entrar], [escolherPerfil], [trocarPerfil] e
+/// [sair] e NÃO navegam depois — a guarda leva ao lugar certo.
+///
+/// Atividade 4: a sessão do provedor sobrevive ao fechar o app (o Firebase
+/// guarda o token), e o `main.dart` a reabre com [entrar] passando o
+/// [Perfil.chave] guardado. [aoMudarPerfil] grava a chave do perfil ativo
+/// (SharedPreferences) e [aoSair] encerra a sessão no provedor e apaga os
+/// dados locais (D20).
 class Sessao extends ChangeNotifier {
+  Sessao({this.aoMudarPerfil, this.aoSair});
+
+  /// Chamado com a [Perfil.chave] do perfil ativo, ou `null` sem perfil.
+  final void Function(String? chaveDoPerfil)? aoMudarPerfil;
+
+  /// Chamado depois de [sair] (D20), sem esperar.
+  final Future<void> Function()? aoSair;
+
   ContaUsuario? _conta;
   List<Perfil> _perfis = const [];
   Perfil? _perfilAtivo;
@@ -81,18 +100,21 @@ class Sessao extends ChangeNotifier {
   }
 
   /// Abre a sessão. Com um perfil só, ele já fica ativo; com mais de um,
-  /// nenhum — o roteador leva à seleção (`/entrar/perfil`). Lança
-  /// [StateError] se os vínculos não derem nenhum perfil (o repositório já
-  /// recusa esse caso com `contaSemAcesso`).
-  void entrar(VinculosDaConta vinculos) {
+  /// fica ativo o de [perfilGuardado] (a [Perfil.chave] da última abertura),
+  /// se ainda existir — senão nenhum, e o roteador leva à seleção
+  /// (`/entrar/perfil`). Lança [StateError] se os vínculos não derem nenhum
+  /// perfil (o repositório já recusa esse caso com `contaSemAcesso`).
+  void entrar(VinculosDaConta vinculos, {String? perfilGuardado}) {
     final perfis = perfisDe(vinculos);
     if (perfis.isEmpty) {
       throw StateError('Conta sem nenhum perfil ativo');
     }
     _conta = vinculos.conta;
     _perfis = perfis;
-    _perfilAtivo = perfis.length == 1 ? perfis.single : null;
-    notifyListeners();
+    _perfilAtivo = perfis.length == 1
+        ? perfis.single
+        : perfis.where((p) => p.chave == perfilGuardado).firstOrNull;
+    _avisar();
   }
 
   /// Ativa um dos perfis da conta (seleção da TM01). Lança [ArgumentError]
@@ -102,7 +124,7 @@ class Sessao extends ChangeNotifier {
       throw ArgumentError.value(perfil, 'perfil', 'não é desta conta');
     }
     _perfilAtivo = perfil;
-    notifyListeners();
+    _avisar();
   }
 
   /// "Trocar perfil": desativa o perfil e o roteador reabre a seleção. Não faz
@@ -110,15 +132,23 @@ class Sessao extends ChangeNotifier {
   void trocarPerfil() {
     if (!temVariosPerfis || _perfilAtivo == null) return;
     _perfilAtivo = null;
-    notifyListeners();
+    _avisar();
   }
 
-  /// "Sair": encerra a sessão; o roteador leva à TM00.
+  /// "Sair": encerra a sessão; o roteador leva à TM00, e [aoSair] apaga os
+  /// dados locais em seguida (D20).
   void sair() {
     if (_conta == null) return;
     _conta = null;
     _perfis = const [];
     _perfilAtivo = null;
+    _avisar();
+    final aoSair = this.aoSair;
+    if (aoSair != null) unawaited(aoSair().catchError((Object _) {}));
+  }
+
+  void _avisar() {
+    aoMudarPerfil?.call(_perfilAtivo?.chave);
     notifyListeners();
   }
 }

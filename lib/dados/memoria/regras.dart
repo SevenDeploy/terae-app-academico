@@ -1,26 +1,11 @@
-/// Regras do "servidor simulado" escritas como funções puras (§7.1, §7.4,
-/// §23), para serem testadas sem estado.
+/// Regras do "servidor simulado" escritas como funções puras (§7.4, §23),
+/// para serem testadas sem estado. A do alerta (§7.1) mora em
+/// `dados/regras/alerta.dart` desde a Atividade 4 e é reexportada aqui.
 library;
 
 import 'dart:math';
 
-import '../enums/intensidade.dart';
-import '../enums/regra_alerta.dart';
-
-/// §7.1 — a regra que o servidor dispara para o registro [nova], dado o
-/// registro imediatamente anterior do mesmo paciente ([anterior], nulo se não
-/// houver): (a) intensidade crítica, sempre; (b) grave quando o anterior
-/// também foi grave. `null` = sem alerta. Só o servidor decide (RF14).
-RegraAlerta? regraDoAlerta({
-  required Intensidade nova,
-  required Intensidade? anterior,
-}) {
-  if (nova == Intensidade.critica) return RegraAlerta.intensidadeCritica;
-  if (nova == Intensidade.grave && anterior == Intensidade.grave) {
-    return RegraAlerta.graveConsecutivo;
-  }
-  return null;
-}
+export '../regras/alerta.dart' show regraDoAlerta;
 
 /// Seis caracteres por convite (RFM09; TM09 e TM10, passo 1).
 const int tamanhoDoCodigo = 6;

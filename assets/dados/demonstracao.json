@@ -1,21 +1,14 @@
 {
   "versao": 1,
-  "descricao": "Dados FICTÍCIOS de demonstração do terae_app (projeto acadêmico, UNEMAT 2026). Cada coleção usa o formato de mapa dos modelos (§22). Datas relativas ao dia de hoje no horário da clínica (D9): {\"emDias\": n} é data civil; {\"emDias\": n, \"hora\": \"HH:mm\"} é instante. Coleções em ordem de criação.",
-  "identidades": [
-    {"provedor": "google", "idProvedor": "google-ana-lucia-martins", "email": "ana.lucia.martins@exemplo.test", "nomeExibicao": "Ana Lúcia Martins"},
-    {"provedor": "google", "idProvedor": "google-patricia-andrade-neves", "email": "patricia.neves@exemplo.test", "nomeExibicao": "Patrícia Andrade Neves"},
-    {"provedor": "google", "idProvedor": "google-regina-martins", "email": "regina.martins@exemplo.test", "nomeExibicao": "Regina Martins"},
-    {"provedor": "google", "idProvedor": "google-joao-pedro-assis", "email": "joao.pedro.assis@exemplo.test", "nomeExibicao": "João Pedro Assis"},
-    {"provedor": "google", "idProvedor": "google-paulo-martins", "email": "paulo.martins@exemplo.test", "nomeExibicao": "Paulo Martins"}
-  ],
+  "descricao": "Dados FICTÍCIOS de demonstração do terae_app (projeto acadêmico, UNEMAT 2026). Cada coleção usa o formato de mapa dos modelos (§22). Toda conta entra com a senha de demonstração (D14, ver README). Datas relativas ao dia de hoje no horário da clínica (D9): {\"emDias\": n} é data civil; {\"emDias\": n, \"hora\": \"HH:mm\"} é instante. Coleções em ordem de criação.",
   "profissionais": [
     {"id": "d0000000-0000-4000-8000-000000000001", "nome": "Dra. Helena Prado", "registroConselho": "CRM-MT 18234", "especialidade": "Psiquiatria"},
     {"id": "d0000000-0000-4000-8000-000000000002", "nome": "Dra. Larissa Fontes Andrade", "registroConselho": "CREFITO-9 30125-TO", "especialidade": "Terapia ocupacional"}
   ],
   "contas": [
-    {"id": "c0000000-0000-4000-8000-000000000001", "nomeExibicao": "Ana Lúcia Martins", "email": "ana.lucia.martins@exemplo.test", "idProvedor": "google-ana-lucia-martins", "situacao": "ativa", "ultimoAcessoEm": {"emDias": -1, "hora": "20:38"}},
-    {"id": "c0000000-0000-4000-8000-000000000002", "nomeExibicao": "Patrícia Andrade Neves", "email": "patricia.neves@exemplo.test", "idProvedor": "google-patricia-andrade-neves", "situacao": "ativa", "ultimoAcessoEm": {"emDias": -2, "hora": "19:05"}},
-    {"id": "c0000000-0000-4000-8000-000000000003", "nomeExibicao": "Regina Martins", "email": "regina.martins@exemplo.test", "idProvedor": "google-regina-martins", "situacao": "ativa", "ultimoAcessoEm": {"emDias": -3, "hora": "12:10"}}
+    {"id": "c0000000-0000-4000-8000-000000000001", "nomeExibicao": "Ana Lúcia Martins", "email": "ana.lucia.martins@exemplo.test", "idProvedor": "c0000000-0000-4000-8000-000000000001", "situacao": "ativa", "ultimoAcessoEm": {"emDias": -1, "hora": "20:38"}},
+    {"id": "c0000000-0000-4000-8000-000000000002", "nomeExibicao": "Patrícia Andrade Neves", "email": "patricia.neves@exemplo.test", "idProvedor": "c0000000-0000-4000-8000-000000000002", "situacao": "ativa", "ultimoAcessoEm": {"emDias": -2, "hora": "19:05"}},
+    {"id": "c0000000-0000-4000-8000-000000000003", "nomeExibicao": "Regina Martins", "email": "regina.martins@exemplo.test", "idProvedor": "c0000000-0000-4000-8000-000000000003", "situacao": "ativa", "ultimoAcessoEm": {"emDias": -3, "hora": "12:10"}}
   ],
   "pacientes": [
     {"id": "a0000000-0000-4000-8000-000000000001", "contaId": "c0000000-0000-4000-8000-000000000001", "profissionalRefId": "d0000000-0000-4000-8000-000000000001", "nome": "Ana Lúcia Martins", "cpf": "41850372608", "dataNascimento": "2010-05-12", "ativo": true},

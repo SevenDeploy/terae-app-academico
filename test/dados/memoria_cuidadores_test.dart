@@ -123,7 +123,7 @@ void main() {
       final v = await m.repositorios.autenticacao.aceitarConviteCuidador(
         codigo: novo.convite.codigo.toLowerCase(),
         cpf: cpfsLivres[2],
-        identidade: identidadeNova,
+        acesso: identidadeNova,
       );
       expect(v.acompanhados.single.id, idMiguel);
       expect(
@@ -183,14 +183,14 @@ void main() {
         m.repositorios.autenticacao.aceitarConviteCuidador(
           codigo: codigoPaulo,
           cpf: cpfPaulo,
-          identidade: identidadeDe(m, 'Paulo Martins'),
+          acesso: identidadeDe(m, 'Paulo Martins'),
         ),
         recusa(MotivoRecusa.codigoExpirado),
       );
       final aceito = await m.repositorios.autenticacao.aceitarConviteCuidador(
         codigo: novo.convite.codigo,
         cpf: cpfPaulo,
-        identidade: identidadeDe(m, 'Paulo Martins'),
+        acesso: identidadeDe(m, 'Paulo Martins'),
       );
       expect(aceito.acompanhados.single.id, idAna);
     });

@@ -75,7 +75,8 @@ class SessaoEspia extends Sessao {
   void abrir(VinculosDaConta vinculos) => super.entrar(vinculos);
 
   @override
-  void entrar(VinculosDaConta vinculos) => entradas.add(vinculos);
+  void entrar(VinculosDaConta vinculos, {String? perfilGuardado}) =>
+      entradas.add(vinculos);
 
   @override
   void escolherPerfil(Perfil perfil) => escolhidos.add(perfil);

@@ -38,6 +38,28 @@ abstract final class Rotas {
   /// TM05 Ajuda imediata — paciente; tela cheia, fora das abas.
   static const String pacienteDiarioAjuda = '$pacienteDiario/$segmentoAjuda';
 
+  /// TM13 Meus registros (Atividade 4) — paciente; lista e busca do diário,
+  /// empilhada sobre as abas.
+  static const String pacienteRegistros = '/paciente/registros';
+
+  /// TM14 Registro (Atividade 4) — paciente; visualização de um registro,
+  /// com o id na consulta: use [registro].
+  static const String pacienteRegistro = '/paciente/registros/registro';
+
+  /// TM15 Corrigir registro (Atividade 4) — paciente; edição no mesmo dia
+  /// (D17), com o id na consulta: use [corrigirRegistro].
+  static const String pacienteCorrigirRegistro = '/paciente/registros/corrigir';
+
+  /// Caminho da TM14 para o registro [id].
+  static String registro(String id) =>
+      Uri(path: pacienteRegistro, queryParameters: {'id': id}).toString();
+
+  /// Caminho da TM15 para o registro [id].
+  static String corrigirRegistro(String id) => Uri(
+    path: pacienteCorrigirRegistro,
+    queryParameters: {'id': id},
+  ).toString();
+
   /// TM06 Jornada (aba 3) — paciente.
   static const String pacienteJornada = '/paciente/jornada';
 
@@ -69,6 +91,9 @@ abstract final class Rotas {
     pacienteDiarioAjuda,
     pacienteJornada,
     pacienteCuidadores,
+    pacienteRegistros,
+    pacienteRegistro,
+    pacienteCorrigirRegistro,
   };
 
   /// Só o papel cuidador alcança.
@@ -100,5 +125,8 @@ abstract final class Rotas {
     'TM08': cuidadorInicio,
     'TM11': cuidadorMedicacao,
     'TM12': cuidadorAgenda,
+    'TM13': pacienteRegistros,
+    'TM14': pacienteRegistro,
+    'TM15': pacienteCorrigirRegistro,
   };
 }

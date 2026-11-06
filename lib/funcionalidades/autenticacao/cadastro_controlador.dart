@@ -27,15 +27,24 @@ const Set<MotivoRecusa> recusasDoPasso1 = {
   MotivoRecusa.pacienteInativo,
 };
 
-/// Base dos cadastros por convite em três passos (RFM09; TM09, TM10).
+/// Recusas que dizem respeito ao passo 4 (o acesso: e-mail e senha).
+const Set<MotivoRecusa> recusasDoAcesso = {
+  MotivoRecusa.emailInvalido,
+  MotivoRecusa.senhaFraca,
+  MotivoRecusa.emailJaCadastrado,
+};
+
+/// Base dos cadastros por convite em quatro passos (RFM09; TM09, TM10).
 ///
-/// Passo 1 confere o código sem consumi-lo; o passo 3 confere de novo e ativa.
-/// A recusa vira mensagem simples no passo certo ([recusasDoPasso1] voltam ao
-/// passo 1); depois da ativação a sessão abre e o roteador leva ao perfil.
+/// Passo 1 confere o código sem consumi-lo; o passo 4 ("Crie seu acesso",
+/// D14) cria o acesso com e-mail e senha, confere tudo de novo e ativa. A
+/// recusa vira mensagem simples no passo certo ([recusasDoPasso1] voltam ao
+/// passo 1, [recusasDoAcesso] ficam no 4); depois da ativação a sessão abre
+/// e o roteador leva ao perfil.
 abstract class CadastroControlador extends ControladorDeEntrada {
   CadastroControlador({required super.autenticacao, required super.sessao});
 
-  static const int totalDePassos = 3;
+  static const int totalDePassos = 4;
 
   int _passo = 1;
   ConviteConferido? _conferido;
@@ -44,6 +53,12 @@ abstract class CadastroControlador extends ControladorDeEntrada {
   /// Erros locais do passo 1, campo a campo (rótulo ligado ao campo, D10).
   String? erroCodigo;
   String? erroCpf;
+
+  /// Erros locais do passo 4 (D14).
+  String? erroNome;
+  String? erroEmail;
+  String? erroSenha;
+  String? erroConfirmacao;
 
   /// Código e CPF já limpos, guardados no passo 1 para o passo 3.
   String _codigo = '';
@@ -90,15 +105,47 @@ abstract class CadastroControlador extends ControladorDeEntrada {
     _irPara(2);
   }
 
-  /// Passo 3: recusa do código, do CPF ou do nascimento volta ao passo 1.
-  void _recusouNoPasso3(MotivoRecusa motivo) {
+  /// Passo 3 → 4, com o termo aceito.
+  void _irParaAcesso() {
+    if (aceite) _irPara(4);
+  }
+
+  /// Passo 4: confere localmente nome, e-mail, senha e confirmação; devolve
+  /// o [NovoAcesso] ou `null` (o erro fica no campo).
+  NovoAcesso? _acessoConferido({
+    required String nome,
+    required String email,
+    required String senha,
+    required String confirmacao,
+  }) {
+    erroNome = nome.trim().isEmpty ? 'Digite seu nome.' : null;
+    erroEmail = erroDoEmail(email);
+    erroSenha = erroDaSenhaNova(senha);
+    erroConfirmacao = erroSenha == null
+        ? erroDaConfirmacao(senha, confirmacao)
+        : null;
+    if (erroNome != null ||
+        erroEmail != null ||
+        erroSenha != null ||
+        erroConfirmacao != null) {
+      limparMensagem();
+      avisar();
+      return null;
+    }
+    return NovoAcesso(nome: nome.trim(), email: email.trim(), senha: senha);
+  }
+
+  /// Passo 4: recusa do código, do CPF ou do nascimento volta ao passo 1;
+  /// recusa do acesso fica no 4.
+  void _recusouNoAcesso(MotivoRecusa motivo) {
     if (recusasDoPasso1.contains(motivo)) _passo = 1;
   }
 }
 
 /// Estado da TM09 — Cadastro do paciente/família: (1) código da clínica, CPF e
 /// nascimento do paciente; (2) quem vai usar — titular ou responsável legal;
-/// (3) termo de consentimento, canal autorizado (R05) e aceite.
+/// (3) termo de consentimento, canal autorizado (R05) e aceite; (4) o acesso,
+/// com nome, e-mail e senha (D14).
 class CadastroPacienteControlador extends CadastroControlador {
   CadastroPacienteControlador({
     required super.autenticacao,
@@ -136,9 +183,14 @@ class CadastroPacienteControlador extends CadastroControlador {
         );
   }
 
-  /// Passo 3 pronto para "Continuar com Google".
+  /// Passo 3 pronto para seguir ao passo 4.
   bool get podeAtivar =>
       _qualidade != null && _canal != null && aceite && !ocupado;
+
+  /// Nome sugerido no passo 4: o do paciente, quando é ele quem vai usar.
+  String get nomeSugerido => _qualidade == QualidadeConsentimento.titular
+      ? (conferido?.nomePaciente ?? '')
+      : '';
 
   /// Passo 1: confere no repositório, sem consumir o código.
   Future<void> conferir({
@@ -186,15 +238,32 @@ class CadastroPacienteControlador extends CadastroControlador {
     avisar();
   }
 
-  /// Passo 3: confere de novo, grava o consentimento e liga a conta; a sessão
-  /// abre e o roteador leva ao Início.
-  Future<void> ativar(IdentidadeProvedor identidade) async {
+  /// Passo 3 → 4 ("Crie seu acesso").
+  void irParaAcesso() {
+    if (podeAtivar) _irParaAcesso();
+  }
+
+  /// Passo 4: cria o acesso, confere de novo, grava o consentimento e liga a
+  /// conta; a sessão abre e o roteador leva ao Início.
+  Future<void> ativar({
+    required String nome,
+    required String email,
+    required String senha,
+    required String confirmacao,
+  }) async {
     final qualidade = _qualidade;
     final canal = _canal;
     final nascimento = _nascimento;
     if (qualidade == null || canal == null || nascimento == null || !aceite) {
       return;
     }
+    final acesso = _acessoConferido(
+      nome: nome,
+      email: email,
+      senha: senha,
+      confirmacao: confirmacao,
+    );
+    if (acesso == null) return;
     final vinculos = await executar(
       () => autenticacao.ativarPaciente(
         codigo: _codigo,
@@ -203,7 +272,7 @@ class CadastroPacienteControlador extends CadastroControlador {
         qualidade: qualidade,
         canalAutorizado: canal,
         versaoTermo: versaoTermoConsentimento,
-        identidade: identidade,
+        acesso: acesso,
       ),
       aoRecusar: (motivo) {
         if (motivo == MotivoRecusa.criancaComoTitular) {
@@ -211,7 +280,7 @@ class CadastroPacienteControlador extends CadastroControlador {
           _qualidade = null;
           _passo = 2;
         } else {
-          _recusouNoPasso3(motivo);
+          _recusouNoAcesso(motivo);
         }
       },
     );
@@ -221,14 +290,15 @@ class CadastroPacienteControlador extends CadastroControlador {
 
 /// Estado da TM10 — Cadastro do cuidador: (1) código do convite e CPF do
 /// cuidador, que tem de ser o informado pelo paciente; (2) o que verá e o que
-/// não verá (RNFM05); (3) aceite do termo de acesso.
+/// não verá (RNFM05); (3) aceite do termo de acesso; (4) o acesso, com nome,
+/// e-mail e senha (D14).
 class CadastroCuidadorControlador extends CadastroControlador {
   CadastroCuidadorControlador({
     required super.autenticacao,
     required super.sessao,
   });
 
-  /// Passo 3 pronto para "Continuar com Google".
+  /// Passo 3 pronto para seguir ao passo 4.
   bool get podeAceitar => aceite && !ocupado;
 
   /// Passo 1: confere no repositório, sem consumir o convite.
@@ -247,17 +317,32 @@ class CadastroCuidadorControlador extends CadastroControlador {
   /// Passo 2 → 3.
   void irParaTermo() => _irPara(3);
 
-  /// Passo 3: confere de novo (inclusive o limite de dois, §7.4) e aceita; a
-  /// sessão abre e o roteador leva à TM08.
-  Future<void> aceitar(IdentidadeProvedor identidade) async {
+  /// Passo 3 → 4 ("Crie seu acesso").
+  void irParaAcesso() => _irParaAcesso();
+
+  /// Passo 4: cria o acesso, confere de novo (inclusive o limite de dois,
+  /// §7.4) e aceita; a sessão abre e o roteador leva à TM08.
+  Future<void> aceitar({
+    required String nome,
+    required String email,
+    required String senha,
+    required String confirmacao,
+  }) async {
     if (!aceite) return;
+    final acesso = _acessoConferido(
+      nome: nome,
+      email: email,
+      senha: senha,
+      confirmacao: confirmacao,
+    );
+    if (acesso == null) return;
     final vinculos = await executar(
       () => autenticacao.aceitarConviteCuidador(
         codigo: _codigo,
         cpf: _cpf,
-        identidade: identidade,
+        acesso: acesso,
       ),
-      aoRecusar: _recusouNoPasso3,
+      aoRecusar: _recusouNoAcesso,
     );
     if (vinculos != null) sessao.entrar(vinculos);
   }

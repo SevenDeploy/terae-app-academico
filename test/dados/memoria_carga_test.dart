@@ -192,21 +192,13 @@ void main() {
       expect(convites.where((c) => c.usadoEm != null), isNotEmpty);
     });
 
-    test('identidades "no aparelho" cobrem as personas e contas novas', () {
-      final nomes = e.identidades.map((i) => i.nomeExibicao);
-      expect(
-        nomes,
-        containsAll([
-          'Ana Lúcia Martins',
-          'Patrícia Andrade Neves',
-          'Regina Martins',
-        ]),
-      );
-      expect(
-        e.identidades.where((i) => e.contaDoProvedor(i.idProvedor) == null),
-        isNotEmpty,
-        reason: 'conta nova para o primeiro acesso',
-      );
+    test('toda conta da demonstração entra com a senha de demonstração', () {
+      expect(e.senhas.keys, unorderedEquals(e.contas.keys));
+      expect(e.senhas.values.toSet(), {senhaDeDemonstracao});
+      for (final c in e.contas.values) {
+        expect(e.contaDoEmail(c.email), c, reason: c.email);
+        expect(c.idProvedor, c.id, reason: 'uid do provedor = id da conta');
+      }
     });
 
     test('alertas da demonstração batem com as regras do §7.1', () {

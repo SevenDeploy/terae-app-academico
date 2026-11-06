@@ -9,9 +9,8 @@ const String falhaInesperada =
     'Não deu para continuar agora. Tente de novo em instantes.';
 
 /// Base dos controladores da TM01, TM09 e TM10 (RFM01, RFM09): marca
-/// [ocupado] durante a chamada ao repositório, transforma a recusa em
-/// [mensagem] simples e busca as contas do provedor para a folha "Escolha uma
-/// conta" (D5).
+/// [ocupado] durante a chamada ao repositório e transforma a recusa em
+/// [mensagem] simples.
 ///
 /// Depois de `sessao.entrar`, ninguém navega: o roteador escuta a sessão.
 abstract class ControladorDeEntrada extends ChangeNotifier {
@@ -28,11 +27,6 @@ abstract class ControladorDeEntrada extends ChangeNotifier {
 
   /// Recusa (ou falha) a mostrar na tela, já em linguagem simples.
   String? get mensagem => _mensagem;
-
-  /// D5 — contas do [provedor] "no aparelho"; `null` se falhou (o motivo
-  /// fica em [mensagem]).
-  Future<List<IdentidadeProvedor>?> contasDoAparelho(Provedor provedor) =>
-      executar(() => autenticacao.identidadesNoAparelho(provedor));
 
   /// Roda [operacao] com [ocupado] ligado. Recusa de regra vira [mensagem]
   /// (e chega a [aoRecusar]); outra exceção vira [falhaInesperada]. Devolve

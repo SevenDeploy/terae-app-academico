@@ -1,4 +1,4 @@
-/// As 13 telas (TM00–TM12) montadas como no aparelho: o `TeraeApp` com a
+/// As 16 telas (TM00–TM15) montadas como no aparelho: o `TeraeApp` com a
 /// memória real (`lib/dados/memoria/` sobre `assets/dados/demonstracao.json`),
 /// o relógio parado em 2/10/2026 10:00 na clínica e a sessão de cada persona
 /// (sem sessão, Ana, Patrícia ou Regina). Base dos testes de acessibilidade e
@@ -9,9 +9,15 @@ import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:terae_app/app.dart';
+import 'package:terae_app/dados/enums/adesao.dart';
+import 'package:terae_app/dados/enums/intensidade.dart';
+import 'package:terae_app/dados/enums/situacao_envio.dart';
+import 'package:terae_app/dados/memoria/estado_memoria.dart';
 import 'package:terae_app/dados/memoria/memoria_demonstracao.dart';
+import 'package:terae_app/dados/modelos/registro_diario.dart';
 import 'package:terae_app/nucleo/rotas/rotas.dart';
 import 'package:terae_app/nucleo/sessao/sessao.dart';
+import 'package:terae_app/nucleo/tempo/relogio.dart';
 
 import '../dados/memoria_apoio.dart';
 
@@ -39,11 +45,13 @@ Future<MemoriaDemonstracao> abrirComMemoria(
   WidgetTester tester, {
   required Persona persona,
   required String em,
+  Future<void> Function(MemoriaDemonstracao memoria)? preparar,
 }) async {
   final memoria = memoriaDeTeste();
+  await preparar?.call(memoria);
   final sessao = Sessao();
   if (persona.nomeNaConta case final nome?) {
-    final vinculos = await memoria.repositorios.autenticacao.entrar(
+    final vinculos = await memoria.repositorios.autenticacao.entrarCom(
       identidadeDe(memoria, nome),
     );
     sessao.entrar(vinculos);
@@ -58,6 +66,25 @@ Future<MemoriaDemonstracao> abrirComMemoria(
   );
   await tester.pumpAndSettle();
   return memoria;
+}
+
+/// Registro de Ana feito hoje às 8h30 (D17: ainda dá para corrigir e excluir).
+const String registroDeHoje = 'f0000000-0000-4000-8000-000000000001';
+
+/// Envia o [registroDeHoje] de Ana pela memória (TM14, TM15).
+Future<void> registrarHoje(MemoriaDemonstracao memoria) async {
+  await memoria.repositorios.diario.enviar(
+    RegistroDiario(
+      id: registroDeHoje,
+      pacienteId: idAna,
+      registradoEm: instanteNaClinica(2026, 10, 2, 8, 30),
+      adesao: Adesao.total,
+      intensidade: Intensidade.moderada,
+      sintomaPredominante: 'Ansiedade',
+      observacao: 'Acordei preocupada com a prova.',
+      situacaoEnvio: SituacaoEnvio.naFila,
+    ),
+  );
 }
 
 /// Rola até [alvo], toca e espera assentar.
@@ -137,7 +164,7 @@ final List<TelaReal> telasReais = [
   TelaReal(
     tela: 'TM01',
     arquivo: 'TM01-entrar',
-    descricao: 'TM01 Entrar, com a folha "Escolha uma conta" aberta',
+    descricao: 'TM01 Entrar, com e-mail e senha preenchidos',
     abrir: (t) async {
       await abrirComMemoria(
         t,
@@ -145,8 +172,15 @@ final List<TelaReal> telasReais = [
         em: Rotas.boasVindas,
       );
       await tocar(t, find.byKey(const Key('ir-entrar')));
-      await tocar(t, find.byKey(const Key('continuar-google')));
-      expect(find.text('Escolha uma conta'), findsOneWidget);
+      await t.enterText(
+        find.byKey(const Key('campo-email')),
+        emailDe['Ana Lúcia Martins']!,
+      );
+      await t.enterText(
+        find.byKey(const Key('campo-senha')),
+        senhaDeDemonstracao,
+      );
+      await t.pumpAndSettle();
     },
   ),
   TelaReal(
@@ -274,6 +308,35 @@ final List<TelaReal> telasReais = [
       );
       await tocar(t, find.byKey(const Key('atalho-agenda')));
     },
+  ),
+  TelaReal(
+    tela: 'TM13',
+    arquivo: 'TM13-meus-registros',
+    descricao: 'TM13 Meus registros (Ana), com a lista do diário',
+    abrir: (t) =>
+        abrirComMemoria(t, persona: Persona.ana, em: Rotas.pacienteRegistros),
+  ),
+  TelaReal(
+    tela: 'TM14',
+    arquivo: 'TM14-registro',
+    descricao: 'TM14 Registro de hoje (Ana), com Corrigir e Excluir',
+    abrir: (t) => abrirComMemoria(
+      t,
+      persona: Persona.ana,
+      em: Rotas.registro(registroDeHoje),
+      preparar: registrarHoje,
+    ),
+  ),
+  TelaReal(
+    tela: 'TM15',
+    arquivo: 'TM15-corrigir-registro',
+    descricao: 'TM15 Corrigir o registro de hoje (Ana)',
+    abrir: (t) => abrirComMemoria(
+      t,
+      persona: Persona.ana,
+      em: Rotas.corrigirRegistro(registroDeHoje),
+      preparar: registrarHoje,
+    ),
   ),
 ];
 

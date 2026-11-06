@@ -239,7 +239,7 @@ void main() {
       final v = await m.repositorios.autenticacao.aceitarConviteCuidador(
         codigo: codigoPaulo,
         cpf: cpfPaulo,
-        identidade: paulo,
+        acesso: paulo,
       );
       final ana = await m.repositorios.visaoCuidador.pacienteAcompanhado(
         contaCuidadorId: v.conta.id,

@@ -10,13 +10,12 @@ import '../../nucleo/tema/tema.dart';
 import '../../nucleo/widgets/botao_grande.dart';
 import '../../nucleo/widgets/cartao.dart';
 import 'entrar_controlador.dart';
-import 'escolha_de_conta.dart';
 import 'primeiro_acesso.dart';
 import 'widgets_entrada.dart';
 
-/// TM01 — Entrar (RFM01). Em `/entrar` (pública): "Continuar com Google"
-/// (simulado, D5) e, só no iOS, "Continuar com Apple"; aviso de que o Terae
-/// não guarda senha (RNFM04); atalho para o primeiro acesso.
+/// TM01 — Entrar (RFM01). Em `/entrar` (pública): e-mail e senha (D14), com
+/// a recusa em linguagem simples; aviso de que a senha não fica no celular
+/// (RNFM04); atalho para o primeiro acesso.
 ///
 /// Em `/entrar/perfil` ([selecaoDePerfil], exige sessão): a lista de
 /// `Sessao.perfis`, com papel e nome do paciente; tocar chama
@@ -40,14 +39,28 @@ class EntrarTela extends StatelessWidget {
   }
 }
 
-class _Entrar extends StatelessWidget {
+class _Entrar extends StatefulWidget {
   const _Entrar();
 
-  Future<void> _continuar(BuildContext context, Provedor provedor) async {
-    final controlador = context.read<EntrarControlador>();
-    final conta = await escolherConta(context, controlador, provedor);
-    if (conta != null) await controlador.entrar(conta);
+  @override
+  State<_Entrar> createState() => _EntrarState();
+}
+
+class _EntrarState extends State<_Entrar> {
+  final _email = TextEditingController();
+  final _senha = TextEditingController();
+
+  @override
+  void dispose() {
+    _email.dispose();
+    _senha.dispose();
+    super.dispose();
   }
+
+  Future<void> _entrar() => context.read<EntrarControlador>().entrar(
+    email: _email.text,
+    senha: _senha.text,
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -69,26 +82,54 @@ class _Entrar extends StatelessWidget {
               ),
               const SizedBox(height: MedidasTerae.espacoPequeno),
               Text(
-                'Use a conta que você já tem neste celular. '
-                'Não precisa criar senha.',
+                'Use o e-mail e a senha que você criou no primeiro acesso.',
                 style: textos.bodyLarge?.copyWith(color: CoresTerae.neutro600),
               ),
               const SizedBox(height: MedidasTerae.espacoGrande),
-              BotoesDeProvedor(
-                aoEscolher: controlador.ocupado
-                    ? null
-                    : (provedor) => unawaited(_continuar(context, provedor)),
+              AutofillGroup(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    CampoDeEmail(
+                      key: const Key('campo-email'),
+                      controlador: _email,
+                      erro: controlador.erroEmail,
+                    ),
+                    const SizedBox(height: MedidasTerae.espaco),
+                    CampoDeSenha(
+                      key: const Key('campo-senha'),
+                      controlador: _senha,
+                      rotulo: 'Senha',
+                      erro: controlador.erroSenha,
+                      acao: TextInputAction.done,
+                      aoConcluir: () => unawaited(_entrar()),
+                    ),
+                  ],
+                ),
               ),
               if (mensagem != null) ...[
                 const SizedBox(height: MedidasTerae.espaco),
                 AvisoDeRecusa(mensagem),
               ],
+              const SizedBox(height: MedidasTerae.espaco),
+              if (controlador.ocupado) ...[
+                const LinearProgressIndicator(semanticsLabel: 'Entrando'),
+                const SizedBox(height: MedidasTerae.espaco),
+              ],
+              BotaoGrande(
+                key: const Key('entrar'),
+                rotulo: controlador.ocupado ? 'Entrando…' : 'Entrar',
+                icone: Icons.login,
+                aoTocar: controlador.ocupado
+                    ? null
+                    : () => unawaited(_entrar()),
+              ),
               const SizedBox(height: MedidasTerae.espacoGrande),
               const CaixaInformativa(
                 icone: Icons.lock_outline,
                 texto:
-                    'O Terae não guarda senha. Quem confere a senha e a '
-                    'verificação em duas etapas é o Google ou a Apple.',
+                    'A senha não fica guardada neste celular. Quem confere a '
+                    'senha é o serviço de login do Terae.',
               ),
               const SizedBox(height: MedidasTerae.espacoGrande),
               const Divider(),

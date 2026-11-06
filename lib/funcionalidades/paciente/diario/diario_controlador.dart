@@ -12,19 +12,7 @@ import '../../../nucleo/tempo/relogio.dart';
 import '../../../nucleo/uuid.dart';
 import 'resultado_provisorio.dart';
 
-/// Opções do sintoma predominante (RNFM02: escolher, nunca digitar). Partem
-/// dos exemplos do protótipo ("dor de cabeça, tristeza, falta de ar…"), em
-/// linguagem simples; o rótulo escolhido é o valor gravado no registro.
-const List<String> sintomasDoDiario = [
-  'Tristeza',
-  'Ansiedade',
-  'Cansaço',
-  'Dor',
-  'Sono ruim',
-  'Falta de ar',
-  'Outro',
-  'Nenhum em especial',
-];
+export 'campos_do_diario.dart' show sintomasDoDiario;
 
 /// Quanto o envio não crítico espera a resposta antes de abrir a TM04 com o
 /// registro guardado (RNFM03: resposta percebida em até 2 s).

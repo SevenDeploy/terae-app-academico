@@ -11,6 +11,7 @@ import '../../../nucleo/tema/cores.dart';
 import '../../../nucleo/tema/tema.dart';
 import '../../../nucleo/tempo/data_civil.dart';
 import '../../../nucleo/tempo/relogio.dart';
+import '../../../nucleo/widgets/aviso_de_conexao.dart';
 import '../../../nucleo/widgets/cartao.dart';
 import '../componentes_paciente.dart';
 import 'inicio_controlador.dart';
@@ -63,6 +64,7 @@ class _ConteudoInicio extends StatelessWidget {
 
     return CorpoDaTela(
       children: [
+        const AvisoDeConexao(),
         Row(
           children: [
             Expanded(

@@ -11,7 +11,11 @@ import '../enums/situacao_envio.dart';
 /// O [id] é UUID gerado no aparelho (`gerarUuidV4`), o que permite criar sem
 /// rede e reenviar sem duplicar. [situacaoEnvio] sustenta a fila em conexão
 /// instável; enquanto `naFila`, nenhuma tela diz que a equipe foi avisada.
-/// Depois de enviado, o registro não é editado (§23).
+///
+/// D17 (Atividade 4) — o registro pode ser corrigido ou excluído só no mesmo
+/// dia civil da clínica em que foi feito (`dados/regras/diario.dart`). A
+/// exclusão é lógica: [excluidoEm] preenchido tira o registro das listas, mas
+/// ele continua guardado (§23: nenhuma exclusão física).
 @immutable
 class RegistroDiario {
   RegistroDiario({
@@ -23,7 +27,11 @@ class RegistroDiario {
     required this.sintomaPredominante,
     this.observacao,
     required this.situacaoEnvio,
-  }) : registradoEm = registradoEm.toUtc();
+    DateTime? atualizadoEm,
+    DateTime? excluidoEm,
+  }) : registradoEm = registradoEm.toUtc(),
+       atualizadoEm = atualizadoEm?.toUtc(),
+       excluidoEm = excluidoEm?.toUtc();
 
   factory RegistroDiario.fromMap(Mapa mapa) => RegistroDiario(
     id: lerCampo<String>(mapa, 'id'),
@@ -34,6 +42,8 @@ class RegistroDiario {
     sintomaPredominante: lerCampo<String>(mapa, 'sintomaPredominante'),
     observacao: lerOpcional<String>(mapa, 'observacao'),
     situacaoEnvio: lerEnum(mapa, 'situacaoEnvio', SituacaoEnvio.values),
+    atualizadoEm: lerInstanteOpcional(mapa, 'atualizadoEm'),
+    excluidoEm: lerInstanteOpcional(mapa, 'excluidoEm'),
   );
 
   final String id;
@@ -49,6 +59,14 @@ class RegistroDiario {
   final String? observacao;
   final SituacaoEnvio situacaoEnvio;
 
+  /// Última correção feita pelo paciente (D17); `null` se nunca mudou.
+  final DateTime? atualizadoEm;
+
+  /// Exclusão lógica (D17); `null` enquanto o registro vale.
+  final DateTime? excluidoEm;
+
+  bool get excluido => excluidoEm != null;
+
   /// Só a situação de envio muda (`naFila` → `enviado`).
   RegistroDiario copyWith({SituacaoEnvio? situacaoEnvio}) => RegistroDiario(
     id: id,
@@ -59,6 +77,45 @@ class RegistroDiario {
     sintomaPredominante: sintomaPredominante,
     observacao: observacao,
     situacaoEnvio: situacaoEnvio ?? this.situacaoEnvio,
+    atualizadoEm: atualizadoEm,
+    excluidoEm: excluidoEm,
+  );
+
+  /// D17 — a correção feita [em] um instante: troca as respostas (a
+  /// [observacao] pode virar `null`) e volta para a fila até o servidor
+  /// confirmar. Mantém `id`, paciente e `registradoEm`.
+  RegistroDiario corrigido({
+    required Adesao adesao,
+    required Intensidade intensidade,
+    required String sintomaPredominante,
+    required String? observacao,
+    required DateTime em,
+  }) => RegistroDiario(
+    id: id,
+    pacienteId: pacienteId,
+    registradoEm: registradoEm,
+    adesao: adesao,
+    intensidade: intensidade,
+    sintomaPredominante: sintomaPredominante,
+    observacao: observacao,
+    situacaoEnvio: SituacaoEnvio.naFila,
+    atualizadoEm: em,
+    excluidoEm: excluidoEm,
+  );
+
+  /// D17 — a exclusão lógica feita [em] um instante; volta para a fila até o
+  /// servidor confirmar.
+  RegistroDiario excluidoAs(DateTime em) => RegistroDiario(
+    id: id,
+    pacienteId: pacienteId,
+    registradoEm: registradoEm,
+    adesao: adesao,
+    intensidade: intensidade,
+    sintomaPredominante: sintomaPredominante,
+    observacao: observacao,
+    situacaoEnvio: SituacaoEnvio.naFila,
+    atualizadoEm: atualizadoEm,
+    excluidoEm: em,
   );
 
   Mapa toMap() => {
@@ -70,6 +127,8 @@ class RegistroDiario {
     'sintomaPredominante': sintomaPredominante,
     'observacao': observacao,
     'situacaoEnvio': situacaoEnvio.name,
+    'atualizadoEm': escreverInstanteOpcional(atualizadoEm),
+    'excluidoEm': escreverInstanteOpcional(excluidoEm),
   };
 
   @override
@@ -82,7 +141,9 @@ class RegistroDiario {
       other.intensidade == intensidade &&
       other.sintomaPredominante == sintomaPredominante &&
       other.observacao == observacao &&
-      other.situacaoEnvio == situacaoEnvio;
+      other.situacaoEnvio == situacaoEnvio &&
+      other.atualizadoEm == atualizadoEm &&
+      other.excluidoEm == excluidoEm;
 
   @override
   int get hashCode => Object.hash(
@@ -94,6 +155,8 @@ class RegistroDiario {
     sintomaPredominante,
     observacao,
     situacaoEnvio,
+    atualizadoEm,
+    excluidoEm,
   );
 
   @override

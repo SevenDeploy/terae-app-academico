@@ -1,7 +1,10 @@
+import '../enums/intensidade.dart';
 import '../enums/situacao_envio.dart';
 import '../modelos/alerta.dart';
 import '../modelos/registro_diario.dart';
+import '../regras/diario.dart';
 import '../repositorios/diario_repositorio.dart';
+import '../repositorios/falhas.dart';
 import 'estado_memoria.dart';
 import 'memoria_demonstracao.dart';
 import 'regras.dart';
@@ -17,7 +20,9 @@ import 'regras.dart';
 ///   alerta vai para a caixa do profissional de referência. Religar a
 ///   conexão pelo painel já reenvia a fila (`DemonstracaoMemoria`).
 /// - Idempotente pelo `id` gerado no aparelho: o mesmo registro não entra
-///   duas vezes nem cria segundo alerta, e o que já foi enviado não é editado.
+///   duas vezes nem cria segundo alerta.
+/// - D17: correção e exclusão lógica só no mesmo dia; as duas passam pela
+///   mesma fila, e o alerta que já existe nunca some.
 class DiarioMemoria implements RepositorioDiario {
   DiarioMemoria(this._memoria);
 
@@ -36,38 +41,117 @@ class DiarioMemoria implements RepositorioDiario {
         registro.id,
         () => registro.copyWith(situacaoEnvio: SituacaoEnvio.naFila),
       );
+      _memoria.atualizarConexao();
       return ResultadoEnvio(registro: naFila);
     }
     _esvaziarFila();
-    return _resultadoNoServidor(registro.id) ?? _receber(registro);
+    final resultado = _resultadoNoServidor(registro.id) ?? _receber(registro);
+    _memoria.atualizarConexao();
+    return resultado;
   }
 
   @override
   Future<List<ResultadoEnvio>> reenviarFila() async {
     await _memoria.esperar();
     if (_memoria.semConexao) return const [];
-    return List.unmodifiable(_esvaziarFila());
+    final saidas = _esvaziarFila();
+    _memoria.atualizarConexao();
+    return List.unmodifiable(saidas);
   }
 
   @override
   Future<List<RegistroDiario>> registros(String pacienteId) async {
     await _memoria.esperar();
     _e.exigirPaciente(pacienteId);
+    return List.unmodifiable(_doPaciente(pacienteId));
+  }
+
+  @override
+  Future<List<RegistroDiario>> buscar(
+    String pacienteId, {
+    String texto = '',
+    Set<Intensidade> intensidades = const {},
+  }) async {
+    await _memoria.esperar();
+    _e.exigirPaciente(pacienteId);
     return List.unmodifiable(
-      ordenar<RegistroDiario>(
-        [
-          ..._e.registros.values,
-          ..._e.fila.values,
-        ].where((r) => r.pacienteId == pacienteId),
-        (a, b) => b.registradoEm.compareTo(a.registradoEm),
+      _doPaciente(pacienteId).where(
+        (r) => passaNoFiltro(r, texto: texto, intensidades: intensidades),
       ),
     );
+  }
+
+  @override
+  Future<RegistroDiario> registro(String registroId) async {
+    await _memoria.esperar();
+    return _versaoAtual(registroId) ??
+        (throw const RecusaDeRegra(MotivoRecusa.registroInexistente));
   }
 
   @override
   Future<Alerta?> alertaDoRegistro(String registroId) async {
     await _memoria.esperar();
     return _e.alertaDoRegistro(registroId);
+  }
+
+  @override
+  Future<ResultadoEnvio> atualizar(RegistroDiario corrigido) async {
+    await _memoria.esperar();
+    final atual = _alteravel(corrigido.id);
+    final novo = atual.corrigido(
+      adesao: corrigido.adesao,
+      intensidade: corrigido.intensidade,
+      sintomaPredominante: corrigido.sintomaPredominante,
+      observacao: corrigido.observacao,
+      em: _memoria.agora(),
+    );
+    return _enfileirarOuEnviar(novo);
+  }
+
+  @override
+  Future<RegistroDiario> excluir(String registroId) async {
+    await _memoria.esperar();
+    final atual = _alteravel(registroId);
+    final resultado = _enfileirarOuEnviar(atual.excluidoAs(_memoria.agora()));
+    return resultado.registro;
+  }
+
+  /// Registros do paciente na última versão (a da fila vence a do servidor),
+  /// sem os excluídos, do mais recente para o mais antigo.
+  List<RegistroDiario> _doPaciente(String pacienteId) =>
+      ordenar<RegistroDiario>(
+        {
+          ..._e.registros,
+          ..._e.fila,
+        }.values.where((r) => r.pacienteId == pacienteId && !r.excluido),
+        (a, b) => b.registradoEm.compareTo(a.registradoEm),
+      );
+
+  RegistroDiario? _versaoAtual(String registroId) =>
+      _e.fila[registroId] ?? _e.registros[registroId];
+
+  /// D17 — o registro existe e ainda pode mudar hoje; senão recusa.
+  RegistroDiario _alteravel(String registroId) {
+    final atual =
+        _versaoAtual(registroId) ??
+        (throw const RecusaDeRegra(MotivoRecusa.registroInexistente));
+    if (!podeAlterar(atual, _memoria.agora())) {
+      throw const RecusaDeRegra(MotivoRecusa.edicaoEncerrada);
+    }
+    return atual;
+  }
+
+  /// Correção ou exclusão: sem conexão, a nova versão fica na fila; com
+  /// conexão, o servidor recebe a fila e depois ela.
+  ResultadoEnvio _enfileirarOuEnviar(RegistroDiario novo) {
+    _e.fila[novo.id] = novo;
+    if (_memoria.semConexao) {
+      _memoria.atualizarConexao();
+      return ResultadoEnvio(registro: novo);
+    }
+    final saidas = _esvaziarFila();
+    _memoria.atualizarConexao();
+    return saidas.lastWhere((r) => r.registro.id == novo.id);
   }
 
   ResultadoEnvio? _resultadoNoServidor(String registroId) {
@@ -89,15 +173,21 @@ class DiarioMemoria implements RepositorioDiario {
   ];
 
   /// O servidor recebe [registro]: grava como `enviado`, tira da fila e
-  /// avalia o §7.1 sobre a sequência que já tem.
+  /// avalia o §7.1 sobre a sequência que já tem. Registro excluído não cria
+  /// alerta, e quem já tem alerta não ganha outro (D17: o que já foi emitido
+  /// fica como está).
   ResultadoEnvio _receber(RegistroDiario registro) {
     final enviado = registro.copyWith(situacaoEnvio: SituacaoEnvio.enviado);
+    _e.registros[enviado.id] = enviado;
+    _e.fila.remove(enviado.id);
+    final existente = _e.alertaDoRegistro(enviado.id);
+    if (existente != null || enviado.excluido) {
+      return ResultadoEnvio(registro: enviado, alerta: existente);
+    }
     final regra = regraDoAlerta(
       nova: enviado.intensidade,
       anterior: _e.registroAnterior(enviado)?.intensidade,
     );
-    _e.registros[enviado.id] = enviado;
-    _e.fila.remove(enviado.id);
     if (regra == null) return ResultadoEnvio(registro: enviado);
     final alerta = Alerta(
       id: _memoria.novoId(),

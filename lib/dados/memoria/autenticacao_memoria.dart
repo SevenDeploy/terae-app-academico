@@ -19,13 +19,17 @@ import 'memoria_demonstracao.dart';
 
 Never _recusa(MotivoRecusa motivo) => throw RecusaDeRegra(motivo);
 
-/// Entrada simulada pelo provedor e primeiro acesso por convite (RFM01,
-/// RFM09; TM01, TM09, TM10), com as regras de convite do §23.
+/// Entrada por e-mail e senha simulada (D14, D19) e primeiro acesso por
+/// convite (RFM01, RFM09; TM01, TM09, TM10), com as regras de convite do §23.
+/// As senhas ficam no "servidor simulado" ([EstadoMemoria.senhas]); nada
+/// fica guardado entre aberturas do app, então [sessaoGuardada] é sempre
+/// `null`.
 ///
 /// Ordem das conferências (a primeira que falha decide a recusa): código →
 /// tipo → uso → vínculo pendente (só cuidador) → validade → CPF → nascimento
 /// (só paciente) → paciente ativo → qualidade de quem aceita (só na ativação
-/// do paciente: criança só pelo responsável legal). O código vem antes do CPF para que quem só
+/// do paciente: criança só pelo responsável legal) → acesso (e-mail, senha).
+/// O código vem antes do CPF para que quem só
 /// sabe um CPF não descubra nada sobre o cadastro (§23); a revogação vem antes
 /// da validade, porque explica melhor por que o convite parou de valer. Toda
 /// conferência acontece antes de qualquer gravação: recusa não grava nada.
@@ -37,21 +41,15 @@ class AutenticacaoMemoria implements RepositorioAutenticacao {
   EstadoMemoria get _e => _memoria.estado;
 
   @override
-  Future<List<IdentidadeProvedor>> identidadesNoAparelho(
-    Provedor provedor,
-  ) async {
+  Future<VinculosDaConta> entrar({
+    required String email,
+    required String senha,
+  }) async {
     await _memoria.esperar();
-    return List.unmodifiable(
-      _e.identidades.where((i) => i.provedor == provedor),
-    );
-  }
-
-  @override
-  Future<VinculosDaConta> entrar(IdentidadeProvedor identidade) async {
-    await _memoria.esperar();
-    final conta =
-        _e.contaDoProvedor(identidade.idProvedor) ??
-        _recusa(MotivoRecusa.contaSemAcesso);
+    final conta = _e.contaDoEmail(email);
+    if (conta == null || _e.senhas[conta.id] != senha) {
+      _recusa(MotivoRecusa.credenciaisInvalidas);
+    }
     if (conta.situacao != SituacaoConta.ativa) {
       _recusa(MotivoRecusa.contaInativa);
     }
@@ -63,6 +61,12 @@ class AutenticacaoMemoria implements RepositorioAutenticacao {
     _e.contas[conta.id] = atualizada;
     return _e.vinculosDaConta(atualizada);
   }
+
+  @override
+  Future<VinculosDaConta?> sessaoGuardada() async => null;
+
+  @override
+  Future<void> sair() async {}
 
   @override
   Future<ConviteConferido> conferirCodigoPaciente({
@@ -83,7 +87,7 @@ class AutenticacaoMemoria implements RepositorioAutenticacao {
     required QualidadeConsentimento qualidade,
     required CanalAutorizado canalAutorizado,
     required String versaoTermo,
-    required IdentidadeProvedor identidade,
+    required NovoAcesso acesso,
   }) async {
     await _memoria.esperar();
     if (versaoTermo.trim().isEmpty) {
@@ -100,9 +104,9 @@ class AutenticacaoMemoria implements RepositorioAutenticacao {
       _recusa(MotivoRecusa.criancaComoTitular);
     }
     final agora = _memoria.agora();
-    final conta = _contaQueEntra(identidade);
+    final conta = _contaQueEntra(acesso);
     // Daqui em diante só grava: nenhuma recusa possível.
-    _e.contas[conta.id] = conta;
+    _guardarConta(conta, acesso);
     _e.pacientes[paciente.id] = paciente.copyWith(contaId: conta.id);
     // Termo novo gera registro novo (§23): o consentimento anterior, se
     // houver, fica como está.
@@ -134,7 +138,7 @@ class AutenticacaoMemoria implements RepositorioAutenticacao {
   Future<VinculosDaConta> aceitarConviteCuidador({
     required String codigo,
     required String cpf,
-    required IdentidadeProvedor identidade,
+    required NovoAcesso acesso,
   }) async {
     await _memoria.esperar();
     final (convite, vinculo, paciente) = _conferirCuidador(codigo, cpf);
@@ -149,8 +153,8 @@ class AutenticacaoMemoria implements RepositorioAutenticacao {
       _recusa(MotivoRecusa.limiteDeCuidadores);
     }
     final agora = _memoria.agora();
-    final conta = _contaQueEntra(identidade);
-    _e.contas[conta.id] = conta;
+    final conta = _contaQueEntra(acesso);
+    _guardarConta(conta, acesso);
     _e.vinculos[vinculo.id] = vinculo.copyWith(
       situacao: SituacaoVinculo.ativo,
       contaCuidadorId: conta.id,
@@ -213,24 +217,40 @@ class AutenticacaoMemoria implements RepositorioAutenticacao {
     }
   }
 
-  /// A conta do mesmo `idProvedor`, com o último acesso de agora, ou uma
-  /// nova — sem gravar. Conta inativa recusa.
-  ContaUsuario _contaQueEntra(IdentidadeProvedor identidade) {
+  /// D14 — a conta do e-mail do [acesso], com o último acesso de agora, ou
+  /// uma nova — sem gravar. Recusa e-mail mal formado, senha curta, e-mail já
+  /// usado com outra senha e conta inativa.
+  ContaUsuario _contaQueEntra(NovoAcesso acesso) {
+    if (!emailBemFormado(acesso.email)) _recusa(MotivoRecusa.emailInvalido);
+    if (acesso.senha.length < tamanhoMinimoDaSenha) {
+      _recusa(MotivoRecusa.senhaFraca);
+    }
     final agora = _memoria.agora();
-    final existente = _e.contaDoProvedor(identidade.idProvedor);
+    final existente = _e.contaDoEmail(acesso.email);
     if (existente != null) {
+      if (_e.senhas[existente.id] != acesso.senha) {
+        _recusa(MotivoRecusa.emailJaCadastrado);
+      }
       if (existente.situacao != SituacaoConta.ativa) {
         _recusa(MotivoRecusa.contaInativa);
       }
       return existente.copyWith(ultimoAcessoEm: agora);
     }
+    final id = _memoria.novoId();
+    final nome = acesso.nome.trim();
     return ContaUsuario(
-      id: _memoria.novoId(),
-      nomeExibicao: identidade.nomeExibicao,
-      email: identidade.email,
-      idProvedor: identidade.idProvedor,
+      id: id,
+      nomeExibicao: nome.isEmpty ? acesso.emailNormalizado : nome,
+      email: acesso.emailNormalizado,
+      // No Firebase, o uid do Authentication; aqui, o próprio id da conta.
+      idProvedor: id,
       situacao: SituacaoConta.ativa,
       ultimoAcessoEm: agora,
     );
+  }
+
+  void _guardarConta(ContaUsuario conta, NovoAcesso acesso) {
+    _e.contas[conta.id] = conta;
+    _e.senhas.putIfAbsent(conta.id, () => acesso.senha);
   }
 }
