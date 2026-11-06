@@ -3,16 +3,31 @@
 > **Projeto acadêmico — UNEMAT 2026, disciplina Dispositivos Móveis.** Este aplicativo Flutter é uma forma de ver,
 > de outro jeito, o app do paciente do Terae. **Não é o app do Terae produção**: o Terae produção é um SaaS web, e o
 > canal dos pacientes no produto é um PWA publicado na Play Store. Este app usa só dados fictícios de demonstração,
-> não se conecta a nenhum servidor e não é publicado em loja.
+> conecta-se só ao Firebase acadêmico `terae-app-academico` (Atividade 4) e não é publicado em loja. Sem o Firebase
+> configurado — e sempre na web —, roda com os dados de demonstração na memória.
 
 Equipe: Izabely Kamila Martins Barbosa, Lucas da Silva Gonçalves, Willian dos Santos Lira e Walyson dos Santos Medeiros.
 
-Especificação: Atividade 3 v3.0 — Implementação Inicial e Modelo de Dados (02/10/2026).
+Especificação: Atividade 3 v3.0 — Implementação Inicial e Modelo de Dados (02/10/2026), e Atividade 4 —
+Persistência Local e Integração com API/Nuvem (decisões D12–D20 em [`docs/estado.md`](docs/estado.md)).
+
+## Atividade 4 em uma tela
+
+| O que pede o enunciado | Onde está |
+|---|---|
+| Cadastro de usuários | TM09/TM10, passo 4 "Crie seu acesso" (e-mail e senha no Firebase Authentication); TM01 entra com e-mail e senha |
+| CRUD do item principal (registro do diário) | TM03 cadastra · TM13 lista e busca · TM14 mostra e exclui (lógico) · TM15 corrige — corrigir e excluir só no mesmo dia (D17) |
+| Persistência local | SQLite (`lib/dados/local/`: diário, alertas, cópias de leitura em JSON) e SharedPreferences (perfil ativo, última sincronização) |
+| API/nuvem | Cloud Firestore + Firebase Authentication (`lib/dados/remoto/`, `lib/dados/persistente/`, `firestore.rules`) |
+| Objeto ↔ JSON | `toMap`/`fromMap` dos modelos → documento do Firestore e `jsonEncode` no SQLite |
+| Carregamento e erros | indicador de carregando, "Tentar de novo", recusas em linguagem simples, prazo de 2 s (RNFM03) |
+| Online/offline | fila no SQLite, aviso "Sem conexão — N registros aguardando envio", envio automático quando a conexão volta (`lib/dados/sincronizacao/`) |
 
 ## Como acessar localmente
 
 Tudo roda nesta máquina, sem internet depois da instalação. Os comandos são do PowerShell, a partir da pasta
-`C:\Users\willi\Projetos\Terae\terae_app`. O Flutter está em `C:\src\flutter\bin` (os scripts o encontram mesmo
+`C:\Users\willi\Projetos\Terae\terae_app` (fora do OneDrive e com caminho sem acento: o Gradle não compila em
+"Dispositivos Móveis" nem dentro do OneDrive). O Flutter está em `C:\src\flutter\bin` (os scripts o encontram mesmo
 fora do PATH).
 
 | O quê | Comando | Onde abre |
@@ -29,7 +44,9 @@ da pasta `Terae/` abre a versão web no navegador embutido.
 
 ### Contas e códigos da demonstração
 
-Toque em **Entrar → Continuar com Google** e escolha a conta na folha "Escolha uma conta" (simulada, sem senha).
+Toque em **Entrar** e use o e-mail da persona e a senha de demonstração: no modo memória (web, testes ou sem
+Firebase), a `senhaDeDemonstracao` de `lib/dados/memoria/estado_memoria.dart`; no Firebase, a `TERAE_APP_SENHA_DEMO`
+do `.env` usada na semente (combinada com a equipe, fora do git).
 
 | Persona | Conta simulada | O que mostra |
 |---|---|---|
@@ -77,3 +94,23 @@ C:\src\flutter\bin\flutter.bat build apk --debug
 
 Estado, decisões (D1–D11 e as da revisão) e pendências: [`docs/estado.md`](docs/estado.md). Contratos internos:
 [`docs/contratos.md`](docs/contratos.md). Capturas das telas: [`docs/capturas/`](docs/capturas/).
+
+## Firebase acadêmico (Atividade 4)
+
+Projeto `terae-app-academico`, plano gratuito Spark, só da disciplina. Passos, uma vez:
+
+1. `firebase login` (conta Google do dono) e criação do projeto, com Firestore em `southamerica-east1` e o provedor
+   "E-mail/senha" ativado em Authentication.
+2. `flutterfire configure --project=terae-app-academico --platforms=android` — gera `lib/firebase_options.dart` e
+   `android/app/google-services.json` (troca o arquivo provisório, que faz o app cair no modo memória).
+3. `firebase deploy --only firestore:rules` — publica `firestore.rules`.
+4. Copie `.env.exemplo` para `.env` e preencha a chave da conta de serviço (guardada fora do OneDrive e do git) e a
+   senha de demonstração; depois `cd ferramentas && npm install && cd ..` e
+   `node ferramentas/semear-firebase.mjs --reiniciar` (apaga e grava de novo as personas e os códigos).
+5. Para conferir o que chegou ao servidor: `node ferramentas/conferir-firebase.mjs [pacienteId]` (só leitura).
+
+Feito em 06/11/2026: projeto criado, regras publicadas, semente rodada e roteiro conferido no emulador
+(capturas em [`docs/evidencias-a4/`](docs/evidencias-a4/)). O banco ficou na região `nam5`.
+
+Sem conexão o app continua: o diário vai para a fila no SQLite e sai sozinho quando a conexão volta; as telas de
+leitura usam a última cópia. No modo depuração, o painel da tela inicial força "sem conexão" sem modo avião.

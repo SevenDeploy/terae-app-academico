@@ -1,4 +1,4 @@
-# Contratos congelados da fundação (onda 1)
+# Contratos congelados da fundação (onda 1) e da Atividade 4
 
 Mudar qualquer item abaixo exige combinar com o líder. Detalhe e doc de cada símbolo estão no próprio arquivo.
 
@@ -70,3 +70,32 @@ indisponível, sem toque e anunciada desativada), `FaixaEmergencia(destaque)` (c
 **Testes** — `test/apoio/dubles.dart` (dublês que lançam `UnimplementedError`: estenda e sobrescreva; personas
 `vinculosAna/Regina/Patricia/Mistos`, `LancadorDuble`) e `test/apoio/app_de_teste.dart` (`appDeTeste(sessao, em)`).
 Portão: `dart format --set-exit-if-changed lib test`, `flutter analyze` sem issue, `flutter test`.
+
+## Atividade 4 (06/11/2026)
+
+**Rotas novas** — `pacienteRegistros` TM13 `/paciente/registros`, `pacienteRegistro` TM14 e
+`pacienteCorrigirRegistro` TM15 (id na consulta: use `Rotas.registro(id)` e `Rotas.corrigirRegistro(id)`), todas em
+`doPaciente`, empilhadas sobre as abas pelo navegador raiz.
+
+**`RepositorioAutenticacao`** — `entrar({email, senha})`, `sessaoGuardada()` (a sessão do Firebase ao reabrir o app;
+sem conexão, a cópia local), `sair()` (D20: encerra e apaga o local); `ativarPaciente(..., acesso: NovoAcesso)` e
+`aceitarConviteCuidador(..., acesso: NovoAcesso)` com `NovoAcesso(nome, email, senha)`. Saem `Provedor`,
+`IdentidadeProvedor` e `identidadesNoAparelho`. Recusas novas: `credenciaisInvalidas`, `emailJaCadastrado`,
+`emailInvalido`, `senhaFraca`.
+
+**`RepositorioDiario`** — também `buscar(pacienteId, {texto, intensidades})`, `registro(id)`, `atualizar(corrigido)`
+e `excluir(id)` (D17: mesmo dia, exclusão lógica); `registros` deixa de fora os excluídos. Recusas novas:
+`edicaoEncerrada`, `registroInexistente`. Regras puras em `dados/regras/diario.dart` (`podeAlterar`, busca sem
+acento) e `dados/regras/alerta.dart` (`regraDoAlerta`).
+
+**`RegistroDiario`** — campos `atualizadoEm?` e `excluidoEm?`; `corrigido(...)` e `excluidoAs(em)`.
+
+**`Repositorios.conexao`** — `ValueListenable<SituacaoSincronizacao>` (online, pendentes, sincronizando, última
+sincronização), entregue às telas como `ConexaoDoApp` e mostrado pelo `AvisoDeConexao` (`nucleo/widgets`).
+
+**`Sessao`** — `Sessao({aoMudarPerfil, aoSair})`; `entrar(vinculos, {perfilGuardado})` reabre o perfil pela
+`Perfil.chave` (`papel:pacienteId`) guardada em SharedPreferences.
+
+**Camadas** — telas só falam com contratos: `funcionalidades/` não importa `dados/local|remoto|persistente|
+sincronizacao` nem sqflite/Firebase (exceção: `situacao_sincronizacao.dart`); só `main.dart` monta a persistência
+(`dados/persistente/composicao.dart`). Conferido por `test/arquitetura_test.dart`.
