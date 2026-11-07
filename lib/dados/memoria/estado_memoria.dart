@@ -14,6 +14,7 @@ import '../enums/situacao_vinculo.dart';
 import '../enums/tipo_convite.dart';
 import '../modelos/agendamento.dart';
 import '../modelos/alerta.dart';
+import '../modelos/atividade_de_casa.dart';
 import '../modelos/consentimento.dart';
 import '../modelos/conta_usuario.dart';
 import '../modelos/convite_acesso.dart';
@@ -22,6 +23,7 @@ import '../modelos/marco_jornada.dart';
 import '../modelos/paciente.dart';
 import '../modelos/profissional_saude.dart';
 import '../modelos/receita_uso_continuo.dart';
+import '../modelos/registro_de_atividade.dart';
 import '../modelos/registro_diario.dart';
 import '../modelos/vinculo_cuidador.dart';
 import '../regras/cuidadores.dart' as cuidadores;
@@ -105,6 +107,8 @@ const Set<String> _chavesConhecidas = {
   'marcos',
   'registros',
   'alertas',
+  'atividadesCasa',
+  'registrosCasa',
 };
 
 List<Mapa> _entradas(Mapa dados, String chave) {
@@ -187,6 +191,27 @@ class EstadoMemoria {
       (r.situacaoEnvio == SituacaoEnvio.enviado ? registros : fila)[r.id] = r;
     }
     _carregar(d, 'alertas', alertas, Alerta.fromMap, (x) => x.id);
+    _carregar(
+      d,
+      'atividadesCasa',
+      atividadesCasa,
+      AtividadeDeCasa.fromMap,
+      (x) => x.id,
+    );
+    final daCasa = <String, RegistroDeAtividade>{};
+    _carregar(
+      d,
+      'registrosCasa',
+      daCasa,
+      RegistroDeAtividade.fromMap,
+      (x) => x.id,
+    );
+    for (final r in daCasa.values) {
+      (r.situacaoEnvio == SituacaoEnvio.enviado
+              ? registrosCasa
+              : filaCasa)[r.id] =
+          r;
+    }
     _conferirIntegridade();
     for (final a in alertas.values) {
       destinatarios[a.id] = _destinatarioDoRegistro(a.registroId);
@@ -216,6 +241,17 @@ class EstadoMemoria {
   /// novos e correções ou exclusões ainda não confirmadas (D17).
   final Map<String, RegistroDiario> fila = {};
   final Map<String, Alerta> alertas = {};
+
+  /// Evolução de TO (F1): atividades de casa (só a clínica cria).
+  final Map<String, AtividadeDeCasa> atividadesCasa = {};
+
+  /// Registros das atividades que o servidor recebeu (`enviado`), na última
+  /// versão confirmada (corrigido ou desfeito no mesmo dia, D26).
+  final Map<String, RegistroDeAtividade> registrosCasa = {};
+
+  /// Fila de envio dos registros das atividades (`naFila`), na ordem em que
+  /// entraram.
+  final Map<String, RegistroDeAtividade> filaCasa = {};
 
   /// Caixa de cada alerta: id do alerta → id do profissional de referência
   /// do paciente no momento em que o servidor o criou (§23: "endereçado ao
@@ -329,6 +365,37 @@ class EstadoMemoria {
         case SituacaoVinculo.revogado:
           _exigir(v.revogadoEm != null, 'vínculo revogado sem data', v.id);
       }
+    }
+    for (final a in atividadesCasa.values) {
+      _exigir(
+        pacientes.containsKey(a.pacienteId),
+        'paciente da atividade',
+        a.id,
+      );
+      _exigir(
+        profissionais.containsKey(a.profissionalId),
+        'profissional da atividade',
+        a.id,
+      );
+    }
+    final diasPorAtividade = <String>{};
+    for (final r in {...registrosCasa, ...filaCasa}.values) {
+      final atividade = atividadesCasa[r.atividadeId];
+      _exigir(
+        atividade != null && atividade.pacienteId == r.pacienteId,
+        'atividade do registro de casa',
+        r.id,
+      );
+      _exigir(
+        DataCivil.doInstante(r.registradoEm) == r.dia,
+        'dia do registro de casa',
+        r.id,
+      );
+      _exigir(
+        diasPorAtividade.add('${r.atividadeId}/${r.dia}'),
+        'dois registros da mesma atividade no mesmo dia (D26)',
+        r.id,
+      );
     }
     _exigir(
       convites.values
@@ -547,6 +614,15 @@ class EstadoMemoria {
     destinatarios[alerta.id] = _destinatarioDoRegistro(alerta.registroId);
   }
 
+  /// O servidor recebe a fila dos registros das atividades de casa, na ordem
+  /// em que entraram: cada um vira `enviado` e sai da fila (F1, D26).
+  void receberFilaCasa() {
+    for (final r in filaCasa.values) {
+      registrosCasa[r.id] = r.copyWith(situacaoEnvio: SituacaoEnvio.enviado);
+    }
+    filaCasa.clear();
+  }
+
   /// Retrato de tudo, no formato dos mapas — para comparar estados em teste
   /// (ex.: `reiniciarDados` volta ao inicial).
   Mapa paraMapa() => {
@@ -565,5 +641,8 @@ class EstadoMemoria {
     'fila': [for (final x in fila.values) x.toMap()],
     'alertas': [for (final x in alertas.values) x.toMap()],
     'destinatarios': {...destinatarios},
+    'atividadesCasa': [for (final x in atividadesCasa.values) x.toMap()],
+    'registrosCasa': [for (final x in registrosCasa.values) x.toMap()],
+    'filaCasa': [for (final x in filaCasa.values) x.toMap()],
   };
 }

@@ -9,15 +9,21 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:terae_app/dados/conversao_mapa.dart';
 import 'package:terae_app/dados/enums/adesao.dart';
+import 'package:terae_app/dados/enums/adesao_em_casa.dart';
 import 'package:terae_app/dados/enums/intensidade.dart';
+import 'package:terae_app/dados/enums/quem_registrou.dart';
 import 'package:terae_app/dados/enums/situacao_envio.dart';
 import 'package:terae_app/dados/local/banco_local.dart';
+import 'package:terae_app/dados/local/registro_de_atividade_dao.dart';
 import 'package:terae_app/dados/local/registro_diario_dao.dart';
+import 'package:terae_app/dados/modelos/registro_de_atividade.dart';
 import 'package:terae_app/dados/modelos/registro_diario.dart';
 import 'package:terae_app/dados/remoto/fonte_firestore.dart';
 import 'package:terae_app/dados/repositorios/falhas.dart';
 import 'package:terae_app/dados/sincronizacao/fila_de_entidade.dart';
+import 'package:terae_app/dados/sincronizacao/fila_registros_casa.dart';
 import 'package:terae_app/dados/sincronizacao/sincronizador.dart';
+import 'package:terae_app/nucleo/tempo/data_civil.dart';
 import 'package:terae_app/nucleo/tempo/relogio.dart';
 
 import 'apoio_persistencia.dart';
@@ -152,25 +158,51 @@ void main() {
     expect(s.situacao.value.pendentes, 1);
   });
 
-  test('outro erro de uma fila não é engolido', () async {
+  test('na fila dos registros de casa, um item recusado fica pendente e os '
+      'seguintes saem (D33)', () async {
+    final daoCasa = RegistroDeAtividadeDao(banco);
+    RegistroDeAtividade registro(String id, int hora) => RegistroDeAtividade(
+      id: id,
+      pacienteId: _paciente,
+      atividadeId: 'ca000000-0000-4000-8000-000000000005',
+      dia: DataCivil(2026, 10, 2),
+      adesao: AdesaoEmCasa.feito,
+      quem: QuemRegistrou.paciente,
+      registradoEm: instanteNaClinica(2026, 10, 2, hora),
+      situacaoEnvio: SituacaoEnvio.naFila,
+    );
+    await daoCasa.salvar(registro('primeiro', 8));
+    await daoCasa.salvar(registro('segundo', 9));
+    final fila = _FilaQueRecusa(
+      dao: daoCasa,
+      fonte: FonteFirestore(FakeFirebaseFirestore()),
+      monitor: conexao.monitor,
+      recusado: 'primeiro',
+    );
+    await expectLater(fila.enviarPendentes(), throwsA(isA<RecusaDeRegra>()));
+    expect((await daoCasa.pendentes()).map((r) => r.id), ['primeiro']);
+    expect(
+      (await daoCasa.porId('segundo'))!.situacaoEnvio,
+      SituacaoEnvio.enviado,
+    );
+  });
+
+  test('o servidor recusar um item de uma fila não derruba o diário, as '
+      'outras filas nem a busca; o item continua pendente (F1)', () async {
     final quebrada = _FilaQuebrada();
     final s = Sincronizador(
       dao: dao,
       fonte: FonteFirestore(FakeFirebaseFirestore()),
       monitor: conexao.monitor,
       relogio: RelogioFixo(agoraDaPersistencia),
-      filas: [quebrada],
-    );
-    await expectLater(
-      s.enviarFila(),
-      throwsA(
-        isA<RecusaDeRegra>().having(
-          (r) => r.motivo,
-          'motivo',
-          MotivoRecusa.acessoNegado,
-        ),
-      ),
-    );
+      filas: [quebrada, presenca],
+    )..acompanhar([_paciente]);
+    await umRegistroNaFila();
+    await s.sincronizar();
+    expect(await dao.contarPendentes(), 0, reason: 'o diário saiu');
+    expect(presenca.eventos, ['enviar com o diário em 0', 'buscar $_paciente']);
+    expect(s.situacao.value.pendentes, 1, reason: 'o recusado continua');
+    expect(s.situacao.value.online, isTrue);
   });
 }
 
@@ -188,6 +220,26 @@ class _FonteDeEnvioLento extends FonteFirestore {
   Future<List<Mapa>> listar(Query<Mapa> consulta) {
     leituras++;
     return super.listar(consulta);
+  }
+}
+
+/// Fila de verdade em que o servidor recusa um registro específico.
+class _FilaQueRecusa extends FilaRegistrosCasa {
+  _FilaQueRecusa({
+    required super.dao,
+    required super.fonte,
+    required super.monitor,
+    required this.recusado,
+  });
+
+  final String recusado;
+
+  @override
+  Future<RegistroDeAtividade> enviar(RegistroDeAtividade registro) {
+    if (registro.id == recusado) {
+      return Future.error(const RecusaDeRegra(MotivoRecusa.acessoNegado));
+    }
+    return super.enviar(registro);
   }
 }
 

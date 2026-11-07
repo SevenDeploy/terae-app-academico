@@ -64,6 +64,15 @@ abstract final class Rotas {
   /// D22): as atividades de casa combinadas com a terapeuta.
   static const String pacienteCasa = '/paciente/casa';
 
+  /// TM17 Atividade (evolução de TO, F1) — paciente com terapia ocupacional;
+  /// uma atividade de casa e o registro de hoje, empilhada sobre as abas, com
+  /// o id na consulta: use [atividade].
+  static const String pacienteAtividade = '/paciente/casa/atividade';
+
+  /// Caminho da TM17 para a atividade [id].
+  static String atividade(String id) =>
+      Uri(path: pacienteAtividade, queryParameters: {'id': id}).toString();
+
   /// TM06 Jornada (aba 3) — paciente.
   static const String pacienteJornada = '/paciente/jornada';
 
@@ -95,6 +104,7 @@ abstract final class Rotas {
     pacienteDiarioEnviado,
     pacienteDiarioAjuda,
     pacienteCasa,
+    pacienteAtividade,
     pacienteJornada,
     pacienteCuidadores,
     pacienteRegistros,
@@ -104,7 +114,10 @@ abstract final class Rotas {
 
   /// D22 — só o paciente com terapia ocupacional alcança (o roteador recusa
   /// para os demais, mesmo por link direto).
-  static const Set<String> daTerapiaOcupacional = {pacienteCasa};
+  static const Set<String> daTerapiaOcupacional = {
+    pacienteCasa,
+    pacienteAtividade,
+  };
 
   /// Só o papel cuidador alcança.
   static const Set<String> doCuidador = {
@@ -139,5 +152,6 @@ abstract final class Rotas {
     'TM14': pacienteRegistro,
     'TM15': pacienteCorrigirRegistro,
     'TM16': pacienteCasa,
+    'TM17': pacienteAtividade,
   };
 }

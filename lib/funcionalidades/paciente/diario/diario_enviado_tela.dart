@@ -11,6 +11,7 @@ import '../../../nucleo/tema/tema.dart';
 import '../../../nucleo/widgets/botao_grande.dart';
 import '../../../nucleo/widgets/cartao.dart';
 import '../componentes_paciente.dart';
+import 'campos_do_diario.dart';
 import 'resultado_provisorio.dart';
 
 /// Quanto a TM04 espera antes de voltar sozinha ao Início (§21).
@@ -233,6 +234,7 @@ class _Resumo extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textos = Theme.of(context).textTheme;
+    final palavras = palavrasDoDiario(context);
     Widget linha(String rotulo, Widget valor) => Padding(
       padding: const EdgeInsets.only(top: MedidasTerae.espacoPequeno),
       child: MergeSemantics(
@@ -261,8 +263,11 @@ class _Resumo extends StatelessWidget {
             cor: CoresTerae.neutro600,
           ),
           linha(
-            'Remédios',
-            Text(registro.adesao.rotulo, style: textos.titleSmall),
+            palavras.resumoAdesao,
+            Text(
+              palavras.rotuloDaAdesao(registro.adesao),
+              style: textos.titleSmall,
+            ),
           ),
           linha(
             'Intensidade',
@@ -275,7 +280,7 @@ class _Resumo extends StatelessWidget {
             ),
           ),
           linha(
-            'O que mais incomoda',
+            palavras.resumoSintoma,
             Text(registro.sintomaPredominante, style: textos.titleSmall),
           ),
           if (observacao != null)

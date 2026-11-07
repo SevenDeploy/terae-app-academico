@@ -134,3 +134,60 @@ fila), mas a busca do servidor ainda roda, como no diário da A4: se a leitura r
 **`BancoLocal`** — esquema por migrações numeradas (`BancoLocal.migracoes`; `versao` = quantas são): o banco novo roda
 todas, e o antigo só as que faltam (`onUpgrade`). Tabela nova = migração nova no fim da lista e o nome dela em
 `BancoLocal.tabelas` (o "Sair" apaga, D20). Na F0 só existe a versão 1; a primeira migração real (v2) vem com a F1.
+
+## Evolução de TO — F1, "Em casa" (06/11/2026)
+
+**`RepositorioProgramaEmCasa`** (`Repositorios.programaEmCasa`; o padrão, sem atividades, serve aos dublês):
+- `atividades(pacienteId)` devolve as que valem hoje, na ordem da publicação.
+- `atividade(pacienteId, id)` devolve uma atividade, ou recusa `atividadeInexistente`.
+- `registros(pacienteId, {dias = 14})` devolve os que valem, do mais recente ao mais antigo, com os da fila.
+- `registrar({pacienteId, atividadeId, adesao, reflexao?, quem})` registra a atividade hoje; se já houver registro do
+  dia, mesmo desfeito, corrige esse mesmo (D26, D31).
+- `desfazer(pacienteId, registroId)` faz a exclusão lógica, só hoje, e recusa `registroInexistente` ou
+  `edicaoEncerrada`.
+- `atualizar(pacienteId)` é o "puxar para atualizar" da TM16: envia as filas e busca o servidor; sem conexão, não
+  faz nada.
+
+**Modelos:**
+- `AtividadeDeCasa`: `id`, `pacienteId`, `profissionalId`, `titulo` (≤120), `texto` (≤1500), `vezesPorSemana` (1–7),
+  `ocupacao`, `publicadaEm` e `encerradaEm?`, com `vigenteEm(dia)`.
+- `RegistroDeAtividade`: `id`, `pacienteId`, `atividadeId`, `dia` (data civil), `adesao`, `reflexao?` (≤500; texto em
+  branco vira nulo), `quem`, `registradoEm`, `situacaoEnvio`, `atualizadoEm?` e `excluidoEm?`, com `corrigido(...)` e
+  `desfeitoAs(em)`.
+
+**Enums:**
+- `Ocupacao`: autocuidado, tarefasDaCasa, brincar, escola, sonoEDescanso, lazer, convivio, trabalho.
+- `AdesaoEmCasa`: feito, emParte, naoFeito; `conta` vale para os dois primeiros.
+- `QuemRegistrou`: paciente, responsavel.
+
+**Regras** (`dados/regras/programa_em_casa.dart`): `atividadesVigentes`, `registroDoDia`, `registroParaReaproveitar`,
+`podeAlterarRegistro`, `vezesNaSemana` (últimos 7 dias, com feito ou em parte), `faixaDeDias` (14 dias; sem atividade,
+a melhor resposta do dia) e `resumoDeHoje` (qualquer resposta conta).
+
+**Persistência:**
+- SQLite v2 com `registros_casa` (está em `BancoLocal.tabelas`).
+- `RegistroDeAtividadeDao`.
+- `FilaRegistrosCasa` (a primeira `FilaDeEntidade`): `enviar(registro)` grava `pacientes/{pid}/registrosCasa/{id}` como
+  `enviado` e só depois marca o SQLite.
+- As atividades vêm de `pacientes/{pid}/atividadesCasa` pela `LeituraComCopia`.
+
+**`Sincronizador` e `FilaRegistrosCasa`** — se um item de fila for recusado por algo que não seja "sem conexão", ele fica
+pendente e os próximos da mesma fila, as outras filas, o diário e a busca seguem (D33).
+
+**Componentes** — `CorpoDaTela(aoAtualizar:)` ("puxar para atualizar") e `RecarregaAoVoltar(rota:, aoVoltar:)` (a aba
+que volta a ficar ativa relê), em `componentes_paciente.dart`.
+
+**Regras** — o "registro do dia" é o mais recente que vale, em qualquer ordem da lista. `RegistroDeAtividadeDao.doDia`
+escolhe o mesmo.
+
+**Rotas:**
+- `pacienteAtividade` TM17 `/paciente/casa/atividade` (use `Rotas.atividade(id)`), em `doPaciente` e em
+  `daTerapiaOcupacional`.
+- Ela empilha sobre as abas e desempilha ao voltar (a TM16 espera a volta para reler). Aberta por link direto, a seta
+  vai à TM16. Ela não usa `_VoltaPara`, que trocaria o voltar por um `go`.
+
+**Diário** — `TextosDoDiario.para(perfil)` e `palavrasDoDiario(context)` em `campos_do_diario.dart` (D32);
+`CamposDoDiario(palavras:)` e `DiarioControlador(adesaoQueFalta:)`.
+
+**Início** — `InicioControlador(programa:, relogio:)` calcula `emCasa` (o resumo de hoje), que aparece como o cartão
+`Key('atalho-em-casa')`.

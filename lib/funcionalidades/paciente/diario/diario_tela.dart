@@ -42,15 +42,19 @@ class DiarioTela extends StatelessWidget {
                 repositorio: context.read<RepositorioDiario>(),
                 relogio: context.read<Relogio>(),
                 pacienteId: perfil.pacienteId,
+                adesaoQueFalta: TextosDoDiario.para(perfil).adesaoQueFalta,
+                sintomaQueFalta: TextosDoDiario.para(perfil).sintomaQueFalta,
               ),
-              child: const _FormularioDoDiario(),
+              child: _FormularioDoDiario(palavras: TextosDoDiario.para(perfil)),
             ),
     );
   }
 }
 
 class _FormularioDoDiario extends StatelessWidget {
-  const _FormularioDoDiario();
+  const _FormularioDoDiario({required this.palavras});
+
+  final TextosDoDiario palavras;
 
   Future<void> _enviar(BuildContext context) async {
     final controlador = context.read<DiarioControlador>();
@@ -68,9 +72,8 @@ class _FormularioDoDiario extends StatelessWidget {
       children: [
         const AvisoDeConexao(),
         CabecalhoDaTela(
-          titulo: 'Como você está hoje?',
-          subtitulo:
-              'Suas respostas ajudam sua equipe a cuidar melhor de você.',
+          titulo: palavras.titulo,
+          subtitulo: palavras.subtitulo,
           acao: IconButton(
             key: const Key('abrir-registros'),
             tooltip: 'Meus registros',
@@ -87,6 +90,7 @@ class _FormularioDoDiario extends StatelessWidget {
           aoMudarAdesao: c.escolherAdesao,
           aoMudarIntensidade: c.escolherIntensidade,
           aoMudarSintoma: c.escolherSintoma,
+          palavras: palavras,
         ),
         const SizedBox(height: MedidasTerae.espaco),
         if (c.erro case final erro?) ...[

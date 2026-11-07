@@ -50,12 +50,22 @@ class DiarioControlador extends ChangeNotifier {
     required this.relogio,
     required this.pacienteId,
     String Function()? gerarId,
+    this.adesaoQueFalta = 'os remédios',
+    this.sintomaQueFalta = 'o sintoma',
   }) : _gerarId = gerarId ?? gerarUuidV4;
 
   final RepositorioDiario repositorio;
   final Relogio relogio;
   final String pacienteId;
   final String Function() _gerarId;
+
+  /// Como a dica chama a adesão que falta ("os remédios" ou, só com TO, "a
+  /// rotina").
+  final String adesaoQueFalta;
+
+  /// Como a dica chama o sintoma que falta ("o sintoma" ou, só com TO, "o
+  /// que mais pesou").
+  final String sintomaQueFalta;
 
   /// Observação livre, opcional.
   final TextEditingController observacao = TextEditingController();
@@ -85,9 +95,9 @@ class DiarioControlador extends ChangeNotifier {
 
   /// O que ainda falta escolher, para a dica abaixo do botão.
   List<String> get faltando => [
-    if (_adesao == null) 'os remédios',
+    if (_adesao == null) adesaoQueFalta,
     if (_intensidade == null) 'a intensidade',
-    if (_sintoma == null) 'o sintoma',
+    if (_sintoma == null) sintomaQueFalta,
   ];
 
   void escolherAdesao(Adesao valor) {

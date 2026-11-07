@@ -1,11 +1,17 @@
 import 'package:flutter/foundation.dart';
 
+import '../enums/adesao_em_casa.dart';
+import '../enums/quem_registrou.dart';
+import '../modelos/atividade_de_casa.dart';
+import '../modelos/registro_de_atividade.dart';
 import '../sincronizacao/situacao_sincronizacao.dart';
 import 'autenticacao_repositorio.dart';
 import 'cuidadores_repositorio.dart';
 import 'demonstracao_repositorio.dart';
 import 'diario_repositorio.dart';
+import 'falhas.dart';
 import 'paciente_repositorio.dart';
+import 'programa_em_casa_repositorio.dart';
 import 'visao_cuidador_repositorio.dart';
 
 /// Os contratos que o `TeraeApp` recebe e disponibiliza por provider (§22:
@@ -23,6 +29,7 @@ class Repositorios {
     required this.cuidadores,
     required this.visaoCuidador,
     required this.demonstracao,
+    this.programaEmCasa = const _ProgramaVazio(),
     this.conexao = const _SempreOnline(),
   });
 
@@ -32,6 +39,11 @@ class Repositorios {
   final RepositorioCuidadores cuidadores;
   final RepositorioVisaoCuidador visaoCuidador;
   final ControleDemonstracao demonstracao;
+
+  /// Evolução de TO (F1): as atividades de casa e o registro de cada dia. O
+  /// padrão (sem atividades) serve aos dublês de teste que não o usam; a
+  /// memória e a persistência montam o de verdade.
+  final RepositorioProgramaEmCasa programaEmCasa;
 
   /// Situação da conexão e da fila do diário (D16), para o aviso das telas.
   final ValueListenable<SituacaoSincronizacao> conexao;
@@ -49,4 +61,38 @@ class _SempreOnline implements ValueListenable<SituacaoSincronizacao> {
 
   @override
   void removeListener(VoidCallback listener) {}
+}
+
+/// Programa sem atividades (dublês de teste que não o usam).
+class _ProgramaVazio implements RepositorioProgramaEmCasa {
+  const _ProgramaVazio();
+
+  @override
+  Future<List<AtividadeDeCasa>> atividades(String pacienteId) async => const [];
+
+  @override
+  Future<AtividadeDeCasa> atividade(String pacienteId, String atividadeId) =>
+      Future.error(const RecusaDeRegra(MotivoRecusa.atividadeInexistente));
+
+  @override
+  Future<List<RegistroDeAtividade>> registros(
+    String pacienteId, {
+    int dias = 14,
+  }) async => const [];
+
+  @override
+  Future<RegistroDeAtividade> registrar({
+    required String pacienteId,
+    required String atividadeId,
+    required AdesaoEmCasa adesao,
+    String? reflexao,
+    required QuemRegistrou quem,
+  }) => Future.error(const RecusaDeRegra(MotivoRecusa.atividadeInexistente));
+
+  @override
+  Future<RegistroDeAtividade> desfazer(String pacienteId, String registroId) =>
+      Future.error(const RecusaDeRegra(MotivoRecusa.registroInexistente));
+
+  @override
+  Future<void> atualizar(String pacienteId) async {}
 }

@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../../dados/modelos/item_medicacao.dart';
 import '../../../dados/modelos/receita_uso_continuo.dart';
 import '../../../dados/repositorios/paciente_repositorio.dart';
+import '../../../dados/repositorios/programa_em_casa_repositorio.dart';
 import '../../../nucleo/rotas/rotas.dart';
 import '../../../nucleo/sessao/sessao.dart';
 import '../../../nucleo/tema/cores.dart';
@@ -14,6 +15,7 @@ import '../../../nucleo/tempo/relogio.dart';
 import '../../../nucleo/widgets/aviso_de_conexao.dart';
 import '../../../nucleo/widgets/cartao.dart';
 import '../componentes_paciente.dart';
+import '../diario/campos_do_diario.dart';
 import 'inicio_controlador.dart';
 
 /// TM02 — Início. RFM02. Aba 1: saudação, atalho grande ao diário (um toque
@@ -40,6 +42,10 @@ class InicioTela extends StatelessWidget {
               create: (context) => InicioControlador(
                 repositorio: context.read<RepositorioPaciente>(),
                 pacienteId: perfil.pacienteId,
+                programa: perfil.paciente.temTerapiaOcupacional
+                    ? context.read<RepositorioProgramaEmCasa>()
+                    : null,
+                relogio: context.read<Relogio>(),
               )..carregar(),
               child: _ConteudoInicio(perfil: perfil),
             ),
@@ -64,70 +70,80 @@ class _ConteudoInicio extends StatelessWidget {
     final primeiroNome = (conta ?? paciente.nome).split(' ').first;
     final mostrarPerfil = variosPerfis || primeiroNome != paciente.primeiroNome;
 
-    return CorpoDaTela(
-      children: [
-        const AvisoDeConexao(),
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                formatarDiaPorExtenso(relogio.agora()),
-                style: textos.bodySmall?.copyWith(
-                  color: CoresTerae.textoSecundario,
-                  fontWeight: FontWeight.w600,
+    return RecarregaAoVoltar(
+      rota: Rotas.pacienteInicio,
+      aoVoltar: controlador.atualizarEmCasa,
+      child: CorpoDaTela(
+        children: [
+          const AvisoDeConexao(),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  formatarDiaPorExtenso(relogio.agora()),
+                  style: textos.bodySmall?.copyWith(
+                    color: CoresTerae.textoSecundario,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
-            ),
-            _MenuDoInicio(variosPerfis: variosPerfis),
-          ],
-        ),
-        CabecalhoDaTela(
-          titulo: 'Olá, $primeiroNome',
-          subtitulo: perfil.falaDeOutraPessoa
-              ? 'Que bom te ver por aqui. Vamos cuidar de '
-                    '${paciente.primeiroNome} hoje?'
-              : 'Que bom te ver por aqui. Vamos cuidar de você hoje?',
-        ),
-        if (mostrarPerfil) ...[
-          const SizedBox(height: MedidasTerae.espacoPequeno),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: Etiqueta(
-              icone: Icons.person_outline,
-              texto: 'Perfil de ${paciente.nome}',
-            ),
+              _MenuDoInicio(variosPerfis: variosPerfis),
+            ],
           ),
-        ],
-        const SizedBox(height: MedidasTerae.espaco),
-        const _AtalhoDoDiario(),
-        const SizedBox(height: MedidasTerae.espaco),
-        if (controlador.carregando)
-          const Carregando()
-        else if (controlador.falhou)
-          AvisoDeFalha(
-            mensagem:
-                'Não foi possível mostrar sua consulta e sua receita '
-                'agora.',
-            aoTentarDeNovo: controlador.carregar,
-          )
-        else ...[
-          // D21 — receita e remédios só no acompanhamento clínico.
-          if (paciente.temAcompanhamentoClinico)
-            if (controlador.receita case final receita?)
-              _LembreteDeRenovacao(
-                receita: receita,
-                hoje: DataCivil.hoje(relogio),
+          CabecalhoDaTela(
+            titulo: 'Olá, $primeiroNome',
+            subtitulo: perfil.falaDeOutraPessoa
+                ? 'Que bom te ver por aqui. Vamos cuidar de '
+                      '${paciente.primeiroNome} hoje?'
+                : 'Que bom te ver por aqui. Vamos cuidar de você hoje?',
+          ),
+          if (mostrarPerfil) ...[
+            const SizedBox(height: MedidasTerae.espacoPequeno),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Etiqueta(
+                icone: Icons.person_outline,
+                texto: 'Perfil de ${paciente.nome}',
               ),
-          _ProximaConsulta(controlador: controlador, relogio: relogio),
-          if (paciente.temAcompanhamentoClinico) ...[
-            const SizedBox(height: MedidasTerae.espaco),
-            _OrientacaoVigente(
-              receita: controlador.receita,
-              itens: controlador.itens,
             ),
           ],
+          const SizedBox(height: MedidasTerae.espaco),
+          const _AtalhoDoDiario(),
+          const SizedBox(height: MedidasTerae.espaco),
+          if (controlador.carregando)
+            const Carregando()
+          else if (controlador.falhou)
+            AvisoDeFalha(
+              mensagem:
+                  'Não foi possível mostrar sua consulta e sua receita '
+                  'agora.',
+              aoTentarDeNovo: controlador.carregar,
+            )
+          else ...[
+            // F1 — o resumo das atividades de casa, para quem tem TO.
+            if (controlador.emCasa case (:final registradas, :final total)
+                when total > 0) ...[
+              _AtalhoEmCasa(registradas: registradas, total: total),
+              const SizedBox(height: MedidasTerae.espaco),
+            ],
+            // D21 — receita e remédios só no acompanhamento clínico.
+            if (paciente.temAcompanhamentoClinico)
+              if (controlador.receita case final receita?)
+                _LembreteDeRenovacao(
+                  receita: receita,
+                  hoje: DataCivil.hoje(relogio),
+                ),
+            _ProximaConsulta(controlador: controlador, relogio: relogio),
+            if (paciente.temAcompanhamentoClinico) ...[
+              const SizedBox(height: MedidasTerae.espaco),
+              _OrientacaoVigente(
+                receita: controlador.receita,
+                itens: controlador.itens,
+              ),
+            ],
+          ],
         ],
-      ],
+      ),
     );
   }
 }
@@ -193,6 +209,7 @@ class _AtalhoDoDiario extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const branco = TextStyle(color: CoresTerae.branco);
+    final palavras = palavrasDoDiario(context);
     return Cartao(
       key: const Key('atalho-diario'),
       corFundo: CoresTerae.primaria600,
@@ -210,7 +227,7 @@ class _AtalhoDoDiario extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Como você está hoje?',
+                  palavras.titulo,
                   style: branco.copyWith(
                     fontSize: 20,
                     fontWeight: FontWeight.w700,
@@ -218,7 +235,7 @@ class _AtalhoDoDiario extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Registre seu dia no diário. Leva menos de 1 minuto.',
+                  palavras.subtituloDoAtalho,
                   style: branco.copyWith(fontSize: 16),
                 ),
               ],
@@ -227,6 +244,50 @@ class _AtalhoDoDiario extends StatelessWidget {
           const ExcludeSemantics(
             child: Icon(Icons.chevron_right, color: CoresTerae.branco),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+/// F1 — atalho à aba Em casa com o resumo de hoje (um toque do Início).
+class _AtalhoEmCasa extends StatelessWidget {
+  const _AtalhoEmCasa({required this.registradas, required this.total});
+
+  final int registradas;
+  final int total;
+
+  @override
+  Widget build(BuildContext context) {
+    final textos = Theme.of(context).textTheme;
+    return Cartao(
+      key: const Key('atalho-em-casa'),
+      aoTocar: () => context.go(Rotas.pacienteCasa),
+      child: Row(
+        children: [
+          const ExcludeSemantics(
+            child: Icon(
+              Icons.extension_outlined,
+              size: 32,
+              color: CoresTerae.primaria600,
+            ),
+          ),
+          const SizedBox(width: MedidasTerae.espaco),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Atividades de casa', style: textos.titleMedium),
+                const SizedBox(height: 4),
+                Text(
+                  'Hoje: $registradas de $total '
+                  '${total == 1 ? 'registrada' : 'registradas'}',
+                  style: textos.bodyMedium,
+                ),
+              ],
+            ),
+          ),
+          const ExcludeSemantics(child: Icon(Icons.chevron_right)),
         ],
       ),
     );

@@ -16,6 +16,7 @@ import 'demonstracao_memoria.dart';
 import 'diario_memoria.dart';
 import 'estado_memoria.dart';
 import 'paciente_memoria.dart';
+import 'programa_em_casa_memoria.dart';
 import 'regras.dart';
 import 'visao_cuidador_memoria.dart';
 
@@ -70,8 +71,9 @@ class MemoriaDemonstracao {
 
   bool _semConexao = false;
 
-  /// D11 — falta de conexão simulada: o diário vai para a fila (`naFila`).
-  /// Só o diário depende dela; as demais operações seguem respondendo.
+  /// D11 — falta de conexão simulada: o diário e os registros das atividades
+  /// de casa vão para a fila (`naFila`). Só eles dependem dela; as demais
+  /// operações seguem respondendo.
   /// Religar pelo `ControleDemonstracao` também reenvia a fila.
   bool get semConexao => _semConexao;
 
@@ -92,14 +94,14 @@ class MemoriaDemonstracao {
   void atualizarConexao() {
     _conexao.value = SituacaoSincronizacao(
       online: !_semConexao,
-      pendentes: _estado.fila.length,
+      pendentes: _estado.fila.length + _estado.filaCasa.length,
     );
   }
 
   /// O estado atual (troca de instância a cada [reiniciar]).
   EstadoMemoria get estado => _estado;
 
-  /// Os seis contratos, prontos para o `TeraeApp`.
+  /// Os contratos, prontos para o `TeraeApp`.
   late final Repositorios repositorios = Repositorios(
     autenticacao: AutenticacaoMemoria(this),
     paciente: PacienteMemoria(this),
@@ -107,6 +109,7 @@ class MemoriaDemonstracao {
     cuidadores: CuidadoresMemoria(this),
     visaoCuidador: VisaoCuidadorMemoria(this),
     demonstracao: DemonstracaoMemoria(this),
+    programaEmCasa: ProgramaEmCasaMemoria(this),
     conexao: conexao,
   );
 

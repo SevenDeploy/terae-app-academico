@@ -25,6 +25,9 @@ pacientes", sem integrar com o Terae web. Respostas dele: **evolução livre / p
 | D23 | Personas: Laura (4) e Miguel (7) só com TO, pela mãe; Ana (16) com psiquiatria e TO; **Antônio Carlos Ribeiro (71)**, titular, só TO depois de um AVC, com o terapeuta ocupacional **Tiago Moreira**; João sem mudança |
 | D24 | Voz do app: o titular lê sobre si ("Vamos cuidar de você hoje?"); o responsável legal e o cuidador leem sobre o paciente ("Vamos cuidar de Miguel hoje?"). A voz vem da qualidade do termo vigente |
 | D25–D30 | Do plano, a aplicar nas fases seguintes: metas sem escore; registro da atividade de casa um por dia; presença que não cancela; lembretes só locais; o cuidador vê sessões e rotina, não atividades; fora do app ficam ABA, foto, chat e o lado da clínica |
+| D31 | (F1) O registro da atividade de casa tem id UUID v4 gerado no aparelho, e "um por atividade por dia" (D26) é garantido pela busca do registro do dia, que é corrigido no lugar. Não usamos id derivado porque as regras do Firestore não calculam hash, e um id que elas conseguissem conferir (`atividadeId_dia`) não seria UUID, o que o §23 pede. As regras não garantem a unicidade entre aparelhos (limitação declarada). Se dois aparelhos registrarem o mesmo dia, vale o mais recente, e é ele que a TM17 mostra, que a faixa e a semana contam e que a correção altera |
+| D32 | (F1) Quem só faz TO tem o mesmo diário, com o mesmo alerta da crítica, mas com as palavras da TO: "E a rotina combinada, deu para seguir?" (Segui/Seguimos, Em parte, Não deu hoje), "O quanto o dia foi difícil?" e "O que mais pesou hoje?" (crise ou desregulação, sono, alimentação…), na voz do perfil. Quem tem acompanhamento clínico, com ou sem TO, continua com o diário das A3/A4 |
+| D33 | (F1) Se o servidor recusar um item de uma fila por algo que não seja "sem conexão", o item fica na fila (o aviso conta), e o diário, as outras filas e a busca seguem. A recusa vai para o log de depuração. Isso resolve a pendência 4 da F0. A regra da rotina local do plano (F4) passa a ser a D34 |
 
 ### F0 — Fundação (06/11/2026, branch `to-f0-fundacao`)
 
@@ -73,6 +76,68 @@ Pendências:
    - Tabela nova entra também em `BancoLocal.tabelas`, para o "Sair" apagá-la (D20).
 5. Da revisão, para a F2 (D29): para paciente que só tem TO, o cuidador ainda vê o atalho "Medicação" na TM08. Nenhuma
    persona passa por isso hoje.
+
+Situação dessas pendências depois da F1:
+- 1 e 3 continuam abertas (veja as pendências da F1).
+- 2 foi feita no diário (D32); "Sua próxima consulta" e a TM07 ficam para a F2.
+- 4 foi decidida (D33), e `registros_casa` está em `BancoLocal.tabelas`.
+- 5 continua para a F2.
+
+### F1 — "Em casa" (06/11/2026, branch `to-f1-em-casa`)
+
+O que entrou:
+- **Domínio:**
+  - enums `Ocupacao`, `AdesaoEmCasa` e `QuemRegistrou`;
+  - modelos `AtividadeDeCasa` (só leitura) e `RegistroDeAtividade`;
+  - regras puras em `lib/dados/regras/programa_em_casa.dart`: vigentes, registro do dia, "esta semana", faixa de 14 dias e resumo de hoje;
+  - recusa `atividadeInexistente`.
+- **Repositório `RepositorioProgramaEmCasa`:**
+  - na memória, com fila e simulação do servidor;
+  - na persistência, com atividades por `LeituraComCopia`, registros pelo DAO, `FilaRegistrosCasa` como a primeira `FilaDeEntidade` e o SQLite v2 (`registros_casa`, com teste de migração v1 → v2 que não perde o diário);
+  - no Firebase, com `atividadesCasa` só para leitura do titular e `registrosCasa` validado pelas regras;
+  - semente nova em `semear-firebase.mjs`.
+- **Telas:**
+  - TM16 Em casa: resumo de hoje, cartões com "Esta semana: 2 de 3" e a resposta de hoje, e a faixa de 14 dias com legenda e rótulo por dia;
+  - TM17 Atividade: o que fazer, "Conseguiu fazer hoje?", reflexão opcional, corrigir e desfazer só hoje, "O dia não permitiu. Tudo bem, é comum." e o histórico do que foi contado;
+  - cartão "Atividades de casa" no Início;
+  - diário com as palavras da TO (D32) também na TM04, na TM14, na TM15 e no atalho do Início.
+- **Demonstração:**
+  - 6 atividades: Miguel com 2, Ana com 2 e Antônio com 2;
+  - 39 registros em 14 dias, entre eles o copo do Antônio hoje;
+  - a avaliação de TO da Ana com o Tiago, há 14 dias;
+  - a Laura fica sem atividades de propósito, porque a primeira avaliação dela ainda vai acontecer.
+- **Portão:** 627 testes, 18 capturas e a TM17 nas telas reais (alvo de toque, contraste, fonte a 200%).
+
+O que a verificação achou:
+- **A fonte a 200% estourava três linhas fixas** ("Hoje: [etiqueta]", "Resposta de hoje" e a legenda da faixa). Elas
+  passaram a quebrar linha.
+- **Sem conexão, a mensagem repetia o texto do cartão "Guardado no aparelho".** Agora diz só "Registrado, sem conexão
+  agora.".
+- **A revisão em contexto limpo bloqueou dois pontos. Os dois foram corrigidos e testados:**
+  - **TM16 e Início desatualizados.** Depois de registrar com conexão, a TM16 e o cartão do Início continuavam com o
+    número antigo. A recarga pela sincronização só dispara quando os pendentes mudam. Além disso, a TM17 estava
+    embrulhada no `_VoltaPara`, que troca o voltar por um `go`, e assim o `push` nunca terminava. Agora a TM17
+    desempilha (e por link direto a seta vai à TM16), a TM16 relê ao voltar e o Início refaz o resumo quando a aba
+    volta a ficar ativa (`RecarregaAoVoltar`).
+  - **Faltava o "puxar para atualizar" da TM16.** Ele entrou (`RepositorioProgramaEmCasa.atualizar` → sincronizador).
+- **Achados menores da revisão, também corrigidos:**
+  - com um registro do mesmo dia vindo de outro aparelho, a correção ia para um registro diferente do mostrado;
+  - a fila parava no primeiro item recusado, e agora segue com os próximos (D33);
+  - a dica do diário de TO ainda dizia "o sintoma";
+  - o `conferir-firebase.mjs` não mostrava os registros de casa.
+
+Pendências da F1:
+1. **Firebase acadêmico:** publicar as `firestore.rules` novas (`firebase deploy --only firestore:rules`) e rodar a
+   semente (`--reiniciar`). As duas coisas mexem no projeto do dono e pedem o ok dele. As regras de `registrosCasa`
+   não têm teste automático, porque o projeto não usa o emulador de regras.
+2. **Roteiro no emulador:** Antônio registra, corrige e desfaz; no modo avião, o registro vai para a fila e sai sozinho;
+   Patrícia, como Miguel, vê "Conseguiram fazer hoje?". Depende da pendência 1.
+3. **Para a F2:** "Sua próxima consulta" no Início, "horários de remédio" na TM07 e o atalho "Medicação" do cuidador
+   para quem só faz TO.
+4. **Da revisão:**
+   - Se o servidor recusar o registro por algo que não seja "sem conexão", a TM17 mostra o erro, mas o registro fica na
+     fila e aparece como "Guardado no aparelho". Nenhuma recusa realista dispara isso hoje.
+   - O `metaId` da atividade entra na F3.
 
 ## Atividade 4 — Persistência local e integração com o Firebase (06/11/2026)
 

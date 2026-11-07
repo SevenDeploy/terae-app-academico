@@ -60,7 +60,12 @@ enum MotivoRecusa {
     'Este registro é de outro dia e não pode mais ser mudado. Se precisar, '
     'conte na próxima consulta.',
   ),
-  registroInexistente('Não encontramos este registro.');
+  registroInexistente('Não encontramos este registro.'),
+
+  /// TM17 — a atividade não existe, não é deste paciente ou foi encerrada.
+  atividadeInexistente(
+    'Não encontramos esta atividade. Ela pode ter sido encerrada na terapia.',
+  );
 
   const MotivoRecusa(this.mensagem);
 

@@ -32,15 +32,18 @@ void main() {
     expect(proxima.profissionalId, idHelena);
   });
 
-  test('Ana: consultas realizadas há 49 e 21 dias, em ordem (RFM06)', () async {
+  test('Ana: consultas há 49 e 21 dias e a avaliação de TO há 14 (F1), em '
+      'ordem (RFM06)', () async {
     final repo = memoriaDeTeste().repositorios.paciente;
     final lista = await repo.agendamentos(idAna);
     expect(lista.map((a) => DataCivil.doInstante(a.dataHora)), [
       hoje.somarDias(-49),
       hoje.somarDias(-21),
+      hoje.somarDias(-14),
       hoje.somarDias(5),
     ]);
     expect(lista.map((a) => a.situacao), [
+      SituacaoAgendamento.realizado,
       SituacaoAgendamento.realizado,
       SituacaoAgendamento.realizado,
       SituacaoAgendamento.agendado,

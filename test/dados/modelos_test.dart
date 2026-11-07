@@ -3,10 +3,13 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:terae_app/dados/conversao_mapa.dart';
 import 'package:terae_app/dados/enums/adesao.dart';
+import 'package:terae_app/dados/enums/adesao_em_casa.dart';
 import 'package:terae_app/dados/enums/canal_autorizado.dart';
 import 'package:terae_app/dados/enums/intensidade.dart';
 import 'package:terae_app/dados/enums/linha_de_cuidado.dart';
+import 'package:terae_app/dados/enums/ocupacao.dart';
 import 'package:terae_app/dados/enums/qualidade_consentimento.dart';
+import 'package:terae_app/dados/enums/quem_registrou.dart';
 import 'package:terae_app/dados/enums/regra_alerta.dart';
 import 'package:terae_app/dados/enums/situacao_agendamento.dart';
 import 'package:terae_app/dados/enums/situacao_conta.dart';
@@ -16,6 +19,7 @@ import 'package:terae_app/dados/enums/tipo_convite.dart';
 import 'package:terae_app/dados/enums/tipo_marco.dart';
 import 'package:terae_app/dados/modelos/agendamento.dart';
 import 'package:terae_app/dados/modelos/alerta.dart';
+import 'package:terae_app/dados/modelos/atividade_de_casa.dart';
 import 'package:terae_app/dados/modelos/consentimento.dart';
 import 'package:terae_app/dados/modelos/conta_usuario.dart';
 import 'package:terae_app/dados/modelos/convite_acesso.dart';
@@ -24,6 +28,7 @@ import 'package:terae_app/dados/modelos/marco_jornada.dart';
 import 'package:terae_app/dados/modelos/paciente.dart';
 import 'package:terae_app/dados/modelos/profissional_saude.dart';
 import 'package:terae_app/dados/modelos/receita_uso_continuo.dart';
+import 'package:terae_app/dados/modelos/registro_de_atividade.dart';
 import 'package:terae_app/dados/modelos/registro_diario.dart';
 import 'package:terae_app/dados/modelos/vinculo_cuidador.dart';
 import 'package:terae_app/nucleo/tempo/data_civil.dart';
@@ -38,7 +43,7 @@ Mapa _peloJson(Mapa mapa) {
 final DateTime _instante = DateTime.utc(2026, 10, 7, 18);
 
 void main() {
-  group('ida e volta fromMap/toMap das 12 entidades (Figura 3)', () {
+  group('ida e volta fromMap/toMap das 14 entidades (Figura 3 + TO)', () {
     final casos = <String, (Object, Object Function(Mapa), Mapa Function())>{};
 
     final conta = ContaUsuario(
@@ -188,8 +193,44 @@ void main() {
     );
     casos['MarcoJornada'] = (marco, MarcoJornada.fromMap, marco.toMap);
 
-    test('são exatamente as 12 entidades', () {
-      expect(casos, hasLength(12));
+    final atividade = AtividadeDeCasa(
+      id: 'ac-1',
+      pacienteId: 'p-miguel',
+      profissionalId: 'pr-larissa',
+      titulo: 'Vestir a camiseta no espelho',
+      texto: 'Ajude só a passar a cabeça.',
+      vezesPorSemana: 5,
+      ocupacao: Ocupacao.autocuidado,
+      publicadaEm: _instante,
+      encerradaEm: _instante.add(const Duration(days: 30)),
+    );
+    casos['AtividadeDeCasa'] = (
+      atividade,
+      AtividadeDeCasa.fromMap,
+      atividade.toMap,
+    );
+
+    final registroCasa = RegistroDeAtividade(
+      id: 'rc-1',
+      pacienteId: 'p-miguel',
+      atividadeId: 'ac-1',
+      dia: DataCivil(2026, 10, 7),
+      adesao: AdesaoEmCasa.emParte,
+      reflexao: 'Passou a cabeça sozinho.',
+      quem: QuemRegistrou.responsavel,
+      registradoEm: _instante,
+      situacaoEnvio: SituacaoEnvio.enviado,
+      atualizadoEm: _instante,
+      excluidoEm: _instante,
+    );
+    casos['RegistroDeAtividade'] = (
+      registroCasa,
+      RegistroDeAtividade.fromMap,
+      registroCasa.toMap,
+    );
+
+    test('são exatamente as 14 entidades', () {
+      expect(casos, hasLength(14));
     });
 
     casos.forEach((nome, caso) {
@@ -565,10 +606,14 @@ void main() {
       'Agendamento.situacao': SituacaoAgendamento.values,
       'MarcoJornada.tipo': TipoMarco.values,
       'Paciente.linhasDeCuidado': LinhaDeCuidado.values,
+      'AtividadeDeCasa.ocupacao': Ocupacao.values,
+      'RegistroDeAtividade.adesao': AdesaoEmCasa.values,
+      'RegistroDeAtividade.quem': QuemRegistrou.values,
     };
 
-    test('são 12 (os 11 do §22 + D21), com os valores esperados', () {
-      expect(enums, hasLength(12));
+    test('são 15 (os 11 do §22 + 4 da evolução de TO), com os valores '
+        'esperados', () {
+      expect(enums, hasLength(15));
       final nomes = enums.map(
         (campo, valores) => MapEntry(campo, valores.map((v) => v.name)),
       );
@@ -611,6 +656,22 @@ void main() {
         'acompanhamentoClinico',
         'terapiaOcupacional',
       ]);
+      expect(nomes['AtividadeDeCasa.ocupacao'], [
+        'autocuidado',
+        'tarefasDaCasa',
+        'brincar',
+        'escola',
+        'sonoEDescanso',
+        'lazer',
+        'convivio',
+        'trabalho',
+      ]);
+      expect(nomes['RegistroDeAtividade.adesao'], [
+        'feito',
+        'emParte',
+        'naoFeito',
+      ]);
+      expect(nomes['RegistroDeAtividade.quem'], ['paciente', 'responsavel']);
     });
 
     test('cada valor volta pelo nome e tem rótulo em linguagem simples', () {
@@ -636,6 +697,9 @@ void main() {
         for (final v in SituacaoAgendamento.values) v.rotulo,
         for (final v in TipoMarco.values) v.rotulo,
         for (final v in LinhaDeCuidado.values) v.rotulo,
+        for (final v in Ocupacao.values) v.rotulo,
+        for (final v in AdesaoEmCasa.values) v.rotulo,
+        for (final v in QuemRegistrou.values) v.rotulo,
       ];
       expect(rotulos, everyElement(isNotEmpty));
       expect(Adesao.total.rotulo, 'Tomei tudo');
