@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:terae_app/dados/repositorios/autenticacao_repositorio.dart';
 import 'package:terae_app/nucleo/rotas/rotas.dart';
 import 'package:terae_app/nucleo/sessao/sessao.dart';
 import 'package:terae_app/roteador.dart';
@@ -235,6 +236,27 @@ void main() {
         Rotas.pacienteInicio,
       );
       expect(guardaDePerfil(to, Rotas.pacienteAtividade), isNull);
+      // F2: a TM18 é de todos; a medicação do cuidador, só do clínico.
+      expect(guardaDePerfil(clinico, Rotas.pacienteSessoes), isNull);
+      expect(guardaDePerfil(to, Rotas.pacienteSessoes), isNull);
+      final cuidadorDeTo = Sessao()
+        ..entrar(
+          VinculosDaConta(
+            conta: contaDe('c-avo', 'Avó'),
+            acompanhados: [
+              pacienteDe(
+                'p-miguel',
+                'Miguel Andrade Neves',
+                linhas: soTerapiaOcupacional,
+              ).paraCuidador(),
+            ],
+          ),
+        );
+      expect(
+        guardaDePerfil(cuidadorDeTo, Rotas.cuidadorMedicacao),
+        Rotas.cuidadorInicio,
+      );
+      expect(guardaDePerfil(cuidadorDeTo, Rotas.cuidadorAgenda), isNull);
       // O diário vale para todos (o alerta da crítica também protege a
       // família de TO).
       for (final sessao in [clinico, to]) {

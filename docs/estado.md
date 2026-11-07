@@ -157,6 +157,116 @@ Pendências da F1:
      fila e aparece como "Guardado no aparelho". Nenhuma recusa realista dispara isso hoje.
    - O `metaId` da atividade entra na F3.
 
+O item 3 foi feito na F2.
+
+### F2 — Sessões, presença e lembretes (06/11/2026, branch `to-f2-sessoes`)
+
+O que entrou:
+- **Presença (D27):**
+  - `ConfirmacaoDePresenca` e `RespostaPresenca`. Os textos são "Sim, vamos" ou "Não vamos conseguir", e o titular lê
+    "Sim, vou" ou "Não vou conseguir".
+  - Uma resposta por agendamento, que pode mudar até o horário da sessão (`regras/presenca.dart`) e nunca cancela a
+    sessão.
+  - Fica na memória e no SQLite v3 (`confirmacoes_presenca`), com a `FilaConfirmacoes`.
+  - No Firestore, em `pacientes/{pid}/confirmacoes/{agendamentoId}`. As regras conferem a sessão marcada e que
+    `respondidaEm` é anterior a ela (como texto ISO UTC), e o cuidador lê.
+- **TM18 Sessões** (`/paciente/sessoes`, aberta pelo cartão da próxima sessão no Início e por uma sessão ou consulta
+  da Jornada):
+  - as próximas, com "Vocês vão?" ou "Você vai?";
+  - "Falar com a clínica", com ligar e WhatsApp para o número fictício `(65) 0000-0000`, que começa com 0 e não chama
+    ninguém;
+  - as anteriores, como "Realizada" ou "Cancelada".
+- **Textos de TO** (pendência 3 da F1):
+  - "Sua próxima sessão" ou "Próxima sessão de Miguel" no Início, com a resposta de presença no cartão;
+  - "Sessão de terapia ocupacional com …" na Jornada, com o rótulo "Sessão";
+  - a TM07 diz "a agenda de sessões e a rotina" e não fala de remédio para quem só faz TO (nem no rodapé nem ao
+    revogar);
+  - TM08 e TM12 chamam a TO de sessão ("Sessão cancelada").
+- **Cuidador (D29):**
+  - vê "Presença confirmada" ou "Avisaram que não vão" (`respostasDePresenca`);
+  - "Medicação" (o atalho, o bloco do próximo remédio e a rota `cuidadorMedicacao`, pela guarda
+    `doAcompanhamentoClinico`) só aparece para paciente com acompanhamento clínico.
+- **Lembretes locais (D28):**
+  - `flutter_local_notifications` 22 e `timezone`, no fuso `America/Cuiaba`, sem alarme exato.
+  - Véspera de cada sessão ou consulta (18:00 a 21:00), e atividades de casa todo dia (8:00, 12:00, 18:00 ou 20:00),
+    para quem faz TO. São agendadas uma a uma para os próximos 7 dias.
+  - As abas do paciente (`ReagendaLembretes`) refazem tudo ao abrir, ao voltar do segundo plano, ao voltar ao Início
+    e ao fim de cada sincronização.
+  - O texto é genérico: "Amanhã às 14:00 tem compromisso na clínica.", "Hora das atividades de casa.".
+  - **TM19 Lembretes** (menu do Início) explica antes por que o Android vai perguntar (só para quem ainda não deu a
+    permissão), pede a permissão do Android 13+ ao salvar, mostra os próximos e manda um lembrete de teste.
+  - As preferências ficam em SharedPreferences. "Sair" cancela tudo e apaga.
+  - Android: `POST_NOTIFICATIONS`, `RECEIVE_BOOT_COMPLETED`, receivers do plugin e desugaring.
+- **Demonstração:** a Ana já confirmou a consulta com a Dra. Helena. Miguel e Antônio ainda não responderam, para a
+  pergunta aparecer.
+
+- **Portão:** 689 testes, 21 capturas (TM18 e TM19 novas) e a TM18 e a TM19 nas telas reais.
+
+O que a verificação achou:
+- **A revisão em contexto limpo bloqueou sete pontos.** Cinco foram reproduzidos com testes que falhavam antes; os sete
+  foram corrigidos e testados:
+  - **A TM18 continuava com "Guardado no aparelho" depois que a fila saía.** Agora ela relê pela sincronização
+    (`RecarregaAoSincronizar`), e o "puxar para atualizar" envia a fila e busca o servidor
+    (`RepositorioPresenca.atualizar`).
+  - **A TM18 não abria pela Jornada**, como o plano pede. Agora a sessão ou consulta da Jornada abre a TM18.
+  - **Os lembretes só eram refeitos na primeira carga do Início.** Com o app vivo em segundo plano por mais de 7 dias,
+    os de casa acabavam sem aviso. O reagendamento saiu do Início e foi para as abas (`ReagendaLembretes`).
+  - **"Sair" durante um reagendamento deixava lembretes agendados.** O `reagendar` lia a agenda (até 2 s por paciente)
+    e agendava depois do `cancelAll` do "Sair". Agora os `reagendar` rodam em fila, e o "Sair" faz o que estiver em
+    curso desistir.
+  - **A hora padrão das atividades (18:00) não estava entre as opções da TM19.** As opções passaram a 8, 12, 18 e 20,
+    ficam junto da hora padrão, e hora guardada fora delas volta à padrão.
+  - **Faltava o texto que explica o pedido de permissão.** Ele aparece antes de salvar, só para quem ainda não deu.
+  - **Entregas sem teste:** Jornada com "Sessão", TM07 de quem só faz TO, TM08 sem "Medicação" para quem só faz TO,
+    reagendamento pelas abas e `LembretesLocais` com o plugin de mentira (fuso, sem alarme exato, "Sair" e ordem).
+- **O teste novo da TM07 achou mais um texto** que a revisão não viu: o rodapé ("Cuidadores veem só sua agenda, seus
+  horários de remédio…") e a confirmação de revogação falavam de remédio para quem só faz TO.
+- **Do "registra e segue" da revisão, corrigido:**
+  - a TM08 caía inteira quando a leitura das respostas falhava; agora a agenda e os avisos aparecem sem elas;
+  - a busca recusada de uma fila derrubava a busca dos pacientes seguintes; agora vai ao log e o resto segue;
+  - a fila marcava como enviada a resposta lida antes do envio, e uma troca feita no meio podia se perder;
+  - o `conferir-firebase.mjs` não mostrava `confirmacoes`;
+  - na demonstração (web), o "Sair" não apagava as escolhas de lembrete;
+  - "Consulta" na Jornada e na TM12 para a TO;
+  - `calcularLembretes` engolia qualquer erro (agora só a recusa), e a TM19 não tinha `try` (podia ficar em
+    "Salvando…").
+- **No emulador, depois das correções:** a Jornada abre a TM18 e o voltar traz de volta; a TM19 manteve a véspera às
+  19:00, não mostra o texto da permissão (já dada) e o alarme foi refeito ao abrir o app.
+
+Desvios conscientes:
+- O `flutter_local_notifications` ficou em `^22.0.0`. A 23 exige o compileSdk 37, que não está instalado, e instalar
+  pede aceitar a licença do Android SDK. A 21 conflita com o `connectivity_plus`.
+- O lembrete das atividades não usa repetição diária do plugin: são 7 agendamentos, refeitos pelas abas. Assim um
+  programa encerrado ou uma preferência mudada valem sem estado no plugin. Quem não abrir o app por mais de 7 dias
+  fica sem o lembrete das atividades até abrir de novo.
+- Na Jornada, o rótulo "Sessão" fica acima de "Sessão de terapia ocupacional com …", como "Consulta" ficava acima de
+  "Consulta com …".
+- A confirmação leva `id` (= `agendamentoId`) no mapa, porque a `LeituraComCopia` usa `id` como chave.
+
+Pendências da F2:
+1. **Firebase acadêmico:** publicar as regras novas (`confirmacoes`) e rodar a semente. As duas coisas pedem o ok do
+   dono. Até lá, no aparelho, a resposta de presença é recusada e fica na fila ("aguardando envio"); a TM08 e a
+   sincronização seguem sem ela.
+2. **Roteiro no emulador:** os lembretes já foram conferidos em 06/11 (`Terae_Pixel`, Android 16, Antônio):
+   - o cartão "Sua próxima sessão" mostrou "Você vai? Responda";
+   - a TM19 salvou a véspera às 19:00 depois do pedido de permissão do Android;
+   - o sistema registrou o alarme de 12/11 às 23:00 UTC (19:00 na clínica, véspera da sessão de 13/11 às 08:00);
+   - o lembrete de teste chegou no canal `lembretes`, com visibilidade privada.
+
+   Depois das correções da revisão, também a Jornada → TM18, a TM19 sem o texto da permissão e o alarme refeito ao
+   abrir o app.
+
+   Falta responder a presença e ver a cuidadora, o que depende das regras novas no Firebase (item 1).
+3. **Limitações declaradas:**
+   - com várias contas no mesmo aparelho, os lembretes são da última que abriu as abas do paciente. Com a Patrícia,
+     eles cobrem Miguel e Laura juntos;
+   - o cuidador lê o documento inteiro de `confirmacoes`, com o `respondidaEm`, porque a regra não escolhe campos na
+     leitura. O app mostra a ele só a resposta, e nenhum dos campos é dado clínico;
+   - o `respondidaEm` vem do aparelho, porque a resposta pode chegar depois pela fila. Quem antedatar consegue trocar
+     a resposta depois da sessão (como na D31);
+   - se a sessão for cancelada no servidor enquanto a resposta espera na fila, a regra recusa e ela fica "aguardando
+     envio" (D33). Hoje nada no app cancela sessão, porque não existe o lado da clínica.
+
 ## Atividade 4 — Persistência local e integração com o Firebase (06/11/2026)
 
 Plano: `C:\Users\willi\.claude\plans\crie-um-plano-para-piped-hare.md`. Prazo de entrega: até ~13/11/2026.

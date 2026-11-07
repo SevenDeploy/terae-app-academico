@@ -17,9 +17,11 @@ import 'funcionalidades/paciente/diario/diario_enviado_tela.dart';
 import 'funcionalidades/paciente/diario/diario_tela.dart';
 import 'funcionalidades/paciente/inicio/inicio_tela.dart';
 import 'funcionalidades/paciente/jornada/jornada_tela.dart';
+import 'funcionalidades/paciente/lembretes/lembretes_tela.dart';
 import 'funcionalidades/paciente/registros/correcao_tela.dart';
 import 'funcionalidades/paciente/registros/registro_tela.dart';
 import 'funcionalidades/paciente/registros/registros_tela.dart';
+import 'funcionalidades/paciente/sessoes/sessoes_tela.dart';
 import 'funcionalidades/publico/boas_vindas_tela.dart';
 import 'nucleo/rotas/rotas.dart';
 import 'nucleo/sessao/sessao.dart';
@@ -55,8 +57,10 @@ String? guardaDePerfil(Sessao sessao, String caminho) {
     Papel.cuidador => Rotas.doCuidador,
   };
   final foraDaLinha =
-      Rotas.daTerapiaOcupacional.contains(caminho) &&
-      !ativo.paciente.temTerapiaOcupacional;
+      (Rotas.daTerapiaOcupacional.contains(caminho) &&
+          !ativo.paciente.temTerapiaOcupacional) ||
+      (Rotas.doAcompanhamentoClinico.contains(caminho) &&
+          !ativo.paciente.temAcompanhamentoClinico);
   return permitidas.contains(caminho) && !foraDaLinha
       ? null
       : inicioDoPapel(ativo.papel);
@@ -187,6 +191,16 @@ GoRouter criarRoteador({
         path: Rotas.pacienteAtividade,
         pageBuilder: (context, state) =>
             _pagina(state, AtividadeTela(atividadeId: _id(state))),
+      ),
+      // F2: a TM18 empilha sobre as abas e desempilha ao voltar (o Início
+      // relê a resposta de presença); por link direto, a seta leva ao Início.
+      GoRoute(
+        path: Rotas.pacienteSessoes,
+        pageBuilder: (context, state) => _pagina(state, const SessoesTela()),
+      ),
+      GoRoute(
+        path: Rotas.pacienteLembretes,
+        pageBuilder: (context, state) => _pagina(state, const LembretesTela()),
       ),
       GoRoute(
         path: Rotas.pacienteRegistros,

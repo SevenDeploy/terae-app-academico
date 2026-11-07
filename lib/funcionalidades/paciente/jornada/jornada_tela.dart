@@ -1,13 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../../dados/enums/situacao_agendamento.dart';
+import '../../../dados/modelos/paciente.dart';
 import '../../../dados/modelos/receita_uso_continuo.dart';
 import '../../../dados/repositorios/paciente_repositorio.dart';
+import '../../../nucleo/rotas/rotas.dart';
 import '../../../nucleo/sessao/sessao.dart';
 import '../../../nucleo/tema/cores.dart';
 import '../../../nucleo/tema/tema.dart';
 import '../../../nucleo/tempo/relogio.dart';
+import '../../../nucleo/textos/encontros.dart';
 import '../../../nucleo/widgets/cartao.dart';
 import '../componentes_paciente.dart';
 import 'jornada_controlador.dart';
@@ -15,6 +19,7 @@ import 'jornada_controlador.dart';
 /// TM06 — Jornada. RFM06. Aba 3: orientação vigente, próximos passos
 /// (consultas marcadas e marcos à frente) e a história até aqui, em linguagem
 /// simples (RNFM01) — nada da evolução clínica chega aqui (só `MarcoJornada`).
+/// Tocar numa sessão ou consulta abre a TM18 (F2), para responder a presença.
 ///
 /// A `Key('TM06')` no Scaffold raiz faz parte do contrato (testes de
 /// navegação).
@@ -48,9 +53,13 @@ class _ConteudoJornada extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.watch<JornadaControlador>();
     final textos = Theme.of(context).textTheme;
-    final clinico = context.select<Sessao, bool>(
-      (s) => s.perfilAtivo?.paciente.temAcompanhamentoClinico ?? false,
+    final paciente = context.select<Sessao, Paciente?>(
+      (s) => s.perfilAtivo?.paciente,
     );
+    final clinico = paciente?.temAcompanhamentoClinico ?? false;
+    final encontros = paciente == null
+        ? 'consultas'
+        : encontrosDoPaciente(paciente);
     return CorpoDaTela(
       children: [
         const CabecalhoDaTela(
@@ -68,7 +77,7 @@ class _ConteudoJornada extends StatelessWidget {
         else if (c.vazia)
           Cartao(
             child: Text(
-              'Sua jornada começa agora. Quando houver consultas e '
+              'Sua jornada começa agora. Quando houver $encontros e '
               'orientações, tudo aparece aqui.',
               style: textos.bodyMedium,
             ),
@@ -199,6 +208,8 @@ class _PontoDaLinha extends StatelessWidget {
       ),
     };
     final situacao = item.situacao;
+    final rotulo = item.rotulo ?? tipo;
+    final ehEncontro = item.tipo == TipoItemJornada.consulta;
     return IntrinsicHeight(
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -239,6 +250,11 @@ class _PontoDaLinha extends StatelessWidget {
               ),
               child: MergeSemantics(
                 child: Cartao(
+                  key: ehEncontro ? Key('jornada-${item.id}') : null,
+                  // F2 — a sessão ou consulta abre a TM18 (presença).
+                  aoTocar: ehEncontro
+                      ? () => context.push(Rotas.pacienteSessoes)
+                      : null,
                   padding: const EdgeInsets.symmetric(
                     horizontal: 14,
                     vertical: 12,
@@ -247,7 +263,7 @@ class _PontoDaLinha extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        tipo,
+                        rotulo,
                         style: textos.labelMedium?.copyWith(color: cor),
                       ),
                       Text(item.titulo, style: textos.titleSmall),

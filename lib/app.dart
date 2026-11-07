@@ -7,7 +7,9 @@ import 'dados/repositorios/autenticacao_repositorio.dart';
 import 'dados/repositorios/cuidadores_repositorio.dart';
 import 'dados/repositorios/demonstracao_repositorio.dart';
 import 'dados/repositorios/diario_repositorio.dart';
+import 'dados/repositorios/lembretes_repositorio.dart';
 import 'dados/repositorios/paciente_repositorio.dart';
+import 'dados/repositorios/presenca_repositorio.dart';
 import 'dados/repositorios/programa_em_casa_repositorio.dart';
 import 'dados/repositorios/repositorios.dart';
 import 'dados/repositorios/visao_cuidador_repositorio.dart';
@@ -72,6 +74,8 @@ class _TeraeAppState extends State<TeraeApp> {
         Provider<RepositorioVisaoCuidador>.value(value: r.visaoCuidador),
         Provider<ControleDemonstracao>.value(value: r.demonstracao),
         Provider<RepositorioProgramaEmCasa>.value(value: r.programaEmCasa),
+        Provider<RepositorioPresenca>.value(value: r.presenca),
+        Provider<RepositorioLembretes>.value(value: r.lembretes),
         Provider<ConexaoDoApp>.value(value: ConexaoDoApp(r.conexao)),
         Provider<Relogio>.value(value: widget.relogio),
         Provider<LancadorExterno>.value(value: widget.lancador),

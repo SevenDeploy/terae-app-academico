@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import '../conversao_mapa.dart';
+import '../enums/resposta_presenca.dart';
 import '../modelos/agendamento.dart';
 import '../modelos/alerta.dart';
 import '../modelos/item_medicacao.dart';
@@ -75,6 +76,14 @@ abstract interface class RepositorioVisaoCuidador {
 
   /// Alertas enviados à equipe, os mais recentes primeiro.
   Future<List<AvisoDeAlerta>> alertas({
+    required String contaCuidadorId,
+    required String pacienteId,
+  });
+
+  /// F2, D29 — a resposta de presença dada pela família, por id do
+  /// agendamento (só as já confirmadas pelo servidor). Não traz quem
+  /// respondeu nem quando: só "vamos" ou "não vamos conseguir".
+  Future<Map<String, RespostaPresenca>> respostasDePresenca({
     required String contaCuidadorId,
     required String pacienteId,
   });

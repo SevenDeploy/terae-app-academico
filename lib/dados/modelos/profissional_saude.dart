@@ -29,6 +29,11 @@ class ProfissionalSaude {
   /// Em linguagem simples (ex.: `Terapia ocupacional`).
   final String especialidade;
 
+  /// F2 — atende em terapia ocupacional: o encontro se chama "sessão", não
+  /// "consulta" (TM02, TM06, TM08, TM12, TM18).
+  bool get ehTerapiaOcupacional =>
+      especialidade.toLowerCase().contains('terapia ocupacional');
+
   Mapa toMap() => {
     'id': id,
     'nome': nome,

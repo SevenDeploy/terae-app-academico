@@ -19,7 +19,9 @@ class DemonstracaoMemoria implements ControleDemonstracao {
     _memoria.semConexao = semConexao;
     if (semConexao) return;
     await _memoria.repositorios.diario.reenviarFila();
-    _memoria.estado.receberFilaCasa();
+    _memoria.estado
+      ..receberFilaCasa()
+      ..receberFilaPresenca();
     _memoria.atualizarConexao();
   }
 

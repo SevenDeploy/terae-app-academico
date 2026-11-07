@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../dados/modelos/agendamento.dart';
+import '../../nucleo/sessao/sessao.dart';
 import '../../nucleo/tema/cores.dart';
 import '../../nucleo/tema/tema.dart';
 import '../../nucleo/tempo/data_civil.dart';
 import '../../nucleo/tempo/relogio.dart';
+import '../../nucleo/textos/encontros.dart';
 import '../../nucleo/widgets/cartao.dart';
 import 'cronograma.dart';
 import 'visao_cuidador_controlador.dart';
@@ -70,17 +72,24 @@ class _Agenda extends StatelessWidget {
       controlador.agora,
     );
     final avisos = _avisos(controlador, hoje);
+    final paciente = context
+        .select<Sessao, Perfil?>((s) => s.perfilAtivo)
+        ?.paciente;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const TituloDeSecao(
-          'Próximas consultas',
+        TituloDeSecao(
+          // F2 — "Próximas sessões" para quem só faz TO.
+          'Próximas ${paciente == null ? 'consultas' : encontrosDoPaciente(paciente)}',
           icone: Icons.event,
           cor: CoresTerae.primaria700,
         ),
         if (marcadas.isEmpty)
           Cartao(
-            child: Text('Nenhuma consulta marcada.', style: textos.bodyLarge),
+            child: Text(
+              'Nenhuma ${paciente == null ? 'consulta' : palavraDoPaciente(paciente)} marcada.',
+              style: textos.bodyLarge,
+            ),
           ),
         for (final consulta in marcadas) ...[
           _CartaoDaConsulta(
@@ -109,7 +118,7 @@ class _Agenda extends StatelessWidget {
           icone: Icons.event_busy,
           cor: CoresTerae.negativo700,
           corFundo: CoresTerae.negativo50,
-          titulo: 'Consulta cancelada',
+          titulo: '${tituloDoEncontro(c.profissionalDe(consulta))} cancelada',
           linhas: [
             '${formatarDiaPorExtenso(consulta.dataHora)} às '
                 '${formatarHora(consulta.dataHora)}',
@@ -190,6 +199,10 @@ class _CartaoDaConsulta extends StatelessWidget {
               hoje: hoje,
             ),
           ),
+          if (controlador.respostaDe(consulta) case final r?) ...[
+            const SizedBox(height: MedidasTerae.espacoPequeno),
+            EtiquetaDaPresenca(r),
+          ],
         ],
       ),
     );

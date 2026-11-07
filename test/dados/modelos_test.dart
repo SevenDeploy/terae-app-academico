@@ -11,6 +11,7 @@ import 'package:terae_app/dados/enums/ocupacao.dart';
 import 'package:terae_app/dados/enums/qualidade_consentimento.dart';
 import 'package:terae_app/dados/enums/quem_registrou.dart';
 import 'package:terae_app/dados/enums/regra_alerta.dart';
+import 'package:terae_app/dados/enums/resposta_presenca.dart';
 import 'package:terae_app/dados/enums/situacao_agendamento.dart';
 import 'package:terae_app/dados/enums/situacao_conta.dart';
 import 'package:terae_app/dados/enums/situacao_envio.dart';
@@ -20,6 +21,7 @@ import 'package:terae_app/dados/enums/tipo_marco.dart';
 import 'package:terae_app/dados/modelos/agendamento.dart';
 import 'package:terae_app/dados/modelos/alerta.dart';
 import 'package:terae_app/dados/modelos/atividade_de_casa.dart';
+import 'package:terae_app/dados/modelos/confirmacao_de_presenca.dart';
 import 'package:terae_app/dados/modelos/consentimento.dart';
 import 'package:terae_app/dados/modelos/conta_usuario.dart';
 import 'package:terae_app/dados/modelos/convite_acesso.dart';
@@ -229,8 +231,21 @@ void main() {
       registroCasa.toMap,
     );
 
-    test('são exatamente as 14 entidades', () {
-      expect(casos, hasLength(14));
+    final confirmacao = ConfirmacaoDePresenca(
+      agendamentoId: 'ag-1',
+      pacienteId: 'p-miguel',
+      resposta: RespostaPresenca.naoVamos,
+      respondidaEm: _instante,
+      situacaoEnvio: SituacaoEnvio.naFila,
+    );
+    casos['ConfirmacaoDePresenca'] = (
+      confirmacao,
+      ConfirmacaoDePresenca.fromMap,
+      confirmacao.toMap,
+    );
+
+    test('são exatamente as 15 entidades', () {
+      expect(casos, hasLength(15));
     });
 
     casos.forEach((nome, caso) {
@@ -609,11 +624,12 @@ void main() {
       'AtividadeDeCasa.ocupacao': Ocupacao.values,
       'RegistroDeAtividade.adesao': AdesaoEmCasa.values,
       'RegistroDeAtividade.quem': QuemRegistrou.values,
+      'ConfirmacaoDePresenca.resposta': RespostaPresenca.values,
     };
 
-    test('são 15 (os 11 do §22 + 4 da evolução de TO), com os valores '
+    test('são 16 (os 11 do §22 + 5 da evolução de TO), com os valores '
         'esperados', () {
-      expect(enums, hasLength(15));
+      expect(enums, hasLength(16));
       final nomes = enums.map(
         (campo, valores) => MapEntry(campo, valores.map((v) => v.name)),
       );
@@ -672,6 +688,7 @@ void main() {
         'naoFeito',
       ]);
       expect(nomes['RegistroDeAtividade.quem'], ['paciente', 'responsavel']);
+      expect(nomes['ConfirmacaoDePresenca.resposta'], ['vamos', 'naoVamos']);
     });
 
     test('cada valor volta pelo nome e tem rótulo em linguagem simples', () {
@@ -700,6 +717,10 @@ void main() {
         for (final v in Ocupacao.values) v.rotulo,
         for (final v in AdesaoEmCasa.values) v.rotulo,
         for (final v in QuemRegistrou.values) v.rotulo,
+        for (final v in RespostaPresenca.values) ...[
+          v.rotulo,
+          v.rotuloNaPrimeiraPessoa,
+        ],
       ];
       expect(rotulos, everyElement(isNotEmpty));
       expect(Adesao.total.rotulo, 'Tomei tudo');

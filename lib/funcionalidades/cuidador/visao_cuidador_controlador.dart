@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 
+import '../../dados/enums/resposta_presenca.dart';
 import '../../dados/modelos/agendamento.dart';
 import '../../dados/modelos/item_medicacao.dart';
 import '../../dados/modelos/profissional_saude.dart';
@@ -38,6 +39,7 @@ class VisaoCuidadorControlador extends ChangeNotifier {
   ReceitaUsoContinuo? _receita;
   List<ItemMedicacao> _itens = const [];
   List<AvisoDeAlerta> _alertas = const [];
+  Map<String, RespostaPresenca> _respostas = const {};
   bool _descartado = false;
 
   bool get carregando => _carregando;
@@ -50,6 +52,9 @@ class VisaoCuidadorControlador extends ChangeNotifier {
   ReceitaUsoContinuo? get receita => _receita;
   List<ItemMedicacao> get itens => _itens;
   List<AvisoDeAlerta> get alertas => _alertas;
+
+  /// F2, D29 — o que a família respondeu sobre a presença na sessão.
+  RespostaPresenca? respostaDe(Agendamento a) => _respostas[a.id];
 
   ProfissionalSaude? profissionalDe(Agendamento consulta) =>
       _profissionais[consulta.profissionalId];
@@ -88,6 +93,18 @@ class VisaoCuidadorControlador extends ChangeNotifier {
         contaCuidadorId: contaCuidadorId,
         pacienteId: pacienteId,
       );
+      // F2 (revisão): a presença é um extra; se não puder ser lida (regra
+      // ainda não publicada, sem conexão e sem cópia), a agenda e os avisos
+      // aparecem sem ela.
+      Map<String, RespostaPresenca> respostas;
+      try {
+        respostas = await repositorio.respostasDePresenca(
+          contaCuidadorId: contaCuidadorId,
+          pacienteId: pacienteId,
+        );
+      } on RecusaDeRegra {
+        respostas = const {};
+      }
       final profissionais = <String, ProfissionalSaude>{};
       for (final id in {for (final c in consultas) c.profissionalId}) {
         profissionais[id] = await repositorio.profissional(id);
@@ -96,6 +113,7 @@ class VisaoCuidadorControlador extends ChangeNotifier {
       _receita = receita;
       _itens = List.unmodifiable(itens);
       _alertas = List.unmodifiable(alertas);
+      _respostas = Map.unmodifiable(respostas);
       _profissionais = Map.unmodifiable(profissionais);
     } on RecusaDeRegra catch (recusa) {
       _erro = recusa.mensagem;

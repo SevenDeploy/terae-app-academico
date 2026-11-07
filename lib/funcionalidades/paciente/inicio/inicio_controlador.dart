@@ -1,11 +1,13 @@
 import 'package:flutter/foundation.dart';
 
+import '../../../dados/enums/resposta_presenca.dart';
 import '../../../dados/modelos/agendamento.dart';
 import '../../../dados/modelos/item_medicacao.dart';
 import '../../../dados/modelos/profissional_saude.dart';
 import '../../../dados/modelos/receita_uso_continuo.dart';
 import '../../../dados/regras/programa_em_casa.dart';
 import '../../../dados/repositorios/paciente_repositorio.dart';
+import '../../../dados/repositorios/presenca_repositorio.dart';
 import '../../../dados/repositorios/programa_em_casa_repositorio.dart';
 import '../../../nucleo/tempo/data_civil.dart';
 import '../../../nucleo/tempo/relogio.dart';
@@ -25,12 +27,17 @@ class InicioControlador extends ChangeNotifier {
     required this.pacienteId,
     this.programa,
     this.relogio,
+    this.presenca,
   }) : assert(programa == null || relogio != null);
 
   final RepositorioPaciente repositorio;
   final String pacienteId;
   final RepositorioProgramaEmCasa? programa;
   final Relogio? relogio;
+
+  /// F2 — para mostrar no cartão se a presença na próxima sessão já foi
+  /// respondida.
+  final RepositorioPresenca? presenca;
 
   /// Começa carregando: a tela chama [carregar] ao criar o controlador.
   bool _carregando = true;
@@ -40,6 +47,7 @@ class InicioControlador extends ChangeNotifier {
   ReceitaUsoContinuo? _receita;
   List<ItemMedicacao> _itens = const [];
   ({int registradas, int total})? _emCasa;
+  RespostaPresenca? _respostaDaProxima;
   bool _descartado = false;
 
   bool get carregando => _carregando;
@@ -53,10 +61,13 @@ class InicioControlador extends ChangeNotifier {
   /// leitura falhou.
   ({int registradas, int total})? get emCasa => _emCasa;
 
+  /// F2 — a resposta de presença da próxima consulta ou sessão, se houver.
+  RespostaPresenca? get respostaDaProxima => _respostaDaProxima;
+
   /// Lê tudo do repositório. Na primeira vez não avisa no início (a tela já
   /// nasce carregando); em "Tentar de novo", mostra o indicador.
-  Future<void> carregar() async {
-    if (!_carregando) {
+  Future<void> carregar({bool emSilencio = false}) async {
+    if (!_carregando && !emSilencio) {
       _carregando = true;
       _falhou = false;
       _avisar();
@@ -74,6 +85,10 @@ class InicioControlador extends ChangeNotifier {
       _profissionalDaConsulta = profissional;
       _receita = receita;
       _itens = List.unmodifiable(itens);
+      _respostaDaProxima = consulta == null || presenca == null
+          ? null
+          : (await presenca!.respostas(pacienteId))[consulta.id]?.resposta;
+      _falhou = false;
     } catch (_) {
       // Dublê sem dado, recusa ou falha de leitura: a tela oferece de novo.
       _falhou = true;

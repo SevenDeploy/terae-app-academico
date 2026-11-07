@@ -29,7 +29,9 @@ Future<void> main() async {
     runApp(
       TeraeApp(
         repositorios: memoria.repositorios,
-        sessao: Sessao(),
+        // D20/D28 — na demonstração também: a persona seguinte não herda os
+        // lembretes da anterior.
+        sessao: Sessao(aoSair: memoria.repositorios.lembretes.cancelarTudo),
         relogio: relogio,
       ),
     );
@@ -49,7 +51,11 @@ Future<void> main() async {
   final repositorios = persistencia.repositorios;
   final sessao = Sessao(
     aoMudarPerfil: persistencia.preferencias.guardarPerfil,
-    aoSair: repositorios.autenticacao.sair,
+    // D20 — "Sair" encerra a conta e, desde a F2 (D28), cancela os lembretes.
+    aoSair: () async {
+      await repositorios.autenticacao.sair();
+      await repositorios.lembretes.cancelarTudo();
+    },
   );
   final perfilGuardado = persistencia.preferencias.perfilAtivo;
   final guardada = await repositorios.autenticacao.sessaoGuardada();

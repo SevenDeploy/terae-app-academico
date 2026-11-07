@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:terae_app/dados/enums/situacao_agendamento.dart';
 import 'package:terae_app/dados/repositorios/visao_cuidador_repositorio.dart';
 import 'package:terae_app/nucleo/rotas/rotas.dart';
 import 'package:terae_app/nucleo/sessao/sessao.dart';
 import 'package:terae_app/nucleo/tempo/data_civil.dart';
+import 'package:terae_app/nucleo/tempo/relogio.dart';
 
 import '../publico/apoio_telas.dart';
 import 'apoio_cuidador.dart';
@@ -55,6 +57,33 @@ void main() {
     expect(
       tester.getTopLeft(find.byKey(primeira)).dy,
       lessThan(tester.getTopLeft(find.byKey(segunda)).dy),
+    );
+  });
+
+  testWidgets('sessão de TO cancelada vira "Sessão cancelada" (F2)', (
+    tester,
+  ) async {
+    await _abrir(
+      tester,
+      visao: VisaoCuidadorFake(
+        consultas: [
+          ...consultasDeTeste,
+          consultaDe(
+            'ag-4',
+            instanteNaClinica(2026, 10, 15, 9),
+            profissionalId: 'pr-larissa',
+            situacao: SituacaoAgendamento.cancelado,
+          ),
+        ],
+      ),
+    );
+    expect(
+      _em(const Key('aviso-cancelada-ag-4'), find.text('Sessão cancelada')),
+      findsOneWidget,
+    );
+    expect(
+      _em(const Key('aviso-cancelada-ag-2'), find.text('Consulta cancelada')),
+      findsOneWidget,
     );
   });
 

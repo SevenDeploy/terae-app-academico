@@ -65,7 +65,16 @@ enum MotivoRecusa {
   /// TM17 — a atividade não existe, não é deste paciente ou foi encerrada.
   atividadeInexistente(
     'Não encontramos esta atividade. Ela pode ter sido encerrada na terapia.',
-  );
+  ),
+
+  /// TM18 — D27: a sessão já começou, já passou ou foi cancelada.
+  sessaoEncerrada(
+    'Esta sessão já começou ou foi cancelada. Para remarcar, fale com a '
+    'clínica.',
+  ),
+
+  /// TM18 — o agendamento não existe ou não é deste paciente.
+  agendamentoInexistente('Não encontramos esta sessão.');
 
   const MotivoRecusa(this.mensagem);
 

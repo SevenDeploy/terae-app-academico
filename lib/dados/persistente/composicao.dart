@@ -10,12 +10,14 @@ import 'package:sqflite/sqflite.dart' show DatabaseFactory;
 import '../../nucleo/tempo/relogio.dart';
 import '../local/banco_local.dart';
 import '../local/cache_dao.dart';
+import '../local/confirmacao_de_presenca_dao.dart';
 import '../local/preferencias_locais.dart';
 import '../local/registro_de_atividade_dao.dart';
 import '../local/registro_diario_dao.dart';
 import '../remoto/fonte_firestore.dart';
 import '../repositorios/demonstracao_repositorio.dart';
 import '../repositorios/repositorios.dart';
+import '../sincronizacao/fila_confirmacoes.dart';
 import '../sincronizacao/fila_registros_casa.dart';
 import '../sincronizacao/monitor_conexao.dart';
 import '../sincronizacao/sincronizador.dart';
@@ -23,7 +25,9 @@ import 'autenticacao_firebase.dart';
 import 'cuidadores_firebase.dart';
 import 'diario_persistente.dart';
 import 'leitura_com_copia.dart';
+import 'lembretes_locais.dart';
 import 'paciente_persistente.dart';
+import 'presenca_persistente.dart';
 import 'programa_em_casa_persistente.dart';
 import 'visao_cuidador_persistente.dart';
 
@@ -74,13 +78,33 @@ Future<Persistencia> montarPersistencia({
     fonte: fonte,
     monitor: conexao,
   );
+  final daoPresenca = ConfirmacaoDePresencaDao(banco);
+  final filaPresenca = FilaConfirmacoes(
+    dao: daoPresenca,
+    fonte: fonte,
+    monitor: conexao,
+  );
   final sincronizador = Sincronizador(
     dao: dao,
     fonte: fonte,
     monitor: conexao,
     relogio: relogio,
     preferencias: prefs,
-    filas: [filaCasa],
+    filas: [filaCasa, filaPresenca],
+  );
+  final paciente = PacientePersistente(
+    fonte: fonte,
+    leitura: leitura,
+    cache: cache,
+    relogio: relogio,
+  );
+  final programa = ProgramaEmCasaPersistente(
+    fonte: fonte,
+    leitura: leitura,
+    dao: daoCasa,
+    fila: filaCasa,
+    sincronizador: sincronizador,
+    relogio: relogio,
   );
   final repositorios = Repositorios(
     autenticacao: AutenticacaoFirebase(
@@ -93,12 +117,7 @@ Future<Persistencia> montarPersistencia({
       sincronizador: sincronizador,
       relogio: relogio,
     ),
-    paciente: PacientePersistente(
-      fonte: fonte,
-      leitura: leitura,
-      cache: cache,
-      relogio: relogio,
-    ),
+    paciente: paciente,
     diario: DiarioPersistente(
       dao: dao,
       sincronizador: sincronizador,
@@ -120,12 +139,18 @@ Future<Persistencia> montarPersistencia({
       sincronizador: sincronizador,
       banco: banco,
     ),
-    programaEmCasa: ProgramaEmCasaPersistente(
-      fonte: fonte,
-      leitura: leitura,
-      dao: daoCasa,
-      fila: filaCasa,
+    presenca: PresencaPersistente(
+      dao: daoPresenca,
+      fila: filaPresenca,
+      paciente: paciente,
       sincronizador: sincronizador,
+      relogio: relogio,
+    ),
+    programaEmCasa: programa,
+    lembretes: LembretesLocais(
+      preferencias: prefs,
+      paciente: paciente,
+      programa: programa,
       relogio: relogio,
     ),
     conexao: sincronizador.situacao,

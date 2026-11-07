@@ -73,6 +73,15 @@ abstract final class Rotas {
   static String atividade(String id) =>
       Uri(path: pacienteAtividade, queryParameters: {'id': id}).toString();
 
+  /// TM18 Sessões (evolução de TO, F2) — paciente; as sessões e consultas,
+  /// com a confirmação de presença e "Falar com a clínica", empilhada sobre
+  /// as abas (aberta pelo cartão da próxima sessão no Início).
+  static const String pacienteSessoes = '/paciente/sessoes';
+
+  /// TM19 Lembretes (evolução de TO, F2) — paciente; aberta pelo menu do
+  /// Início, empilhada sobre as abas.
+  static const String pacienteLembretes = '/paciente/lembretes';
+
   /// TM06 Jornada (aba 3) — paciente.
   static const String pacienteJornada = '/paciente/jornada';
 
@@ -105,6 +114,8 @@ abstract final class Rotas {
     pacienteDiarioAjuda,
     pacienteCasa,
     pacienteAtividade,
+    pacienteSessoes,
+    pacienteLembretes,
     pacienteJornada,
     pacienteCuidadores,
     pacienteRegistros,
@@ -114,6 +125,10 @@ abstract final class Rotas {
 
   /// D22 — só o paciente com terapia ocupacional alcança (o roteador recusa
   /// para os demais, mesmo por link direto).
+  /// D21 (F2) — só o perfil de paciente com acompanhamento clínico alcança
+  /// (a medicação do cuidador); o roteador recusa para os demais.
+  static const Set<String> doAcompanhamentoClinico = {cuidadorMedicacao};
+
   static const Set<String> daTerapiaOcupacional = {
     pacienteCasa,
     pacienteAtividade,
@@ -153,5 +168,7 @@ abstract final class Rotas {
     'TM15': pacienteCorrigirRegistro,
     'TM16': pacienteCasa,
     'TM17': pacienteAtividade,
+    'TM18': pacienteSessoes,
+    'TM19': pacienteLembretes,
   };
 }

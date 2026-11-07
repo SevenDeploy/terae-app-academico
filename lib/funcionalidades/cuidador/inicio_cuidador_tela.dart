@@ -10,6 +10,7 @@ import '../../nucleo/tema/cores.dart';
 import '../../nucleo/tema/tema.dart';
 import '../../nucleo/tempo/data_civil.dart';
 import '../../nucleo/tempo/relogio.dart';
+import '../../nucleo/textos/encontros.dart';
 import '../../nucleo/widgets/aviso_de_conexao.dart';
 import '../../nucleo/widgets/cartao.dart';
 import 'visao_cuidador_controlador.dart';
@@ -85,24 +86,33 @@ class _InicioCuidador extends StatelessWidget {
                   const SizedBox(height: MedidasTerae.espacoGrande),
                   ConteudoCarregado(
                     controlador: controlador,
-                    construtor: (_) => _ProximosCompromissos(controlador),
+                    construtor: (_) => _ProximosCompromissos(
+                      controlador,
+                      clinico: paciente?.temAcompanhamentoClinico ?? true,
+                    ),
                   ),
                   const SizedBox(height: MedidasTerae.espacoGrande),
                   const TituloDeSecao('Ver mais', icone: Icons.apps),
-                  _Atalho(
-                    key: const Key('atalho-medicacao'),
-                    icone: Icons.medication_outlined,
-                    titulo: 'Medicação',
-                    descricao: 'Horários de hoje e dos próximos dias',
-                    aoTocar: () =>
-                        unawaited(context.push(Rotas.cuidadorMedicacao)),
-                  ),
-                  const SizedBox(height: 12),
+                  // D21 — remédios só no acompanhamento clínico.
+                  if (paciente?.temAcompanhamentoClinico ?? true) ...[
+                    _Atalho(
+                      key: const Key('atalho-medicacao'),
+                      icone: Icons.medication_outlined,
+                      titulo: 'Medicação',
+                      descricao: 'Horários de hoje e dos próximos dias',
+                      aoTocar: () =>
+                          unawaited(context.push(Rotas.cuidadorMedicacao)),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
                   _Atalho(
                     key: const Key('atalho-agenda'),
                     icone: Icons.event_note_outlined,
                     titulo: 'Agenda e avisos',
-                    descricao: 'Consultas, receita e avisos à equipe',
+                    descricao: (paciente?.temAcompanhamentoClinico ?? true)
+                        ? '${_maiusculaInicial(paciente == null ? 'consultas' : encontrosDoPaciente(paciente))}, '
+                              'receita e avisos à equipe'
+                        : 'Sessões e avisos à equipe',
                     aoTocar: () =>
                         unawaited(context.push(Rotas.cuidadorAgenda)),
                   ),
@@ -161,9 +171,12 @@ class _Menu extends StatelessWidget {
 
 /// Próximo remédio e próxima consulta.
 class _ProximosCompromissos extends StatelessWidget {
-  const _ProximosCompromissos(this.controlador);
+  const _ProximosCompromissos(this.controlador, {required this.clinico});
 
   final VisaoCuidadorControlador controlador;
+
+  /// D21 — sem acompanhamento clínico, sem o bloco do próximo remédio.
+  final bool clinico;
 
   @override
   Widget build(BuildContext context) {
@@ -177,42 +190,47 @@ class _ProximosCompromissos extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const TituloDeSecao(
-          'Próximo remédio',
-          icone: Icons.alarm,
-          cor: CoresTerae.clinico700,
-        ),
-        Cartao(
-          key: const Key('proximo-remedio'),
-          corBorda: CoresTerae.clinico100,
-          child: dose == null
-              ? Text(
-                  controlador.receita == null
-                      ? 'Nenhuma receita em uso agora.'
-                      : 'Nenhum horário de remédio pela frente.',
-                  style: textos.bodyLarge,
-                )
-              : Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      diaEHora(dose.instante, hoje),
-                      style: textos.titleLarge?.copyWith(
-                        color: CoresTerae.clinico700,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    for (final item in dose.itens)
+        if (clinico) ...[
+          const TituloDeSecao(
+            'Próximo remédio',
+            icone: Icons.alarm,
+            cor: CoresTerae.clinico700,
+          ),
+          Cartao(
+            key: const Key('proximo-remedio'),
+            corBorda: CoresTerae.clinico100,
+            child: dose == null
+                ? Text(
+                    controlador.receita == null
+                        ? 'Nenhuma receita em uso agora.'
+                        : 'Nenhum horário de remédio pela frente.',
+                    style: textos.bodyLarge,
+                  )
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                       Text(
-                        '${item.medicamento} — ${item.posologia}',
-                        style: textos.bodyLarge,
+                        diaEHora(dose.instante, hoje),
+                        style: textos.titleLarge?.copyWith(
+                          color: CoresTerae.clinico700,
+                        ),
                       ),
-                  ],
-                ),
-        ),
-        const SizedBox(height: MedidasTerae.espacoGrande),
-        const TituloDeSecao(
-          'Próxima consulta',
+                      const SizedBox(height: 4),
+                      for (final item in dose.itens)
+                        Text(
+                          '${item.medicamento} — ${item.posologia}',
+                          style: textos.bodyLarge,
+                        ),
+                    ],
+                  ),
+          ),
+          const SizedBox(height: MedidasTerae.espacoGrande),
+        ],
+        TituloDeSecao(
+          // F2 — "Próxima sessão" quando o profissional é de TO.
+          consulta == null
+              ? (clinico ? 'Próxima consulta' : 'Próxima sessão')
+              : 'Próxima ${palavraDoEncontro(profissional)}',
           icone: Icons.event,
           cor: CoresTerae.primaria700,
         ),
@@ -220,7 +238,12 @@ class _ProximosCompromissos extends StatelessWidget {
           key: const Key('proxima-consulta'),
           corBorda: CoresTerae.primaria100,
           child: consulta == null
-              ? Text('Nenhuma consulta marcada.', style: textos.bodyLarge)
+              ? Text(
+                  clinico
+                      ? 'Nenhuma consulta marcada.'
+                      : 'Nenhuma sessão marcada.',
+                  style: textos.bodyLarge,
+                )
               : Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -240,6 +263,10 @@ class _ProximosCompromissos extends StatelessWidget {
                         hoje: hoje,
                       ),
                     ),
+                    if (controlador.respostaDe(consulta) case final r?) ...[
+                      const SizedBox(height: MedidasTerae.espacoPequeno),
+                      EtiquetaDaPresenca(r),
+                    ],
                   ],
                 ),
         ),
@@ -302,3 +329,6 @@ class _Atalho extends StatelessWidget {
     );
   }
 }
+
+String _maiusculaInicial(String texto) =>
+    texto.isEmpty ? texto : texto[0].toUpperCase() + texto.substring(1);

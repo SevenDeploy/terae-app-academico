@@ -7,6 +7,7 @@ import '../../../nucleo/sessao/sessao.dart';
 import '../../../nucleo/tema/cores.dart';
 import '../../../nucleo/tema/tema.dart';
 import '../../../nucleo/tempo/relogio.dart';
+import '../../../nucleo/textos/encontros.dart';
 import '../../../nucleo/validacao/formatador_cpf.dart';
 import '../../../nucleo/widgets/botao_grande.dart';
 import '../../../nucleo/widgets/cartao.dart';
@@ -51,17 +52,29 @@ class CuidadoresTela extends StatelessWidget {
 class _ConteudoCuidadores extends StatelessWidget {
   const _ConteudoCuidadores();
 
+  /// F2 — o que o cuidador acompanha depende das linhas de cuidado.
+  static String _oQueAcompanha(Perfil? perfil) {
+    final clinico = perfil?.paciente.temAcompanhamentoClinico ?? true;
+    final terapia = perfil?.paciente.temTerapiaOcupacional ?? false;
+    final agenda = encontrosDoPaciente(perfil!.paciente);
+    if (clinico && terapia) {
+      return 'a agenda de $agenda, os horários de remédio e a rotina';
+    }
+    if (terapia) return 'a agenda de $agenda e a rotina';
+    return 'sua agenda e seus horários de remédio';
+  }
+
   @override
   Widget build(BuildContext context) {
     final c = context.watch<CuidadoresControlador>();
     final textos = Theme.of(context).textTheme;
     return CorpoDaTela(
       children: [
-        const CabecalhoDaTela(
+        CabecalhoDaTela(
           titulo: 'Quem cuida com você',
           subtitulo:
-              'Autorize pessoas de confiança para acompanhar sua agenda e seus '
-              'horários de remédio.',
+              'Autorize pessoas de confiança para acompanhar '
+              '${_oQueAcompanha(context.select<Sessao, Perfil?>((s) => s.perfilAtivo))}.',
         ),
         const SizedBox(height: MedidasTerae.espacoGrande),
         if (c.carregando)
@@ -260,6 +273,7 @@ class _CartaoDoCuidador extends StatelessWidget {
 
   Future<void> _confirmarRevogacao(BuildContext context) async {
     final controlador = context.read<CuidadoresControlador>();
+    final remedio = _temRemedio(context);
     final vinculo = cuidador.vinculo;
     final pendente = vinculo.situacao == SituacaoVinculo.pendente;
     final confirmou = await showDialog<bool>(
@@ -269,8 +283,10 @@ class _CartaoDoCuidador extends StatelessWidget {
         content: Text(
           pendente
               ? 'O código do convite deixa de valer.'
-              : '${vinculo.nome} não vai mais ver sua agenda nem seus '
-                    'horários de remédio.',
+              : remedio
+              ? '${vinculo.nome} não vai mais ver sua agenda nem seus '
+                    'horários de remédio.'
+              : '${vinculo.nome} não vai mais ver sua agenda.',
         ),
         actions: [
           TextButton(
@@ -527,9 +543,8 @@ class _NotaDePrivacidade extends StatelessWidget {
             const SizedBox(width: 12),
             Expanded(
               child: Text(
-                'Cuidadores veem só sua agenda, seus horários de remédio e os '
-                'avisos enviados à equipe. O que você conta no diário fica '
-                'entre você e sua equipe.',
+                '${_oQueOsCuidadoresVeem(context)} O que você conta no '
+                'diário fica entre você e sua equipe.',
                 style: textos.bodySmall?.copyWith(color: CoresTerae.neutro600),
               ),
             ),
@@ -539,3 +554,14 @@ class _NotaDePrivacidade extends StatelessWidget {
     );
   }
 }
+
+/// D21 — só quem tem acompanhamento clínico tem horários de remédio; quem só
+/// faz terapia ocupacional não lê sobre eles na TM07 (F2, achado da revisão).
+bool _temRemedio(BuildContext context) =>
+    context.read<Sessao>().perfilAtivo?.paciente.temAcompanhamentoClinico ??
+    true;
+
+String _oQueOsCuidadoresVeem(BuildContext context) => _temRemedio(context)
+    ? 'Cuidadores veem só sua agenda, seus horários de remédio e os avisos '
+          'enviados à equipe.'
+    : 'Cuidadores veem só sua agenda e os avisos enviados à equipe.';

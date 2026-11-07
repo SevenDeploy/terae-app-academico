@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../nucleo/sessao/sessao.dart';
+import 'lembretes/reagenda_lembretes.dart';
 
 /// As abas do perfil paciente/família, na ordem dos ramos do
 /// `StatefulShellRoute` em `lib/roteador.dart` (o índice do enum é o índice
@@ -39,7 +40,8 @@ List<AbaDoPaciente> abasVisiveis({required bool temTerapiaOcupacional}) => [
 /// preenchimento ao trocar de aba.
 ///
 /// Voltar do Android numa aba diferente do Início leva ao Início; no Início,
-/// fecha o aplicativo. A `NavigationBar` expõe cada aba com papel de aba e
+/// fecha o aplicativo. As abas também refazem os lembretes locais
+/// ([ReagendaLembretes], F2). A `NavigationBar` expõe cada aba com papel de aba e
 /// `selected` na ativa. Chaves das abas em [AbaDoPaciente.chave] para teste.
 class AbasPaciente extends StatelessWidget {
   const AbasPaciente({super.key, required this.navigationShell});
@@ -57,28 +59,31 @@ class AbasPaciente extends StatelessWidget {
     final visiveis = abasVisiveis(temTerapiaOcupacional: temTerapiaOcupacional);
     final atual = navigationShell.currentIndex;
     final selecionada = visiveis.indexWhere((aba) => aba.index == atual);
-    return PopScope(
-      canPop: atual == inicio,
-      onPopInvokedWithResult: (saiu, _) {
-        if (!saiu) navigationShell.goBranch(inicio);
-      },
-      child: Scaffold(
-        body: navigationShell,
-        bottomNavigationBar: NavigationBar(
-          selectedIndex: selecionada < 0 ? 0 : selecionada,
-          onDestinationSelected: (indice) {
-            final ramo = visiveis[indice].index;
-            navigationShell.goBranch(ramo, initialLocation: ramo == atual);
-          },
-          destinations: [
-            for (final aba in visiveis)
-              NavigationDestination(
-                key: Key(aba.chave),
-                icon: Icon(aba.icone),
-                selectedIcon: Icon(aba.iconeAtivo),
-                label: aba.rotulo,
-              ),
-          ],
+    return ReagendaLembretes(
+      noInicio: atual == inicio,
+      child: PopScope(
+        canPop: atual == inicio,
+        onPopInvokedWithResult: (saiu, _) {
+          if (!saiu) navigationShell.goBranch(inicio);
+        },
+        child: Scaffold(
+          body: navigationShell,
+          bottomNavigationBar: NavigationBar(
+            selectedIndex: selecionada < 0 ? 0 : selecionada,
+            onDestinationSelected: (indice) {
+              final ramo = visiveis[indice].index;
+              navigationShell.goBranch(ramo, initialLocation: ramo == atual);
+            },
+            destinations: [
+              for (final aba in visiveis)
+                NavigationDestination(
+                  key: Key(aba.chave),
+                  icon: Icon(aba.icone),
+                  selectedIcon: Icon(aba.iconeAtivo),
+                  label: aba.rotulo,
+                ),
+            ],
+          ),
         ),
       ),
     );

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:terae_app/dados/enums/resposta_presenca.dart';
 import 'package:terae_app/dados/repositorios/falhas.dart';
 import 'package:terae_app/nucleo/rotas/rotas.dart';
 import 'package:terae_app/nucleo/sessao/sessao.dart';
@@ -28,6 +29,15 @@ Future<Sessao> _abrir(
   return s;
 }
 
+/// A leitura das respostas de presença é recusada (regra ainda não publicada).
+class _PresencaRecusada extends VisaoCuidadorFake {
+  @override
+  Future<Map<String, RespostaPresenca>> respostasDePresenca({
+    required String contaCuidadorId,
+    required String pacienteId,
+  }) async => throw const RecusaDeRegra(MotivoRecusa.acessoNegado);
+}
+
 Finder _em(Key chave, Finder alvo) =>
     find.descendant(of: find.byKey(chave), matching: alvo);
 
@@ -39,6 +49,30 @@ Future<void> _tocar(WidgetTester tester, Finder alvo) async {
 }
 
 void main() {
+  testWidgets('paciente só de TO: sem o atalho "Medicação" e sem o próximo '
+      'remédio, mesmo com receita no repositório (D21; pendência 3 da F1)', (
+    tester,
+  ) async {
+    await _abrir(
+      tester,
+      sessao: Sessao()..entrar(vinculosReginaDeQuemSoFazTerapia()),
+    );
+    expect(find.byKey(const Key('TM08')), findsOneWidget);
+    expect(find.byKey(const Key('atalho-medicacao')), findsNothing);
+    expect(find.byKey(const Key('proximo-remedio')), findsNothing);
+    expect(find.byKey(const Key('atalho-agenda')), findsOneWidget);
+  });
+
+  testWidgets('sem poder ler a presença, a TM08 mostra a agenda e os avisos '
+      'mesmo assim', (tester) async {
+    await _abrir(tester, visao: _PresencaRecusada());
+    expect(
+      _em(const Key('proxima-consulta'), find.text('Dra. Helena Prado')),
+      findsOneWidget,
+    );
+    expect(find.textContaining('Tentar de novo'), findsNothing);
+  });
+
   testWidgets('quem acompanha, aviso, próximo remédio e próxima consulta', (
     tester,
   ) async {

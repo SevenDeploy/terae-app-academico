@@ -114,7 +114,9 @@ class ProgramaEmCasaMemoria implements RepositorioProgramaEmCasa {
   Future<void> atualizar(String pacienteId) async {
     await _memoria.esperar();
     if (_memoria.semConexao) return;
-    _e.receberFilaCasa();
+    _e
+      ..receberFilaCasa()
+      ..receberFilaPresenca();
     _memoria.atualizarConexao();
   }
 

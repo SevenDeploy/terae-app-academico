@@ -9,6 +9,7 @@ import 'package:terae_app/dados/enums/canal_autorizado.dart';
 import 'package:terae_app/dados/enums/intensidade.dart';
 import 'package:terae_app/dados/enums/linha_de_cuidado.dart';
 import 'package:terae_app/dados/enums/qualidade_consentimento.dart';
+import 'package:terae_app/dados/enums/resposta_presenca.dart';
 import 'package:terae_app/dados/enums/situacao_conta.dart';
 import 'package:terae_app/dados/modelos/agendamento.dart';
 import 'package:terae_app/dados/modelos/alerta.dart';
@@ -179,6 +180,13 @@ class VisaoCuidadorDuble implements RepositorioVisaoCuidador {
     required String contaCuidadorId,
     required String pacienteId,
   }) => _naoUsado();
+
+  /// F2 — sem respostas de presença (o controlador do cuidador sempre lê).
+  @override
+  Future<Map<String, RespostaPresenca>> respostasDePresenca({
+    required String contaCuidadorId,
+    required String pacienteId,
+  }) async => const {};
 }
 
 class DemonstracaoDuble implements ControleDemonstracao {
