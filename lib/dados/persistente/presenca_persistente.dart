@@ -35,6 +35,9 @@ class PresencaPersistente implements RepositorioPresenca {
       _dao.doPaciente(pacienteId);
 
   @override
+  Future<void> atualizar(String pacienteId) => _sinc.sincronizar();
+
+  @override
   Future<ConfirmacaoDePresenca> responder({
     required String pacienteId,
     required String agendamentoId,

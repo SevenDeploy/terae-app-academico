@@ -43,6 +43,13 @@ for (const d of daCasa.docs) {
   console.log(`  ${r.dia}  ${r.adesao.padEnd(9)} ${r.quem.padEnd(12)} ${r.situacaoEnvio}` +
     `${r.atualizadoEm ? '  corrigido ' + r.atualizadoEm : ''}${r.excluidoEm ? '  DESFEITO ' + r.excluidoEm : ''}`);
 }
+// Evolução de TO (F2): as respostas de presença, por sessão.
+const confirmacoes = await paciente.collection('confirmacoes').get();
+console.log(`Respostas de presença: ${confirmacoes.size}`);
+for (const d of confirmacoes.docs) {
+  const c = d.data();
+  console.log(`  sessão ${d.id}  ${c.resposta.padEnd(8)} respondida ${c.respondidaEm}  ${c.situacaoEnvio}`);
+}
 const alertas = await paciente.collection('alertas').get();
 console.log(`Alertas: ${alertas.size}; avisos do cuidador: ${(await paciente.collection('avisosCuidador').get()).size}`);
 const contas = await db.collection('contas').get();

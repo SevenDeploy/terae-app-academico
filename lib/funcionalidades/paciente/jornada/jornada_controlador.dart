@@ -25,6 +25,7 @@ class ItemJornada {
     required this.quando,
     this.texto,
     this.situacao,
+    this.rotulo,
   });
 
   final String id;
@@ -42,6 +43,10 @@ class ItemJornada {
 
   /// Situação da consulta quando não é "marcada" (realizada, cancelada).
   final SituacaoAgendamento? situacao;
+
+  /// F2 — o rótulo acima do título, quando não é o do [tipo] ("Sessão" na
+  /// terapia ocupacional).
+  final String? rotulo;
 }
 
 /// Estado da TM06 Jornada (RFM06): linha do tempo de consultas e marcos,
@@ -132,6 +137,7 @@ class JornadaControlador extends ChangeNotifier {
         situacao: c.situacao == SituacaoAgendamento.agendado
             ? null
             : c.situacao,
+        rotulo: tituloDoEncontro(profissional),
       );
       final marcada = c.situacao == SituacaoAgendamento.agendado;
       (marcada && !c.dataHora.isBefore(agora) ? proximos : historia).add(item);

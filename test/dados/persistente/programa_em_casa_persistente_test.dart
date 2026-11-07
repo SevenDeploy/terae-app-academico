@@ -12,6 +12,8 @@ import 'package:terae_app/dados/enums/quem_registrou.dart';
 import 'package:terae_app/dados/enums/resposta_presenca.dart';
 import 'package:terae_app/dados/enums/situacao_envio.dart';
 import 'package:terae_app/dados/local/banco_local.dart';
+import 'package:terae_app/dados/local/confirmacao_de_presenca_dao.dart';
+import 'package:terae_app/dados/modelos/confirmacao_de_presenca.dart';
 import 'package:terae_app/dados/repositorios/falhas.dart';
 import 'package:terae_app/dados/repositorios/programa_em_casa_repositorio.dart';
 
@@ -255,6 +257,41 @@ void main() {
       expect(
         (await presenca.respostas(_p))[ag]!.resposta,
         RespostaPresenca.naoVamos,
+      );
+    });
+
+    test('trocar a resposta durante o envio: a nova continua na fila e sai '
+        'na próxima vez (revisão da F2)', () async {
+      final dao = ConfirmacaoDePresencaDao(m.persistencia.banco);
+      final primeira = ConfirmacaoDePresenca(
+        agendamentoId: ag,
+        pacienteId: _p,
+        resposta: RespostaPresenca.vamos,
+        respondidaEm: agoraDaPersistencia,
+        situacaoEnvio: SituacaoEnvio.naFila,
+      );
+      await dao.salvar(primeira);
+      // A primeira vai ao servidor; enquanto isso, a pessoa troca.
+      final segunda = ConfirmacaoDePresenca(
+        agendamentoId: ag,
+        pacienteId: _p,
+        resposta: RespostaPresenca.naoVamos,
+        respondidaEm: agoraDaPersistencia.add(const Duration(minutes: 1)),
+        situacaoEnvio: SituacaoEnvio.naFila,
+      );
+      await dao.salvar(segunda);
+      await dao.marcarEnviada(
+        primeira.copyWith(situacaoEnvio: SituacaoEnvio.enviado),
+      );
+      final linha = (await dao.doPaciente(_p))[ag]!;
+      expect(linha.resposta, RespostaPresenca.naoVamos);
+      expect(linha.situacaoEnvio, SituacaoEnvio.naFila);
+      await dao.marcarEnviada(
+        segunda.copyWith(situacaoEnvio: SituacaoEnvio.enviado),
+      );
+      expect(
+        (await dao.doPaciente(_p))[ag]!.situacaoEnvio,
+        SituacaoEnvio.enviado,
       );
     });
 

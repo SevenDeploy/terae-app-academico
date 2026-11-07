@@ -8,7 +8,8 @@ rules_version = '2';
 // e garantem, no próprio servidor, o que o aparelho não pode decidir sozinho
 // (D18): o código de convite é de uso único, o paciente só se liga à conta
 // que usou o código no mesmo lote, no máximo dois cuidadores ativos (§7.4),
-// o cuidador lê só as cópias reduzidas (RNFM05), alerta só nasce de registro
+// o cuidador lê só as cópias reduzidas (RNFM05; a exceção declarada é a
+// resposta de presença da F2, abaixo), alerta só nasce de registro
 // grave ou crítico e nada é apagado (§23).
 //
 // Publicar: firebase deploy --only firestore:rules
@@ -172,6 +173,14 @@ service cloud.firestore {
       // a resposta; a sessão precisa estar marcada e a resposta ter sido dada
       // antes do horário dela (mesmo que chegue depois, pela fila). O cuidador
       // lê a resposta (D29). Nunca cancela a sessão; nada é apagado.
+      //
+      // Limitações declaradas (revisão da F2):
+      // - o cuidador lê o documento inteiro, com o `respondidaEm`: a regra não
+      //   escolhe campos na leitura. O app mostra a ele só a resposta, e
+      //   nenhum dos campos é dado clínico;
+      // - o `respondidaEm` vem do aparelho (a resposta pode chegar depois,
+      //   pela fila). Quem antedatar consegue trocar a resposta depois da
+      //   sessão; aceito como na D31.
       match /confirmacoes/{aid} {
         function respostaValida() {
           let d = request.resource.data;

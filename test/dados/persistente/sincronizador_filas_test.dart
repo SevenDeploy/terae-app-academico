@@ -41,6 +41,9 @@ class _FilaDeTeste implements FilaDeEntidade {
 
   int pendentes;
   bool semConexao = false;
+
+  /// O servidor recusa a leitura desta coleção (regra ainda não publicada).
+  bool buscaRecusada = false;
   final List<String> eventos = [];
 
   @override
@@ -56,6 +59,7 @@ class _FilaDeTeste implements FilaDeEntidade {
   @override
   Future<void> buscar(String pacienteId) async {
     eventos.add('buscar $pacienteId');
+    if (buscaRecusada) throw const RecusaDeRegra(MotivoRecusa.acessoNegado);
   }
 }
 
@@ -100,6 +104,23 @@ void main() {
       situacaoEnvio: SituacaoEnvio.naFila,
     ),
   );
+
+  test('a busca recusada de uma fila não impede as outras filas nem os '
+      'outros pacientes (revisão da F2)', () async {
+    const outro = 'a0000000-0000-4000-8000-000000000006';
+    casa.buscaRecusada = true;
+    sincronizador.acompanhar([_paciente, outro]);
+    await sincronizador.sincronizar();
+    expect(casa.eventos.where((e) => e.startsWith('buscar')), [
+      'buscar $_paciente',
+      'buscar $outro',
+    ]);
+    expect(presenca.eventos.where((e) => e.startsWith('buscar')), [
+      'buscar $_paciente',
+      'buscar $outro',
+    ]);
+    expect(sincronizador.situacao.value.online, isTrue);
+  });
 
   test('o aviso de conexão soma o diário e todas as filas', () async {
     await umRegistroNaFila();

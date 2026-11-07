@@ -21,6 +21,7 @@ import '../../../nucleo/widgets/aviso_de_conexao.dart';
 import '../../../nucleo/widgets/cartao.dart';
 import '../../../nucleo/widgets/faixa_emergencia.dart';
 import '../componentes_paciente.dart';
+import '../registros/componentes_registros.dart';
 import 'sessoes_controlador.dart';
 
 /// Contato da clínica da demonstração (F2). **Número fictício**: começa com
@@ -33,7 +34,7 @@ abstract final class ContatoDaClinica {
 }
 
 /// TM18 — Sessões (evolução de TO, F2; D27). Aberta pelo cartão da próxima
-/// sessão no Início: as marcadas, com "Vocês vão?" / "Você vai?" ("Sim,
+/// sessão no Início e por uma sessão ou consulta da Jornada: as marcadas, com "Vocês vão?" / "Você vai?" ("Sim,
 /// vamos" ou "Não vamos conseguir", que só avisa a clínica e nunca cancela),
 /// "Falar com a clínica" (ligar ou WhatsApp) e as anteriores.
 ///
@@ -92,58 +93,65 @@ class _ConteudoDasSessoes extends StatelessWidget {
     final paciente = perfil.paciente;
     final deOutro = perfil.falaDeOutraPessoa;
     final encontros = encontrosDoPaciente(paciente);
-    return CorpoDaTela(
-      aoAtualizar: c.carregar,
-      children: [
-        const AvisoDeConexao(),
-        CabecalhoDaTela(
-          titulo: deOutro ? 'Agenda de ${paciente.primeiroNome}' : 'Sua agenda',
-          subtitulo: deOutro
-              ? 'Avise a clínica se vocês vão. Para remarcar, fale com ela.'
-              : 'Avise a clínica se você vai. Para remarcar, fale com ela.',
-        ),
-        const SizedBox(height: MedidasTerae.espacoGrande),
-        if (c.carregando)
-          const Carregando()
-        else if (c.falhou)
-          AvisoDeFalha(
-            mensagem: 'Não foi possível mostrar as $encontros agora.',
-            aoTentarDeNovo: c.carregar,
-          )
-        else ...[
-          const RotuloDeSecao('Próximas', icone: Icons.event),
-          const SizedBox(height: MedidasTerae.espaco),
-          if (c.proximas.isEmpty)
-            Cartao(
-              key: const Key('sem-proximas'),
-              child: Text(
-                'Nenhuma ${palavraDoPaciente(paciente)} marcada. Fale com a '
-                'clínica para combinar.',
-                style: textos.bodyMedium,
-              ),
+    // Como na TM13, TM14 e TM16: quando a fila sai, o "Guardado no aparelho"
+    // vira a resposta enviada sem a pessoa precisar sair da tela.
+    return RecarregaAoSincronizar(
+      aoMudar: () => c.carregar(emSilencio: true),
+      child: CorpoDaTela(
+        aoAtualizar: c.atualizar,
+        children: [
+          const AvisoDeConexao(),
+          CabecalhoDaTela(
+            titulo: deOutro
+                ? 'Agenda de ${paciente.primeiroNome}'
+                : 'Sua agenda',
+            subtitulo: deOutro
+                ? 'Avise a clínica se vocês vão. Para remarcar, fale com ela.'
+                : 'Avise a clínica se você vai. Para remarcar, fale com ela.',
+          ),
+          const SizedBox(height: MedidasTerae.espacoGrande),
+          if (c.carregando)
+            const Carregando()
+          else if (c.falhou)
+            AvisoDeFalha(
+              mensagem: 'Não foi possível mostrar as $encontros agora.',
+              aoTentarDeNovo: c.carregar,
             )
-          else
-            for (final a in c.proximas) ...[
-              _CartaoDaProxima(agendamento: a, c: c, deOutro: deOutro),
-              const SizedBox(height: MedidasTerae.espaco),
-            ],
-          const SizedBox(height: MedidasTerae.espaco),
-          const _FalarComAClinica(),
-          if (c.anteriores.isNotEmpty) ...[
-            const SizedBox(height: MedidasTerae.espacoGrande),
-            const RotuloDeSecao(
-              'Anteriores',
-              icone: Icons.history,
-              cor: CoresTerae.neutro600,
-            ),
+          else ...[
+            const RotuloDeSecao('Próximas', icone: Icons.event),
             const SizedBox(height: MedidasTerae.espaco),
-            for (final a in c.anteriores) ...[
-              _LinhaDaAnterior(agendamento: a, c: c),
-              const SizedBox(height: MedidasTerae.espacoPequeno),
+            if (c.proximas.isEmpty)
+              Cartao(
+                key: const Key('sem-proximas'),
+                child: Text(
+                  'Nenhuma ${palavraDoPaciente(paciente)} marcada. Fale com a '
+                  'clínica para combinar.',
+                  style: textos.bodyMedium,
+                ),
+              )
+            else
+              for (final a in c.proximas) ...[
+                _CartaoDaProxima(agendamento: a, c: c, deOutro: deOutro),
+                const SizedBox(height: MedidasTerae.espaco),
+              ],
+            const SizedBox(height: MedidasTerae.espaco),
+            const _FalarComAClinica(),
+            if (c.anteriores.isNotEmpty) ...[
+              const SizedBox(height: MedidasTerae.espacoGrande),
+              const RotuloDeSecao(
+                'Anteriores',
+                icone: Icons.history,
+                cor: CoresTerae.neutro600,
+              ),
+              const SizedBox(height: MedidasTerae.espaco),
+              for (final a in c.anteriores) ...[
+                _LinhaDaAnterior(agendamento: a, c: c),
+                const SizedBox(height: MedidasTerae.espacoPequeno),
+              ],
             ],
           ],
         ],
-      ],
+      ),
     );
   }
 }

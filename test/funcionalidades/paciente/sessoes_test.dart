@@ -113,6 +113,27 @@ void main() {
       expect(find.text('Realizada'), findsWidgets);
     });
 
+    testWidgets('respondida sem conexão, a TM18 troca "Guardado no aparelho" '
+        'pela resposta enviada quando a fila sai (achado 1 da revisão)', (
+      tester,
+    ) async {
+      final m = await abrirComMemoria(
+        tester,
+        persona: Persona.antonio,
+        em: Rotas.pacienteSessoes,
+        preparar: (m) =>
+            m.repositorios.demonstracao.definirSemConexao(semConexao: true),
+      );
+      await tocar(tester, find.byKey(Key('vamos-$_sessaoAntonio')));
+      expect(find.textContaining('Guardado no aparelho'), findsOneWidget);
+
+      await m.repositorios.demonstracao.definirSemConexao(semConexao: false);
+      await tester.pumpAndSettle();
+      expect(m.estado.filaPresenca, isEmpty);
+      expect(find.textContaining('Guardado no aparelho'), findsNothing);
+      expect(find.byKey(Key('resposta-$_sessaoAntonio')), findsOneWidget);
+    });
+
     testWidgets('"Falar com a clínica" liga ou abre o WhatsApp do número '
         'fictício', (tester) async {
       final app = await abrirAppDoPaciente(tester, em: Rotas.pacienteSessoes);
@@ -126,14 +147,57 @@ void main() {
   });
 
   group('textos do encontro (F2)', () {
-    testWidgets('Antônio: "Sua próxima sessão"; a Jornada da Ana chama a TO '
-        'de sessão', (tester) async {
+    testWidgets('Antônio: "Sua próxima sessão" no Início', (tester) async {
       await abrirComMemoria(
         tester,
         persona: Persona.antonio,
         em: Rotas.pacienteInicio,
       );
       expect(find.text('SUA PRÓXIMA SESSÃO'), findsOneWidget);
+    });
+
+    testWidgets('Jornada do Antônio: a TO é "Sessão", e tocar nela abre a '
+        'TM18; voltar traz à Jornada (achados 2 e 7)', (tester) async {
+      await abrirComMemoria(
+        tester,
+        persona: Persona.antonio,
+        em: Rotas.pacienteJornada,
+      );
+      final item = find.byKey(Key('jornada-$_sessaoAntonio'));
+      expect(item, findsOneWidget);
+      expect(
+        find.descendant(of: item, matching: find.text('Sessão')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: item,
+          matching: find.text(
+            'Sessão de terapia ocupacional com Tiago Moreira',
+          ),
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('Consulta'), findsNothing);
+
+      await tocar(tester, item);
+      expect(find.byKey(const Key('TM18')), findsOneWidget);
+      await tocar(tester, find.byType(BackButton));
+      expect(find.byKey(const Key('TM06')), findsOneWidget);
+    });
+
+    testWidgets('TM07 de quem só faz TO não fala de remédio (pendência 3 da '
+        'F1)', (tester) async {
+      await abrirComMemoria(
+        tester,
+        persona: Persona.antonio,
+        em: Rotas.pacienteCuidadores,
+      );
+      expect(
+        find.textContaining('a agenda de sessões e a rotina'),
+        findsOneWidget,
+      );
+      expect(find.textContaining('remédio'), findsNothing);
     });
 
     testWidgets('a cuidadora vê a presença confirmada (D29)', (tester) async {

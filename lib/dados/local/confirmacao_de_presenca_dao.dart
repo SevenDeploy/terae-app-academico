@@ -37,6 +37,23 @@ class ConfirmacaoDePresencaDao {
     conflictAlgorithm: ConflictAlgorithm.replace,
   );
 
+  /// Depois do envio, passa a `enviado` só se a linha ainda é a mesma
+  /// resposta: se a pessoa trocou a resposta durante o envio, a nova continua
+  /// na fila e sai na próxima vez.
+  Future<void> marcarEnviada(ConfirmacaoDePresenca enviada) {
+    final linha = paraLinha(enviada);
+    return _banco.db.update(
+      _tabela,
+      {'situacao_envio': SituacaoEnvio.enviado.name},
+      where: 'agendamento_id = ? AND resposta = ? AND respondida_em = ?',
+      whereArgs: [
+        linha['agendamento_id'],
+        linha['resposta'],
+        linha['respondida_em'],
+      ],
+    );
+  }
+
   /// As respostas do paciente, por id do agendamento.
   Future<Map<String, ConfirmacaoDePresenca>> doPaciente(
     String pacienteId,

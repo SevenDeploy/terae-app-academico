@@ -13,6 +13,10 @@ String nomeDoEncontro(ProfissionalSaude? profissional) =>
     ? 'Sessão de terapia ocupacional'
     : 'Consulta';
 
+/// "Sessão" ou "Consulta", para rótulos curtos ("Sessão cancelada").
+String tituloDoEncontro(ProfissionalSaude? profissional) =>
+    (profissional?.ehTerapiaOcupacional ?? false) ? 'Sessão' : 'Consulta';
+
 /// "sessão" ou "consulta", para frases ("Sua próxima sessão").
 String palavraDoEncontro(ProfissionalSaude? profissional) =>
     (profissional?.ehTerapiaOcupacional ?? false) ? 'sessão' : 'consulta';

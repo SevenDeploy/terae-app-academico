@@ -12,6 +12,10 @@ abstract interface class RepositorioPresenca {
   /// As respostas do paciente, por id do agendamento, com as da fila.
   Future<Map<String, ConfirmacaoDePresenca>> respostas(String pacienteId);
 
+  /// "Puxar para atualizar" da TM18: envia a fila e busca o servidor. Sem
+  /// conexão, não faz nada (a tela continua com o que está no aparelho).
+  Future<void> atualizar(String pacienteId);
+
   /// D27 — responde (ou troca a resposta de) uma sessão marcada que ainda não
   /// começou. Recusa `agendamentoInexistente` e `sessaoEncerrada`.
   Future<ConfirmacaoDePresenca> responder({

@@ -81,6 +81,9 @@ class _PresencaVazia implements RepositorioPresenca {
   ) async => const {};
 
   @override
+  Future<void> atualizar(String pacienteId) async {}
+
+  @override
   Future<ConfirmacaoDePresenca> responder({
     required String pacienteId,
     required String agendamentoId,

@@ -40,7 +40,7 @@ class FilaConfirmacoes implements FilaDeEntidade {
         enviada.toMap(),
       );
     await _fonte.gravar(lote);
-    await _dao.salvar(enviada);
+    await _dao.marcarEnviada(enviada);
     return enviada;
   }
 

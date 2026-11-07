@@ -212,6 +212,18 @@ VinculosDaConta vinculosReginaComPacienteCompleto() => VinculosDaConta(
   acompanhados: [pacienteDe('p-ana', 'Ana Lúcia Martins')],
 );
 
+/// Regina acompanhando um paciente que só faz terapia ocupacional (D21).
+VinculosDaConta vinculosReginaDeQuemSoFazTerapia() => VinculosDaConta(
+  conta: contaDe('c-regina', 'Regina Souza'),
+  acompanhados: [
+    pacienteDe(
+      'p-ana',
+      'Ana Lúcia Martins',
+      linhas: soTerapiaOcupacional,
+    ).paraCuidador(),
+  ],
+);
+
 /// O que o cuidador nunca pode ler na tela (RNFM05).
 const List<String> proibidosAoCuidador = [
   '52998224725',

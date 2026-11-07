@@ -118,7 +118,7 @@ class _Agenda extends StatelessWidget {
           icone: Icons.event_busy,
           cor: CoresTerae.negativo700,
           corFundo: CoresTerae.negativo50,
-          titulo: 'Consulta cancelada',
+          titulo: '${tituloDoEncontro(c.profissionalDe(consulta))} cancelada',
           linhas: [
             '${formatarDiaPorExtenso(consulta.dataHora)} às '
                 '${formatarHora(consulta.dataHora)}',

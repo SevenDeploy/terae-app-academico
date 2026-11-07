@@ -273,6 +273,7 @@ class _CartaoDoCuidador extends StatelessWidget {
 
   Future<void> _confirmarRevogacao(BuildContext context) async {
     final controlador = context.read<CuidadoresControlador>();
+    final remedio = _temRemedio(context);
     final vinculo = cuidador.vinculo;
     final pendente = vinculo.situacao == SituacaoVinculo.pendente;
     final confirmou = await showDialog<bool>(
@@ -282,8 +283,10 @@ class _CartaoDoCuidador extends StatelessWidget {
         content: Text(
           pendente
               ? 'O código do convite deixa de valer.'
-              : '${vinculo.nome} não vai mais ver sua agenda nem seus '
-                    'horários de remédio.',
+              : remedio
+              ? '${vinculo.nome} não vai mais ver sua agenda nem seus '
+                    'horários de remédio.'
+              : '${vinculo.nome} não vai mais ver sua agenda.',
         ),
         actions: [
           TextButton(
@@ -540,9 +543,8 @@ class _NotaDePrivacidade extends StatelessWidget {
             const SizedBox(width: 12),
             Expanded(
               child: Text(
-                'Cuidadores veem só sua agenda, seus horários de remédio e os '
-                'avisos enviados à equipe. O que você conta no diário fica '
-                'entre você e sua equipe.',
+                '${_oQueOsCuidadoresVeem(context)} O que você conta no '
+                'diário fica entre você e sua equipe.',
                 style: textos.bodySmall?.copyWith(color: CoresTerae.neutro600),
               ),
             ),
@@ -552,3 +554,14 @@ class _NotaDePrivacidade extends StatelessWidget {
     );
   }
 }
+
+/// D21 — só quem tem acompanhamento clínico tem horários de remédio; quem só
+/// faz terapia ocupacional não lê sobre eles na TM07 (F2, achado da revisão).
+bool _temRemedio(BuildContext context) =>
+    context.read<Sessao>().perfilAtivo?.paciente.temAcompanhamentoClinico ??
+    true;
+
+String _oQueOsCuidadoresVeem(BuildContext context) => _temRemedio(context)
+    ? 'Cuidadores veem só sua agenda, seus horários de remédio e os avisos '
+          'enviados à equipe.'
+    : 'Cuidadores veem só sua agenda e os avisos enviados à equipe.';

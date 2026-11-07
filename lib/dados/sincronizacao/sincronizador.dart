@@ -215,7 +215,17 @@ class Sincronizador {
         await _dao.salvarAlerta(Alerta.fromMap(m));
       }
       for (final fila in _filas) {
-        await fila.buscar(pid);
+        try {
+          await fila.buscar(pid);
+        } on RecusaDeRegra catch (recusa) {
+          if (ehSemConexao(recusa)) rethrow;
+          // F2 (revisão): uma coleção que o servidor recusa (regra ainda não
+          // publicada, por exemplo) fica sem a cópia nova, e o resto segue.
+          debugPrint(
+            'Busca de ${fila.runtimeType} recusada para $pid: '
+            '${recusa.motivo}',
+          );
+        }
       }
     }
   }

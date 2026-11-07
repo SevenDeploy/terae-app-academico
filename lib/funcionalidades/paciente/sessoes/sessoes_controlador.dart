@@ -78,10 +78,13 @@ class SessoesControlador extends ChangeNotifier {
   /// Falha ao responder, em linguagem simples, e de qual agendamento.
   String? erroDe(Agendamento a) => _erroDe == a.id ? _erro : null;
 
-  Future<void> carregar() async {
-    _carregando = true;
-    _falhou = false;
-    _avisar();
+  /// Lê tudo. [emSilencio] (quando a fila sai) relê sem o "carregando".
+  Future<void> carregar({bool emSilencio = false}) async {
+    if (!emSilencio) {
+      _carregando = true;
+      _falhou = false;
+      _avisar();
+    }
     try {
       final agendamentos = await paciente.agendamentos(pacienteId);
       final profissionais = <String, ProfissionalSaude>{};
@@ -96,6 +99,17 @@ class SessoesControlador extends ChangeNotifier {
     }
     _carregando = false;
     _avisar();
+  }
+
+  /// "Puxar para atualizar": envia a fila, busca o servidor e relê. Sem
+  /// conexão, só relê o que está no aparelho.
+  Future<void> atualizar() async {
+    try {
+      await presenca.atualizar(pacienteId);
+    } on Object {
+      // Sem conexão ou recusa: a tela continua com o que está no aparelho.
+    }
+    await carregar(emSilencio: true);
   }
 
   void mudarResposta(Agendamento a) {

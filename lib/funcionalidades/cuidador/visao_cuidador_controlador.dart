@@ -93,10 +93,18 @@ class VisaoCuidadorControlador extends ChangeNotifier {
         contaCuidadorId: contaCuidadorId,
         pacienteId: pacienteId,
       );
-      final respostas = await repositorio.respostasDePresenca(
-        contaCuidadorId: contaCuidadorId,
-        pacienteId: pacienteId,
-      );
+      // F2 (revisão): a presença é um extra; se não puder ser lida (regra
+      // ainda não publicada, sem conexão e sem cópia), a agenda e os avisos
+      // aparecem sem ela.
+      Map<String, RespostaPresenca> respostas;
+      try {
+        respostas = await repositorio.respostasDePresenca(
+          contaCuidadorId: contaCuidadorId,
+          pacienteId: pacienteId,
+        );
+      } on RecusaDeRegra {
+        respostas = const {};
+      }
       final profissionais = <String, ProfissionalSaude>{};
       for (final id in {for (final c in consultas) c.profissionalId}) {
         profissionais[id] = await repositorio.profissional(id);

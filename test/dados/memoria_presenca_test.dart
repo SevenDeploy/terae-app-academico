@@ -76,6 +76,27 @@ void main() {
     );
   });
 
+  test('"puxar para atualizar" (atualizar) envia a fila quando há conexão; '
+      'sem conexão não faz nada', () async {
+    final presenca = m.repositorios.presenca;
+    await m.repositorios.demonstracao.definirSemConexao(semConexao: true);
+    await presenca.responder(
+      pacienteId: idMiguel,
+      agendamentoId: _sessaoMiguel,
+      resposta: RespostaPresenca.vamos,
+    );
+    await presenca.atualizar(idMiguel);
+    expect(m.estado.filaPresenca, hasLength(1));
+    // A conexão volta sem a demonstração esvaziar a fila sozinha.
+    m.semConexao = false;
+    await presenca.atualizar(idMiguel);
+    expect(m.estado.filaPresenca, isEmpty);
+    expect(
+      (await presenca.respostas(idMiguel))[_sessaoMiguel]!.situacaoEnvio,
+      SituacaoEnvio.enviado,
+    );
+  });
+
   test('sessão que já passou, de outro paciente ou inexistente: recusa sem '
       'gravar', () async {
     final presenca = m.repositorios.presenca;

@@ -30,6 +30,16 @@ class PresencaMemoria implements RepositorioPresenca {
   }
 
   @override
+  Future<void> atualizar(String pacienteId) async {
+    await _memoria.esperar();
+    if (_memoria.semConexao) return;
+    _e
+      ..receberFilaCasa()
+      ..receberFilaPresenca();
+    _memoria.atualizarConexao();
+  }
+
+  @override
   Future<ConfirmacaoDePresenca> responder({
     required String pacienteId,
     required String agendamentoId,
