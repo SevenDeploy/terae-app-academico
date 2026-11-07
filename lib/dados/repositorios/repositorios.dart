@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import '../enums/adesao_em_casa.dart';
 import '../enums/quem_registrou.dart';
 import '../enums/resposta_presenca.dart';
+import '../lembretes/lembrete.dart';
 import '../modelos/atividade_de_casa.dart';
 import '../modelos/confirmacao_de_presenca.dart';
 import '../modelos/registro_de_atividade.dart';
@@ -12,6 +13,7 @@ import 'cuidadores_repositorio.dart';
 import 'demonstracao_repositorio.dart';
 import 'diario_repositorio.dart';
 import 'falhas.dart';
+import 'lembretes_repositorio.dart';
 import 'paciente_repositorio.dart';
 import 'presenca_repositorio.dart';
 import 'programa_em_casa_repositorio.dart';
@@ -34,6 +36,7 @@ class Repositorios {
     required this.demonstracao,
     this.programaEmCasa = const _ProgramaVazio(),
     this.presenca = const _PresencaVazia(),
+    this.lembretes = const _LembretesDesligados(),
     this.conexao = const _SempreOnline(),
   });
 
@@ -53,6 +56,10 @@ class Repositorios {
   /// (sem respostas) serve aos dublês de teste que não o usam.
   final RepositorioPresenca presenca;
 
+  /// Evolução de TO (F2, D28): os lembretes locais. O padrão (desligado)
+  /// serve aos dublês de teste que não os usam.
+  final RepositorioLembretes lembretes;
+
   /// Situação da conexão e da fila do diário (D16), para o aviso das telas.
   final ValueListenable<SituacaoSincronizacao> conexao;
 }
@@ -69,6 +76,33 @@ class _SempreOnline implements ValueListenable<SituacaoSincronizacao> {
 
   @override
   void removeListener(VoidCallback listener) {}
+}
+
+/// Lembretes desligados (dublês de teste que não os usam).
+class _LembretesDesligados implements RepositorioLembretes {
+  const _LembretesDesligados();
+
+  @override
+  Future<PreferenciasDeLembrete> preferencias() async =>
+      const PreferenciasDeLembrete();
+
+  @override
+  Future<void> salvar(PreferenciasDeLembrete preferencias) async {}
+
+  @override
+  Future<bool> pedirPermissao() async => true;
+
+  @override
+  Future<bool> notificacoesPermitidas() async => true;
+
+  @override
+  Future<List<Lembrete>> reagendar(List<String> pacienteIds) async => const [];
+
+  @override
+  Future<void> testar() async {}
+
+  @override
+  Future<void> cancelarTudo() async {}
 }
 
 /// Presença sem respostas (dublês de teste que não a usam).

@@ -78,6 +78,10 @@ abstract final class Rotas {
   /// as abas (aberta pelo cartão da próxima sessão no Início).
   static const String pacienteSessoes = '/paciente/sessoes';
 
+  /// TM19 Lembretes (evolução de TO, F2) — paciente; aberta pelo menu do
+  /// Início, empilhada sobre as abas.
+  static const String pacienteLembretes = '/paciente/lembretes';
+
   /// TM06 Jornada (aba 3) — paciente.
   static const String pacienteJornada = '/paciente/jornada';
 
@@ -111,6 +115,7 @@ abstract final class Rotas {
     pacienteCasa,
     pacienteAtividade,
     pacienteSessoes,
+    pacienteLembretes,
     pacienteJornada,
     pacienteCuidadores,
     pacienteRegistros,
@@ -164,5 +169,6 @@ abstract final class Rotas {
     'TM16': pacienteCasa,
     'TM17': pacienteAtividade,
     'TM18': pacienteSessoes,
+    'TM19': pacienteLembretes,
   };
 }

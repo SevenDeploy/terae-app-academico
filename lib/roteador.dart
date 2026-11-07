@@ -17,6 +17,7 @@ import 'funcionalidades/paciente/diario/diario_enviado_tela.dart';
 import 'funcionalidades/paciente/diario/diario_tela.dart';
 import 'funcionalidades/paciente/inicio/inicio_tela.dart';
 import 'funcionalidades/paciente/jornada/jornada_tela.dart';
+import 'funcionalidades/paciente/lembretes/lembretes_tela.dart';
 import 'funcionalidades/paciente/registros/correcao_tela.dart';
 import 'funcionalidades/paciente/registros/registro_tela.dart';
 import 'funcionalidades/paciente/registros/registros_tela.dart';
@@ -196,6 +197,10 @@ GoRouter criarRoteador({
       GoRoute(
         path: Rotas.pacienteSessoes,
         pageBuilder: (context, state) => _pagina(state, const SessoesTela()),
+      ),
+      GoRoute(
+        path: Rotas.pacienteLembretes,
+        pageBuilder: (context, state) => _pagina(state, const LembretesTela()),
       ),
       GoRoute(
         path: Rotas.pacienteRegistros,

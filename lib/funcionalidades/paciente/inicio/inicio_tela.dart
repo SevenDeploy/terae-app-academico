@@ -156,7 +156,7 @@ class _ConteudoInicio extends StatelessWidget {
   }
 }
 
-enum _AcaoMenu { cuidadores, trocarPerfil, sair }
+enum _AcaoMenu { lembretes, cuidadores, trocarPerfil, sair }
 
 /// Menu da TM02: "Cuidadores" (a TM07, desde a D22), "Trocar perfil" (só com
 /// vários perfis) e "Sair".
@@ -174,6 +174,8 @@ class _MenuDoInicio extends StatelessWidget {
       onSelected: (acao) {
         final sessao = context.read<Sessao>();
         switch (acao) {
+          case _AcaoMenu.lembretes:
+            context.push(Rotas.pacienteLembretes);
           case _AcaoMenu.cuidadores:
             context.push(Rotas.pacienteCuidadores);
           case _AcaoMenu.trocarPerfil:
@@ -183,6 +185,14 @@ class _MenuDoInicio extends StatelessWidget {
         }
       },
       itemBuilder: (context) => [
+        const PopupMenuItem(
+          key: Key('menu-lembretes'),
+          value: _AcaoMenu.lembretes,
+          child: ListTile(
+            leading: Icon(Icons.notifications_outlined),
+            title: Text('Lembretes'),
+          ),
+        ),
         const PopupMenuItem(
           key: Key('menu-cuidadores'),
           value: _AcaoMenu.cuidadores,

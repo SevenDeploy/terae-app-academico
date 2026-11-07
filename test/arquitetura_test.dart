@@ -157,6 +157,9 @@ void main() {
         'package:cloud_firestore',
         'package:firebase_',
         'package:connectivity_plus',
+        // F2 (D28): o plugin de notificação só em dados/persistente.
+        'package:flutter_local_notifications',
+        'package:timezone',
       ];
       final falhas = _importacoesProibidas(
         _em('funcionalidades/'),
@@ -281,6 +284,7 @@ void main() {
       'paciente/casa/em_casa_tela.dart',
       'paciente/casa/atividade_tela.dart',
       'paciente/sessoes/sessoes_tela.dart',
+      'paciente/lembretes/lembretes_tela.dart',
     ];
     final existentes = _em('funcionalidades/').map((f) => f.caminho).toSet();
     for (final tela in telas) {

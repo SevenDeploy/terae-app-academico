@@ -25,6 +25,7 @@ import 'autenticacao_firebase.dart';
 import 'cuidadores_firebase.dart';
 import 'diario_persistente.dart';
 import 'leitura_com_copia.dart';
+import 'lembretes_locais.dart';
 import 'paciente_persistente.dart';
 import 'presenca_persistente.dart';
 import 'programa_em_casa_persistente.dart';
@@ -97,6 +98,14 @@ Future<Persistencia> montarPersistencia({
     cache: cache,
     relogio: relogio,
   );
+  final programa = ProgramaEmCasaPersistente(
+    fonte: fonte,
+    leitura: leitura,
+    dao: daoCasa,
+    fila: filaCasa,
+    sincronizador: sincronizador,
+    relogio: relogio,
+  );
   final repositorios = Repositorios(
     autenticacao: AutenticacaoFirebase(
       auth: auth,
@@ -137,12 +146,11 @@ Future<Persistencia> montarPersistencia({
       sincronizador: sincronizador,
       relogio: relogio,
     ),
-    programaEmCasa: ProgramaEmCasaPersistente(
-      fonte: fonte,
-      leitura: leitura,
-      dao: daoCasa,
-      fila: filaCasa,
-      sincronizador: sincronizador,
+    programaEmCasa: programa,
+    lembretes: LembretesLocais(
+      preferencias: prefs,
+      paciente: paciente,
+      programa: programa,
       relogio: relogio,
     ),
     conexao: sincronizador.situacao,

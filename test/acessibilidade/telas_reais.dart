@@ -1,4 +1,4 @@
-/// As 19 telas (TM00–TM18) montadas como no aparelho: o `TeraeApp` com a
+/// As 20 telas (TM00–TM19) montadas como no aparelho: o `TeraeApp` com a
 /// memória real (`lib/dados/memoria/` sobre `assets/dados/demonstracao.json`),
 /// o relógio parado em 2/10/2026 10:00 na clínica e a sessão de cada persona
 /// (sem sessão, Ana, Patrícia, Regina ou Antônio). Base dos testes de acessibilidade e
@@ -369,6 +369,20 @@ final List<TelaReal> telasReais = [
     },
   ),
   telaDasSessoes,
+  TelaReal(
+    tela: 'TM19',
+    arquivo: 'TM19-lembretes',
+    descricao: 'TM19 Lembretes (Antônio), com a véspera ligada',
+    abrir: (t) async {
+      await abrirComMemoria(
+        t,
+        persona: Persona.antonio,
+        em: Rotas.pacienteLembretes,
+      );
+      await tocar(t, find.byKey(const Key('lembrete-vespera')));
+      await voltarAoTopo(t, 'TM19');
+    },
+  ),
 ];
 
 /// TM18 (F2): a agenda do Antônio, com a sessão de daqui a 7 dias sem
