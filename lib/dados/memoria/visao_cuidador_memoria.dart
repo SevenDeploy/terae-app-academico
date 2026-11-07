@@ -1,3 +1,4 @@
+import '../enums/resposta_presenca.dart';
 import '../enums/situacao_agendamento.dart';
 import '../modelos/agendamento.dart';
 import '../modelos/item_medicacao.dart';
@@ -88,6 +89,18 @@ class VisaoCuidadorMemoria implements RepositorioVisaoCuidador {
       throw const RecusaDeRegra(MotivoRecusa.acessoNegado);
     }
     return _e.itensDaReceita(receitaId);
+  }
+
+  @override
+  Future<Map<String, RespostaPresenca>> respostasDePresenca({
+    required String contaCuidadorId,
+    required String pacienteId,
+  }) async {
+    await _autorizado(contaCuidadorId, pacienteId);
+    return Map.unmodifiable({
+      for (final c in _e.confirmacoes.values)
+        if (c.pacienteId == pacienteId) c.agendamentoId: c.resposta,
+    });
   }
 
   @override

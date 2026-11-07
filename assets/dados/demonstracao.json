@@ -148,5 +148,8 @@
     {"id": "cb000000-0000-4000-8000-000000000037", "pacienteId": "a0000000-0000-4000-8000-000000000005", "atividadeId": "ca000000-0000-4000-8000-000000000006", "dia": {"emDias": -2}, "adesao": "feito", "reflexao": null, "quem": "paciente", "registradoEm": {"emDias": -2, "hora": "08:10"}, "situacaoEnvio": "enviado", "atualizadoEm": null, "excluidoEm": null},
     {"id": "cb000000-0000-4000-8000-000000000038", "pacienteId": "a0000000-0000-4000-8000-000000000005", "atividadeId": "ca000000-0000-4000-8000-000000000006", "dia": {"emDias": -1}, "adesao": "feito", "reflexao": null, "quem": "paciente", "registradoEm": {"emDias": -1, "hora": "08:10"}, "situacaoEnvio": "enviado", "atualizadoEm": null, "excluidoEm": null},
     {"id": "cb000000-0000-4000-8000-000000000039", "pacienteId": "a0000000-0000-4000-8000-000000000005", "atividadeId": "ca000000-0000-4000-8000-000000000006", "dia": {"emDias": 0}, "adesao": "feito", "reflexao": "Sem derramar nada hoje.", "quem": "paciente", "registradoEm": {"emDias": 0, "hora": "08:10"}, "situacaoEnvio": "enviado", "atualizadoEm": null, "excluidoEm": null}
+  ],
+  "confirmacoes": [
+    {"id": "ad000000-0000-4000-8000-000000000003", "agendamentoId": "ad000000-0000-4000-8000-000000000003", "pacienteId": "a0000000-0000-4000-8000-000000000001", "resposta": "vamos", "respondidaEm": {"emDias": -1, "hora": "20:45"}, "situacaoEnvio": "enviado"}
   ]
 }

@@ -167,6 +167,31 @@ service cloud.firestore {
         allow delete: if false;
       }
 
+      // Evolução de TO (F2, D27): a resposta de presença de uma sessão. O
+      // titular (ou o responsável legal, dono da conta) responde e pode trocar
+      // a resposta; a sessão precisa estar marcada e a resposta ter sido dada
+      // antes do horário dela (mesmo que chegue depois, pela fila). O cuidador
+      // lê a resposta (D29). Nunca cancela a sessão; nada é apagado.
+      match /confirmacoes/{aid} {
+        function respostaValida() {
+          let d = request.resource.data;
+          let sessao = get(/databases/$(db)/documents/pacientes/$(pid)/agendamentos/$(aid)).data;
+          return d.id == aid
+            && d.agendamentoId == aid
+            && d.pacienteId == pid
+            && d.situacaoEnvio == 'enviado'
+            && d.resposta in ['vamos', 'naoVamos']
+            && d.keys().hasOnly(['id', 'agendamentoId', 'pacienteId', 'resposta',
+                 'respondidaEm', 'situacaoEnvio'])
+            && sessao.situacao == 'agendado'
+            && d.respondidaEm is string
+            && d.respondidaEm < sessao.dataHora;
+        }
+        allow read: if ehTitular(pid) || ehCuidador(pid);
+        allow create, update: if ehTitular(pid) && respostaValida();
+        allow delete: if false;
+      }
+
       // Convites completos (com o CPF) que o titular gerou na TM07.
       match /convites/{cid} {
         allow read: if ehTitular(pid);

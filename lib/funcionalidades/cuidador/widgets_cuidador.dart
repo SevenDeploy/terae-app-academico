@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../dados/enums/resposta_presenca.dart';
 import '../../dados/modelos/receita_uso_continuo.dart';
 import '../../dados/repositorios/visao_cuidador_repositorio.dart';
 import '../../nucleo/sessao/sessao.dart';
@@ -152,6 +153,53 @@ class EtiquetaRelativa extends StatelessWidget {
           texto,
           style: Theme.of(context).textTheme.labelMedium
               ?.copyWith(color: CoresTerae.primaria700),
+        ),
+      ),
+    );
+  }
+}
+
+/// F2, D29 — o que a família respondeu sobre a presença na sessão (ícone e
+/// texto, nunca só cor).
+class EtiquetaDaPresenca extends StatelessWidget {
+  const EtiquetaDaPresenca(this.resposta, {super.key});
+
+  final RespostaPresenca resposta;
+
+  @override
+  Widget build(BuildContext context) {
+    final vamos = resposta == RespostaPresenca.vamos;
+    final cor = vamos ? CoresTerae.clinico700 : CoresTerae.aviso900;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: vamos ? CoresTerae.clinico50 : CoresTerae.aviso50,
+        borderRadius: const BorderRadius.all(Radius.circular(999)),
+        border: Border.all(color: cor.withValues(alpha: 0.35)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ExcludeSemantics(
+              child: Icon(
+                vamos ? Icons.check_circle_outline : Icons.event_busy,
+                size: 16,
+                color: cor,
+              ),
+            ),
+            const SizedBox(width: 4),
+            Flexible(
+              child: Text(
+                vamos ? 'Presença confirmada' : 'Avisaram que não vão',
+                style: TextStyle(
+                  fontSize: MedidasTerae.textoMinimo,
+                  fontWeight: FontWeight.w600,
+                  color: cor,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

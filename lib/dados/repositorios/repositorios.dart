@@ -2,7 +2,9 @@ import 'package:flutter/foundation.dart';
 
 import '../enums/adesao_em_casa.dart';
 import '../enums/quem_registrou.dart';
+import '../enums/resposta_presenca.dart';
 import '../modelos/atividade_de_casa.dart';
+import '../modelos/confirmacao_de_presenca.dart';
 import '../modelos/registro_de_atividade.dart';
 import '../sincronizacao/situacao_sincronizacao.dart';
 import 'autenticacao_repositorio.dart';
@@ -11,6 +13,7 @@ import 'demonstracao_repositorio.dart';
 import 'diario_repositorio.dart';
 import 'falhas.dart';
 import 'paciente_repositorio.dart';
+import 'presenca_repositorio.dart';
 import 'programa_em_casa_repositorio.dart';
 import 'visao_cuidador_repositorio.dart';
 
@@ -30,6 +33,7 @@ class Repositorios {
     required this.visaoCuidador,
     required this.demonstracao,
     this.programaEmCasa = const _ProgramaVazio(),
+    this.presenca = const _PresencaVazia(),
     this.conexao = const _SempreOnline(),
   });
 
@@ -44,6 +48,10 @@ class Repositorios {
   /// padrão (sem atividades) serve aos dublês de teste que não o usam; a
   /// memória e a persistência montam o de verdade.
   final RepositorioProgramaEmCasa programaEmCasa;
+
+  /// Evolução de TO (F2): a confirmação de presença nas sessões. O padrão
+  /// (sem respostas) serve aos dublês de teste que não o usam.
+  final RepositorioPresenca presenca;
 
   /// Situação da conexão e da fila do diário (D16), para o aviso das telas.
   final ValueListenable<SituacaoSincronizacao> conexao;
@@ -61,6 +69,23 @@ class _SempreOnline implements ValueListenable<SituacaoSincronizacao> {
 
   @override
   void removeListener(VoidCallback listener) {}
+}
+
+/// Presença sem respostas (dublês de teste que não a usam).
+class _PresencaVazia implements RepositorioPresenca {
+  const _PresencaVazia();
+
+  @override
+  Future<Map<String, ConfirmacaoDePresenca>> respostas(
+    String pacienteId,
+  ) async => const {};
+
+  @override
+  Future<ConfirmacaoDePresenca> responder({
+    required String pacienteId,
+    required String agendamentoId,
+    required RespostaPresenca resposta,
+  }) => Future.error(const RecusaDeRegra(MotivoRecusa.agendamentoInexistente));
 }
 
 /// Programa sem atividades (dublês de teste que não o usam).

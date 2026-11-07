@@ -190,6 +190,12 @@ async function semear() {
     lote.set(doPaciente(pid, 'itensCuidador', i.id), i);
   }
   for (const m of dados.marcos) lote.set(doPaciente(m.pacienteId, 'marcos', m.id), m);
+  // Evolução de TO (F2): respostas de presença já dadas (uma por agendamento).
+  for (const c of dados.confirmacoes ?? []) {
+    lote.set(doPaciente(c.pacienteId, 'confirmacoes', c.agendamentoId), {
+      ...c, situacaoEnvio: 'enviado',
+    });
+  }
   // Evolução de TO (F1): atividades de casa (da clínica) e o histórico dos registros.
   for (const a of dados.atividadesCasa ?? []) {
     lote.set(doPaciente(a.pacienteId, 'atividadesCasa', a.id), a);

@@ -7,7 +7,9 @@
 ///   profissional, consultas, receita, marcos, vínculos, atividades de casa),
 ///   cada uma guardada como o JSON do `toMap` do modelo;
 /// - `registros_casa` (versão 2, evolução de TO): os registros das atividades
-///   de casa, com a fila de envio deles.
+///   de casa, com a fila de envio deles;
+/// - `confirmacoes_presenca` (versão 3, evolução de TO): as respostas de
+///   presença, uma por agendamento, com a fila de envio.
 ///
 /// Sem cifra nesta versão (D15: limitação declarada; os dados são fictícios).
 ///
@@ -59,6 +61,7 @@ class BancoLocal {
     'alertas',
     'cache_documentos',
     'registros_casa',
+    'confirmacoes_presenca',
   ];
 
   /// Migrações em ordem: a de índice `i` leva o banco da versão `i` à `i + 1`.
@@ -66,6 +69,7 @@ class BancoLocal {
   static const List<Future<void> Function(Database db)> migracoes = [
     _versao1,
     _versao2,
+    _versao3,
   ];
 
   static Future<void> _migrar(
@@ -148,6 +152,29 @@ class BancoLocal {
       )
       ..execute(
         'CREATE INDEX idx_casa_fila ON registros_casa (situacao_envio)',
+      );
+    await lote.commit(noResult: true);
+  }
+
+  /// Versão 3 (evolução de TO, F2): as respostas de presença, uma por
+  /// agendamento, com a fila de envio.
+  static Future<void> _versao3(Database db) async {
+    final lote = db.batch()
+      ..execute('''
+        CREATE TABLE confirmacoes_presenca (
+          agendamento_id TEXT PRIMARY KEY,
+          paciente_id TEXT NOT NULL,
+          resposta TEXT NOT NULL,
+          respondida_em TEXT NOT NULL,
+          situacao_envio TEXT NOT NULL
+        )''')
+      ..execute(
+        'CREATE INDEX idx_presenca_paciente ON confirmacoes_presenca '
+        '(paciente_id)',
+      )
+      ..execute(
+        'CREATE INDEX idx_presenca_fila ON confirmacoes_presenca '
+        '(situacao_envio)',
       );
     await lote.commit(noResult: true);
   }

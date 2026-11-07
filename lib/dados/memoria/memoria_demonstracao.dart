@@ -16,6 +16,7 @@ import 'demonstracao_memoria.dart';
 import 'diario_memoria.dart';
 import 'estado_memoria.dart';
 import 'paciente_memoria.dart';
+import 'presenca_memoria.dart';
 import 'programa_em_casa_memoria.dart';
 import 'regras.dart';
 import 'visao_cuidador_memoria.dart';
@@ -94,7 +95,10 @@ class MemoriaDemonstracao {
   void atualizarConexao() {
     _conexao.value = SituacaoSincronizacao(
       online: !_semConexao,
-      pendentes: _estado.fila.length + _estado.filaCasa.length,
+      pendentes:
+          _estado.fila.length +
+          _estado.filaCasa.length +
+          _estado.filaPresenca.length,
     );
   }
 
@@ -110,6 +114,7 @@ class MemoriaDemonstracao {
     visaoCuidador: VisaoCuidadorMemoria(this),
     demonstracao: DemonstracaoMemoria(this),
     programaEmCasa: ProgramaEmCasaMemoria(this),
+    presenca: PresencaMemoria(this),
     conexao: conexao,
   );
 

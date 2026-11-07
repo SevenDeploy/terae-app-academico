@@ -15,6 +15,7 @@ import '../enums/tipo_convite.dart';
 import '../modelos/agendamento.dart';
 import '../modelos/alerta.dart';
 import '../modelos/atividade_de_casa.dart';
+import '../modelos/confirmacao_de_presenca.dart';
 import '../modelos/consentimento.dart';
 import '../modelos/conta_usuario.dart';
 import '../modelos/convite_acesso.dart';
@@ -109,6 +110,7 @@ const Set<String> _chavesConhecidas = {
   'alertas',
   'atividadesCasa',
   'registrosCasa',
+  'confirmacoes',
 };
 
 List<Mapa> _entradas(Mapa dados, String chave) {
@@ -212,6 +214,20 @@ class EstadoMemoria {
               : filaCasa)[r.id] =
           r;
     }
+    final respostas = <String, ConfirmacaoDePresenca>{};
+    _carregar(
+      d,
+      'confirmacoes',
+      respostas,
+      ConfirmacaoDePresenca.fromMap,
+      (x) => x.agendamentoId,
+    );
+    for (final c in respostas.values) {
+      (c.situacaoEnvio == SituacaoEnvio.enviado
+              ? confirmacoes
+              : filaPresenca)[c.agendamentoId] =
+          c;
+    }
     _conferirIntegridade();
     for (final a in alertas.values) {
       destinatarios[a.id] = _destinatarioDoRegistro(a.registroId);
@@ -252,6 +268,13 @@ class EstadoMemoria {
   /// Fila de envio dos registros das atividades (`naFila`), na ordem em que
   /// entraram.
   final Map<String, RegistroDeAtividade> filaCasa = {};
+
+  /// Evolução de TO (F2): respostas de presença que o servidor recebeu, por
+  /// id do agendamento (D27).
+  final Map<String, ConfirmacaoDePresenca> confirmacoes = {};
+
+  /// Fila de envio das respostas de presença (`naFila`).
+  final Map<String, ConfirmacaoDePresenca> filaPresenca = {};
 
   /// Caixa de cada alerta: id do alerta → id do profissional de referência
   /// do paciente no momento em que o servidor o criou (§23: "endereçado ao
@@ -395,6 +418,19 @@ class EstadoMemoria {
         diasPorAtividade.add('${r.atividadeId}/${r.dia}'),
         'dois registros da mesma atividade no mesmo dia (D26)',
         r.id,
+      );
+    }
+    for (final c in {...confirmacoes, ...filaPresenca}.values) {
+      final agendamento = agendamentos[c.agendamentoId];
+      _exigir(
+        agendamento != null && agendamento.pacienteId == c.pacienteId,
+        'agendamento da resposta de presença',
+        c.agendamentoId,
+      );
+      _exigir(
+        c.respondidaEm.isBefore(agendamento!.dataHora),
+        'resposta de presença depois da sessão (D27)',
+        c.agendamentoId,
       );
     }
     _exigir(
@@ -623,6 +659,16 @@ class EstadoMemoria {
     filaCasa.clear();
   }
 
+  /// O servidor recebe a fila das respostas de presença (F2, D27).
+  void receberFilaPresenca() {
+    for (final c in filaPresenca.values) {
+      confirmacoes[c.agendamentoId] = c.copyWith(
+        situacaoEnvio: SituacaoEnvio.enviado,
+      );
+    }
+    filaPresenca.clear();
+  }
+
   /// Retrato de tudo, no formato dos mapas — para comparar estados em teste
   /// (ex.: `reiniciarDados` volta ao inicial).
   Mapa paraMapa() => {
@@ -644,5 +690,7 @@ class EstadoMemoria {
     'atividadesCasa': [for (final x in atividadesCasa.values) x.toMap()],
     'registrosCasa': [for (final x in registrosCasa.values) x.toMap()],
     'filaCasa': [for (final x in filaCasa.values) x.toMap()],
+    'confirmacoes': [for (final x in confirmacoes.values) x.toMap()],
+    'filaPresenca': [for (final x in filaPresenca.values) x.toMap()],
   };
 }

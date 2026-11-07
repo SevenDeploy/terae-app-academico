@@ -1,6 +1,7 @@
 import '../../nucleo/tempo/data_civil.dart';
 import '../../nucleo/tempo/relogio.dart';
 import '../conversao_mapa.dart';
+import '../enums/resposta_presenca.dart';
 import '../enums/situacao_agendamento.dart';
 import '../modelos/agendamento.dart';
 import '../modelos/item_medicacao.dart';
@@ -116,6 +117,22 @@ class VisaoCuidadorPersistente implements RepositorioVisaoCuidador {
       for (final m in await _colecao('itensCuidador', pacienteId))
         if (m['receitaId'] == receitaId) ItemMedicacao.fromMap(m),
     ];
+  }
+
+  @override
+  Future<Map<String, RespostaPresenca>> respostasDePresenca({
+    required String contaCuidadorId,
+    required String pacienteId,
+  }) async {
+    await _autorizado(contaCuidadorId, pacienteId);
+    return {
+      for (final m in await _colecao('confirmacoes', pacienteId))
+        lerCampo<String>(m, 'agendamentoId'): lerEnum(
+          m,
+          'resposta',
+          RespostaPresenca.values,
+        ),
+    };
   }
 
   @override

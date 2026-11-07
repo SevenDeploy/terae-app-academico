@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
+import '../../../dados/enums/resposta_presenca.dart';
 import '../../../dados/modelos/item_medicacao.dart';
 import '../../../dados/modelos/receita_uso_continuo.dart';
 import '../../../dados/repositorios/paciente_repositorio.dart';
+import '../../../dados/repositorios/presenca_repositorio.dart';
 import '../../../dados/repositorios/programa_em_casa_repositorio.dart';
 import '../../../nucleo/rotas/rotas.dart';
 import '../../../nucleo/sessao/sessao.dart';
@@ -12,6 +14,7 @@ import '../../../nucleo/tema/cores.dart';
 import '../../../nucleo/tema/tema.dart';
 import '../../../nucleo/tempo/data_civil.dart';
 import '../../../nucleo/tempo/relogio.dart';
+import '../../../nucleo/textos/encontros.dart';
 import '../../../nucleo/widgets/aviso_de_conexao.dart';
 import '../../../nucleo/widgets/cartao.dart';
 import '../componentes_paciente.dart';
@@ -46,6 +49,7 @@ class InicioTela extends StatelessWidget {
                     ? context.read<RepositorioProgramaEmCasa>()
                     : null,
                 relogio: context.read<Relogio>(),
+                presenca: context.read<RepositorioPresenca>(),
               )..carregar(),
               child: _ConteudoInicio(perfil: perfil),
             ),
@@ -133,7 +137,11 @@ class _ConteudoInicio extends StatelessWidget {
                   receita: receita,
                   hoje: DataCivil.hoje(relogio),
                 ),
-            _ProximaConsulta(controlador: controlador, relogio: relogio),
+            _ProximaConsulta(
+              controlador: controlador,
+              relogio: relogio,
+              perfil: perfil,
+            ),
             if (paciente.temAcompanhamentoClinico) ...[
               const SizedBox(height: MedidasTerae.espaco),
               _OrientacaoVigente(
@@ -337,26 +345,56 @@ class _LembreteDeRenovacao extends StatelessWidget {
 }
 
 class _ProximaConsulta extends StatelessWidget {
-  const _ProximaConsulta({required this.controlador, required this.relogio});
+  const _ProximaConsulta({
+    required this.controlador,
+    required this.relogio,
+    required this.perfil,
+  });
 
   final InicioControlador controlador;
   final Relogio relogio;
+  final Perfil perfil;
+
+  /// F2 — "Sua próxima consulta" ou, na TO, "sessão"; para quem cuida,
+  /// "Próxima sessão de Miguel".
+  String _titulo() {
+    final consulta = controlador.proximaConsulta;
+    final palavra = consulta == null
+        ? palavraDoPaciente(perfil.paciente)
+        : palavraDoEncontro(controlador.profissionalDaConsulta);
+    return perfil.falaDeOutraPessoa
+        ? 'Próxima $palavra de ${perfil.paciente.primeiroNome}'
+        : 'Sua próxima $palavra';
+  }
 
   @override
   Widget build(BuildContext context) {
     final textos = Theme.of(context).textTheme;
     final consulta = controlador.proximaConsulta;
     final profissional = controlador.profissionalDaConsulta;
+    final resposta = controlador.respostaDaProxima;
+    final deOutro = perfil.falaDeOutraPessoa;
     return Cartao(
       key: const Key('proxima-consulta'),
+      aoTocar: () async {
+        // F2: a agenda com a confirmação de presença; volta relendo.
+        await context.push<void>(Rotas.pacienteSessoes);
+        await controlador.carregar(emSilencio: true);
+      },
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const RotuloDeSecao('Sua próxima consulta', icone: Icons.event),
+          Row(
+            children: [
+              Expanded(child: RotuloDeSecao(_titulo(), icone: Icons.event)),
+              const ExcludeSemantics(child: Icon(Icons.chevron_right)),
+            ],
+          ),
           const SizedBox(height: MedidasTerae.espacoPequeno),
           if (consulta == null)
             Text(
-              'Nenhuma consulta marcada. Combine o retorno com a clínica.',
+              'Nenhuma ${palavraDoPaciente(perfil.paciente)} marcada. '
+              'Combine com a clínica.',
               style: textos.bodyMedium,
             )
           else ...[
@@ -376,16 +414,48 @@ class _ProximaConsulta extends StatelessWidget {
               style: textos.bodyMedium,
             ),
             const SizedBox(height: MedidasTerae.espacoPequeno),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Etiqueta(
-                texto: _maiuscula(
-                  descricaoRelativa(
-                    DataCivil.doInstante(consulta.dataHora),
-                    hoje: DataCivil.hoje(relogio),
+            Wrap(
+              spacing: MedidasTerae.espacoPequeno,
+              runSpacing: MedidasTerae.espacoPequeno,
+              children: [
+                Etiqueta(
+                  texto: _maiuscula(
+                    descricaoRelativa(
+                      DataCivil.doInstante(consulta.dataHora),
+                      hoje: DataCivil.hoje(relogio),
+                    ),
                   ),
                 ),
-              ),
+                Etiqueta(
+                  key: const Key('presenca-da-proxima'),
+                  icone: switch (resposta) {
+                    RespostaPresenca.vamos => Icons.check_circle_outline,
+                    RespostaPresenca.naoVamos => Icons.event_busy,
+                    null => Icons.help_outline,
+                  },
+                  texto: switch (resposta) {
+                    RespostaPresenca.vamos => 'Presença confirmada',
+                    RespostaPresenca.naoVamos =>
+                      deOutro ? 'Avisaram que não vão' : 'Avisou que não vai',
+                    null =>
+                      deOutro ? 'Vocês vão? Responda' : 'Você vai? Responda',
+                  },
+                  cores: switch (resposta) {
+                    RespostaPresenca.vamos => const ParDeCores(
+                      CoresTerae.clinico700,
+                      CoresTerae.clinico50,
+                    ),
+                    RespostaPresenca.naoVamos => const ParDeCores(
+                      CoresTerae.aviso900,
+                      CoresTerae.aviso50,
+                    ),
+                    null => const ParDeCores(
+                      CoresTerae.primaria700,
+                      CoresTerae.primaria50,
+                    ),
+                  },
+                ),
+              ],
             ),
           ],
         ],

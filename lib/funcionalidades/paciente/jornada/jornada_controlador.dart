@@ -4,10 +4,12 @@ import '../../../dados/enums/situacao_agendamento.dart';
 import '../../../dados/enums/tipo_marco.dart';
 import '../../../dados/modelos/agendamento.dart';
 import '../../../dados/modelos/marco_jornada.dart';
+import '../../../dados/modelos/profissional_saude.dart';
 import '../../../dados/modelos/receita_uso_continuo.dart';
 import '../../../dados/repositorios/paciente_repositorio.dart';
 import '../../../nucleo/tempo/data_civil.dart';
 import '../../../nucleo/tempo/relogio.dart';
+import '../../../nucleo/textos/encontros.dart';
 
 /// Tipo de um ponto da linha do tempo da TM06.
 enum TipoItemJornada { consulta, reavaliacao, orientacao, proximoPasso }
@@ -86,11 +88,11 @@ class JornadaControlador extends ChangeNotifier {
       final consultas = await repositorio.agendamentos(pacienteId);
       final marcos = await repositorio.marcos(pacienteId);
       final receita = await repositorio.receitaVigente(pacienteId);
-      final nomes = <String, String>{};
+      final profissionais = <String, ProfissionalSaude>{};
       for (final id in {for (final c in consultas) c.profissionalId}) {
-        nomes[id] = (await repositorio.profissional(id)).nome;
+        profissionais[id] = await repositorio.profissional(id);
       }
-      _montar(consultas, marcos, nomes);
+      _montar(consultas, marcos, profissionais);
       _receita = receita;
     } catch (_) {
       // Dublê sem dado, recusa ou falha de leitura: a tela oferece de novo.
@@ -103,7 +105,7 @@ class JornadaControlador extends ChangeNotifier {
   void _montar(
     List<Agendamento> consultas,
     List<MarcoJornada> marcos,
-    Map<String, String> nomes,
+    Map<String, ProfissionalSaude> profissionais,
   ) {
     final agora = relogio.agora();
     final hoje = DataCivil.hoje(relogio);
@@ -111,7 +113,7 @@ class JornadaControlador extends ChangeNotifier {
     final historia = <ItemJornada>[];
 
     for (final c in consultas) {
-      final nome = nomes[c.profissionalId];
+      final profissional = profissionais[c.profissionalId];
       final relativo = descricaoRelativa(
         DataCivil.doInstante(c.dataHora),
         hoje: hoje,
@@ -120,7 +122,10 @@ class JornadaControlador extends ChangeNotifier {
         id: c.id,
         tipo: TipoItemJornada.consulta,
         instante: c.dataHora,
-        titulo: nome == null ? 'Consulta' : 'Consulta com $nome',
+        // F2: "Sessão de terapia ocupacional com …" ou "Consulta com …".
+        titulo: profissional == null
+            ? nomeDoEncontro(null)
+            : '${nomeDoEncontro(profissional)} com ${profissional.nome}',
         quando:
             '${formatarDiaPorExtenso(c.dataHora)} às '
             '${formatarHora(c.dataHora)} · $relativo',

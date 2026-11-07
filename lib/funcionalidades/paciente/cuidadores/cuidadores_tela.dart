@@ -7,6 +7,7 @@ import '../../../nucleo/sessao/sessao.dart';
 import '../../../nucleo/tema/cores.dart';
 import '../../../nucleo/tema/tema.dart';
 import '../../../nucleo/tempo/relogio.dart';
+import '../../../nucleo/textos/encontros.dart';
 import '../../../nucleo/validacao/formatador_cpf.dart';
 import '../../../nucleo/widgets/botao_grande.dart';
 import '../../../nucleo/widgets/cartao.dart';
@@ -51,17 +52,29 @@ class CuidadoresTela extends StatelessWidget {
 class _ConteudoCuidadores extends StatelessWidget {
   const _ConteudoCuidadores();
 
+  /// F2 — o que o cuidador acompanha depende das linhas de cuidado.
+  static String _oQueAcompanha(Perfil? perfil) {
+    final clinico = perfil?.paciente.temAcompanhamentoClinico ?? true;
+    final terapia = perfil?.paciente.temTerapiaOcupacional ?? false;
+    final agenda = encontrosDoPaciente(perfil!.paciente);
+    if (clinico && terapia) {
+      return 'a agenda de $agenda, os horários de remédio e a rotina';
+    }
+    if (terapia) return 'a agenda de $agenda e a rotina';
+    return 'sua agenda e seus horários de remédio';
+  }
+
   @override
   Widget build(BuildContext context) {
     final c = context.watch<CuidadoresControlador>();
     final textos = Theme.of(context).textTheme;
     return CorpoDaTela(
       children: [
-        const CabecalhoDaTela(
+        CabecalhoDaTela(
           titulo: 'Quem cuida com você',
           subtitulo:
-              'Autorize pessoas de confiança para acompanhar sua agenda e seus '
-              'horários de remédio.',
+              'Autorize pessoas de confiança para acompanhar '
+              '${_oQueAcompanha(context.select<Sessao, Perfil?>((s) => s.perfilAtivo))}.',
         ),
         const SizedBox(height: MedidasTerae.espacoGrande),
         if (c.carregando)

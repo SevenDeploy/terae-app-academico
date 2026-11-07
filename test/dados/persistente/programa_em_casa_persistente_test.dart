@@ -9,6 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:terae_app/dados/enums/adesao_em_casa.dart';
 import 'package:terae_app/dados/enums/quem_registrou.dart';
+import 'package:terae_app/dados/enums/resposta_presenca.dart';
 import 'package:terae_app/dados/enums/situacao_envio.dart';
 import 'package:terae_app/dados/local/banco_local.dart';
 import 'package:terae_app/dados/repositorios/falhas.dart';
@@ -213,6 +214,81 @@ void main() {
     expect((await noServidor(outro))!['adesao'], 'feito');
   });
 
+  group('presença (F2, D27)', () {
+    const ag = 'ad000000-0000-4000-8000-000000000012';
+
+    Future<void> semearSessao({required String dataHora}) => m.firestore
+        .collection('pacientes')
+        .doc(_p)
+        .collection('agendamentos')
+        .doc(ag)
+        .set({
+          'id': ag,
+          'pacienteId': _p,
+          'profissionalId': 'd0000000-0000-4000-8000-000000000003',
+          'dataHora': dataHora,
+          'motivoRetorno': 'Sessão de terapia ocupacional',
+          'situacao': 'agendado',
+        });
+
+    Future<Map<String, Object?>?> confirmacaoNoServidor() async =>
+        (await m.firestore
+                .collection('pacientes')
+                .doc(_p)
+                .collection('confirmacoes')
+                .doc(ag)
+                .get())
+            .data();
+
+    test('responder com conexão grava o documento do agendamento', () async {
+      await semearSessao(dataHora: '2026-10-09T12:00:00.000Z');
+      final presenca = m.persistencia.repositorios.presenca;
+      final c = await presenca.responder(
+        pacienteId: _p,
+        agendamentoId: ag,
+        resposta: RespostaPresenca.naoVamos,
+      );
+      expect(c.situacaoEnvio, SituacaoEnvio.enviado);
+      final doc = (await confirmacaoNoServidor())!;
+      expect(doc['id'], ag);
+      expect(doc['resposta'], 'naoVamos');
+      expect(
+        (await presenca.respostas(_p))[ag]!.resposta,
+        RespostaPresenca.naoVamos,
+      );
+    });
+
+    test('sem conexão fica na fila e sai na sincronização', () async {
+      await semearSessao(dataHora: '2026-10-09T12:00:00.000Z');
+      final presenca = m.persistencia.repositorios.presenca;
+      await m.persistencia.repositorios.paciente.agendamentos(_p);
+      await m.conexao.desligar();
+      final c = await presenca.responder(
+        pacienteId: _p,
+        agendamentoId: ag,
+        resposta: RespostaPresenca.vamos,
+      );
+      expect(c.situacaoEnvio, SituacaoEnvio.naFila);
+      expect(m.persistencia.sincronizador.situacao.value.pendentes, 1);
+      await m.conexao.ligar();
+      await m.persistencia.sincronizador.sincronizar();
+      expect((await confirmacaoNoServidor())!['resposta'], 'vamos');
+      expect(m.persistencia.sincronizador.situacao.value.pendentes, 0);
+    });
+
+    test('sessão que já começou é recusada', () async {
+      await semearSessao(dataHora: '2026-10-02T13:00:00.000Z');
+      await expectLater(
+        m.persistencia.repositorios.presenca.responder(
+          pacienteId: _p,
+          agendamentoId: ag,
+          resposta: RespostaPresenca.vamos,
+        ),
+        _recusa(MotivoRecusa.sessaoEncerrada),
+      );
+    });
+  });
+
   test('"Sair" apaga também os registros das atividades (D20)', () async {
     await programa.registrar(
       pacienteId: _p,
@@ -255,14 +331,18 @@ void main() {
       fabrica: databaseFactoryFfi,
       caminho: caminho,
     );
-    expect(await banco.db.getVersion(), 2);
-    expect(BancoLocal.versao, 2);
+    // F2: a v3 (respostas de presença) roda junto, na mesma abertura.
+    expect(await banco.db.getVersion(), BancoLocal.versao);
+    expect(BancoLocal.versao, 3);
     final tabelas = await banco.db.query(
       'sqlite_master',
       columns: ['name'],
       where: "type = 'table'",
     );
-    expect(tabelas.map((t) => t['name']), contains('registros_casa'));
+    expect(
+      tabelas.map((t) => t['name']),
+      containsAll(['registros_casa', 'confirmacoes_presenca']),
+    );
     final diario = await banco.db.query('registros_diario');
     expect(diario.single['situacao_envio'], 'naFila');
     await banco.fechar();
