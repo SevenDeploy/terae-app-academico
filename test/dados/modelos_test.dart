@@ -15,6 +15,7 @@ import 'package:terae_app/dados/enums/resposta_presenca.dart';
 import 'package:terae_app/dados/enums/situacao_agendamento.dart';
 import 'package:terae_app/dados/enums/situacao_conta.dart';
 import 'package:terae_app/dados/enums/situacao_envio.dart';
+import 'package:terae_app/dados/enums/situacao_meta.dart';
 import 'package:terae_app/dados/enums/situacao_vinculo.dart';
 import 'package:terae_app/dados/enums/tipo_convite.dart';
 import 'package:terae_app/dados/enums/tipo_marco.dart';
@@ -27,6 +28,7 @@ import 'package:terae_app/dados/modelos/conta_usuario.dart';
 import 'package:terae_app/dados/modelos/convite_acesso.dart';
 import 'package:terae_app/dados/modelos/item_medicacao.dart';
 import 'package:terae_app/dados/modelos/marco_jornada.dart';
+import 'package:terae_app/dados/modelos/meta_terapeutica.dart';
 import 'package:terae_app/dados/modelos/paciente.dart';
 import 'package:terae_app/dados/modelos/profissional_saude.dart';
 import 'package:terae_app/dados/modelos/receita_uso_continuo.dart';
@@ -45,7 +47,7 @@ Mapa _peloJson(Mapa mapa) {
 final DateTime _instante = DateTime.utc(2026, 10, 7, 18);
 
 void main() {
-  group('ida e volta fromMap/toMap das 14 entidades (Figura 3 + TO)', () {
+  group('ida e volta fromMap/toMap das 16 entidades (Figura 3 + TO)', () {
     final casos = <String, (Object, Object Function(Mapa), Mapa Function())>{};
 
     final conta = ContaUsuario(
@@ -192,6 +194,7 @@ void main() {
       data: DataCivil(2026, 10, 20),
       titulo: 'Reavaliação marcada',
       textoSimples: 'Vamos ver juntos como você está.',
+      metaId: 'meta-1',
     );
     casos['MarcoJornada'] = (marco, MarcoJornada.fromMap, marco.toMap);
 
@@ -205,6 +208,7 @@ void main() {
       ocupacao: Ocupacao.autocuidado,
       publicadaEm: _instante,
       encerradaEm: _instante.add(const Duration(days: 30)),
+      metaId: 'meta-1',
     );
     casos['AtividadeDeCasa'] = (
       atividade,
@@ -244,8 +248,20 @@ void main() {
       confirmacao.toMap,
     );
 
-    test('são exatamente as 15 entidades', () {
-      expect(casos, hasLength(15));
+    final meta = MetaTerapeutica(
+      id: 'meta-1',
+      pacienteId: 'p-miguel',
+      profissionalId: 'pr-larissa',
+      ocupacao: Ocupacao.autocuidado,
+      descricao: 'Vestir a camiseta sozinho',
+      combinadaCom: 'Patrícia e Miguel',
+      prazo: DataCivil(2026, 11, 30),
+      situacao: SituacaoMeta.ativa,
+    );
+    casos['MetaTerapeutica'] = (meta, MetaTerapeutica.fromMap, meta.toMap);
+
+    test('são exatamente as 16 entidades', () {
+      expect(casos, hasLength(16));
     });
 
     casos.forEach((nome, caso) {
@@ -270,6 +286,16 @@ void main() {
       final volta = RegistroDiario.fromMap(_peloJson(semOpcionais.toMap()));
       expect(volta.observacao, isNull);
       expect(volta, semOpcionais);
+      // F3: marco e atividade das fases anteriores, sem `metaId`.
+      final marcoAntigo = MarcoJornada.fromMap({
+        'id': 'm-2',
+        'pacienteId': 'p-ana',
+        'tipo': 'orientacao',
+        'data': '2026-10-01',
+        'titulo': 'Rotina de sono',
+        'textoSimples': 'Durma sempre no mesmo horário.',
+      });
+      expect(marcoAntigo.metaId, isNull);
     });
   });
 
@@ -607,6 +633,59 @@ void main() {
     });
   });
 
+  group('MetaTerapeutica (F3; D25)', () {
+    Map<String, Object?> mapa() => {
+      'id': 'meta-1',
+      'pacienteId': 'p',
+      'profissionalId': 'pr',
+      'ocupacao': 'brincar',
+      'descricao': 'Brincar de massinha por 10 minutos',
+      'combinadaCom': 'Patrícia e Miguel',
+      'prazo': '2026-12-01',
+      'situacao': 'alcancada',
+    };
+
+    test('escore, nível GAS e peso que viessem no documento são ignorados e '
+        'não voltam no mapa', () {
+      final meta = MetaTerapeutica.fromMap({
+        ...mapa(),
+        'escore': 3,
+        'nivelGas': 1,
+        'peso': 2,
+      });
+      expect(meta.toMap().keys.toSet(), {
+        'id',
+        'pacienteId',
+        'profissionalId',
+        'ocupacao',
+        'descricao',
+        'combinadaCom',
+        'prazo',
+        'situacao',
+      });
+    });
+
+    test('descrição e "combinada com" não podem ser vazias nem longas '
+        'demais', () {
+      expect(
+        () => MetaTerapeutica.fromMap({...mapa(), 'descricao': '  '}),
+        throwsArgumentError,
+      );
+      expect(
+        () => MetaTerapeutica.fromMap({...mapa(), 'descricao': 'x' * 201}),
+        throwsArgumentError,
+      );
+      expect(
+        () => MetaTerapeutica.fromMap({...mapa(), 'combinadaCom': ''}),
+        throwsArgumentError,
+      );
+      expect(
+        () => MetaTerapeutica.fromMap({...mapa(), 'combinadaCom': 'x' * 121}),
+        throwsArgumentError,
+      );
+    });
+  });
+
   group('os 11 enums do §22 (grafia do docx) e os da evolução de TO', () {
     final enums = <String, List<Enum>>{
       'ContaUsuario.situacao': SituacaoConta.values,
@@ -625,11 +704,12 @@ void main() {
       'RegistroDeAtividade.adesao': AdesaoEmCasa.values,
       'RegistroDeAtividade.quem': QuemRegistrou.values,
       'ConfirmacaoDePresenca.resposta': RespostaPresenca.values,
+      'MetaTerapeutica.situacao': SituacaoMeta.values,
     };
 
-    test('são 16 (os 11 do §22 + 5 da evolução de TO), com os valores '
+    test('são 17 (os 11 do §22 + 6 da evolução de TO), com os valores '
         'esperados', () {
-      expect(enums, hasLength(16));
+      expect(enums, hasLength(17));
       final nomes = enums.map(
         (campo, valores) => MapEntry(campo, valores.map((v) => v.name)),
       );
@@ -667,6 +747,8 @@ void main() {
         'reavaliacao',
         'orientacao',
         'proximoPasso',
+        'metaAlcancada',
+        'alta',
       ]);
       expect(nomes['Paciente.linhasDeCuidado'], [
         'acompanhamentoClinico',
@@ -689,6 +771,12 @@ void main() {
       ]);
       expect(nomes['RegistroDeAtividade.quem'], ['paciente', 'responsavel']);
       expect(nomes['ConfirmacaoDePresenca.resposta'], ['vamos', 'naoVamos']);
+      expect(nomes['MetaTerapeutica.situacao'], [
+        'ativa',
+        'alcancada',
+        'interrompida',
+        'substituida',
+      ]);
     });
 
     test('cada valor volta pelo nome e tem rótulo em linguagem simples', () {
@@ -721,6 +809,7 @@ void main() {
           v.rotulo,
           v.rotuloNaPrimeiraPessoa,
         ],
+        for (final v in SituacaoMeta.values) v.rotulo,
       ];
       expect(rotulos, everyElement(isNotEmpty));
       expect(Adesao.total.rotulo, 'Tomei tudo');

@@ -27,6 +27,7 @@ import 'package:terae_app/dados/modelos/vinculo_cuidador.dart';
 import 'package:terae_app/dados/repositorios/cuidadores_repositorio.dart';
 import 'package:terae_app/dados/repositorios/diario_repositorio.dart';
 import 'package:terae_app/dados/repositorios/falhas.dart';
+import 'package:terae_app/dados/repositorios/metas_repositorio.dart';
 import 'package:terae_app/dados/repositorios/repositorios.dart';
 import 'package:terae_app/nucleo/rotas/rotas.dart';
 import 'package:terae_app/nucleo/sessao/sessao.dart';
@@ -354,6 +355,7 @@ Future<AppDoPaciente> abrirAppDoPaciente(
   PacienteComDados? paciente,
   DiarioControlavel? diario,
   CuidadoresEmMemoria? cuidadores,
+  RepositorioMetas? metas,
 }) async {
   final app = AppDoPaciente(
     sessao: sessao ?? (Sessao()..entrar(vinculosAna())),
@@ -373,6 +375,7 @@ Future<AppDoPaciente> abrirAppDoPaciente(
         cuidadores: app.cuidadores,
         visaoCuidador: base.visaoCuidador,
         demonstracao: base.demonstracao,
+        metas: metas ?? base.metas,
       ),
       sessao: app.sessao,
       relogio: RelogioFixo(agoraDeTeste),

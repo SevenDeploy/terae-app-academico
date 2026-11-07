@@ -22,6 +22,7 @@ class AtividadeDeCasa {
     required this.ocupacao,
     required DateTime publicadaEm,
     DateTime? encerradaEm,
+    this.metaId,
   }) : publicadaEm = publicadaEm.toUtc(),
        encerradaEm = encerradaEm?.toUtc() {
     if (titulo.trim().isEmpty || titulo.length > tamanhoMaximoDoTitulo) {
@@ -45,6 +46,7 @@ class AtividadeDeCasa {
     ocupacao: lerEnum(mapa, 'ocupacao', Ocupacao.values),
     publicadaEm: lerInstante(mapa, 'publicadaEm'),
     encerradaEm: lerInstanteOpcional(mapa, 'encerradaEm'),
+    metaId: lerOpcional<String>(mapa, 'metaId'),
   );
 
   /// Como no programa em casa do Terae web.
@@ -69,6 +71,10 @@ class AtividadeDeCasa {
   /// Nula enquanto vale.
   final DateTime? encerradaEm;
 
+  /// F3 — a meta que a atividade ajuda a alcançar ("Esta atividade ajuda na
+  /// meta: …"); `null` se não está ligada a uma.
+  final String? metaId;
+
   /// Vale no [dia] civil da clínica: publicada até esse dia e não encerrada
   /// antes dele.
   bool vigenteEm(DataCivil dia) =>
@@ -86,6 +92,7 @@ class AtividadeDeCasa {
     'ocupacao': ocupacao.name,
     'publicadaEm': escreverInstante(publicadaEm),
     'encerradaEm': escreverInstanteOpcional(encerradaEm),
+    'metaId': metaId,
   };
 
   @override
@@ -99,7 +106,8 @@ class AtividadeDeCasa {
       other.vezesPorSemana == vezesPorSemana &&
       other.ocupacao == ocupacao &&
       other.publicadaEm == publicadaEm &&
-      other.encerradaEm == encerradaEm;
+      other.encerradaEm == encerradaEm &&
+      other.metaId == metaId;
 
   @override
   int get hashCode => Object.hash(
@@ -112,6 +120,7 @@ class AtividadeDeCasa {
     ocupacao,
     publicadaEm,
     encerradaEm,
+    metaId,
   );
 
   @override

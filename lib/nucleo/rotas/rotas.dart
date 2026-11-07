@@ -73,6 +73,15 @@ abstract final class Rotas {
   static String atividade(String id) =>
       Uri(path: pacienteAtividade, queryParameters: {'id': id}).toString();
 
+  /// TM20 Meta (evolução de TO, F3) — paciente com terapia ocupacional; uma
+  /// meta do plano, com as atividades de casa e os marcos ligados a ela,
+  /// empilhada sobre as abas, com o id na consulta: use [meta].
+  static const String pacienteMeta = '/paciente/meta';
+
+  /// Caminho da TM20 para a meta [id].
+  static String meta(String id) =>
+      Uri(path: pacienteMeta, queryParameters: {'id': id}).toString();
+
   /// TM18 Sessões (evolução de TO, F2) — paciente; as sessões e consultas,
   /// com a confirmação de presença e "Falar com a clínica", empilhada sobre
   /// as abas (aberta pelo cartão da próxima sessão no Início).
@@ -114,6 +123,7 @@ abstract final class Rotas {
     pacienteDiarioAjuda,
     pacienteCasa,
     pacienteAtividade,
+    pacienteMeta,
     pacienteSessoes,
     pacienteLembretes,
     pacienteJornada,
@@ -123,15 +133,16 @@ abstract final class Rotas {
     pacienteCorrigirRegistro,
   };
 
-  /// D22 — só o paciente com terapia ocupacional alcança (o roteador recusa
-  /// para os demais, mesmo por link direto).
   /// D21 (F2) — só o perfil de paciente com acompanhamento clínico alcança
   /// (a medicação do cuidador); o roteador recusa para os demais.
   static const Set<String> doAcompanhamentoClinico = {cuidadorMedicacao};
 
+  /// D22 — só o paciente com terapia ocupacional alcança (o roteador recusa
+  /// para os demais, mesmo por link direto). As metas (F3) também.
   static const Set<String> daTerapiaOcupacional = {
     pacienteCasa,
     pacienteAtividade,
+    pacienteMeta,
   };
 
   /// Só o papel cuidador alcança.
@@ -170,5 +181,6 @@ abstract final class Rotas {
     'TM17': pacienteAtividade,
     'TM18': pacienteSessoes,
     'TM19': pacienteLembretes,
+    'TM20': pacienteMeta,
   };
 }

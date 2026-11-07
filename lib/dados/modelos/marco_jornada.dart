@@ -17,6 +17,7 @@ class MarcoJornada {
     required this.data,
     required this.titulo,
     required this.textoSimples,
+    this.metaId,
   });
 
   factory MarcoJornada.fromMap(Mapa mapa) => MarcoJornada(
@@ -26,6 +27,7 @@ class MarcoJornada {
     data: lerDataCivil(mapa, 'data'),
     titulo: lerCampo<String>(mapa, 'titulo'),
     textoSimples: lerCampo<String>(mapa, 'textoSimples'),
+    metaId: lerOpcional<String>(mapa, 'metaId'),
   );
 
   final String id;
@@ -37,6 +39,10 @@ class MarcoJornada {
   final String titulo;
   final String textoSimples;
 
+  /// F3 — a meta da terapia ocupacional a que o marco se refere (o "próximo
+  /// passo" de uma meta, a meta alcançada); `null` nos demais.
+  final String? metaId;
+
   Mapa toMap() => {
     'id': id,
     'pacienteId': pacienteId,
@@ -44,6 +50,7 @@ class MarcoJornada {
     'data': data.paraIso(),
     'titulo': titulo,
     'textoSimples': textoSimples,
+    'metaId': metaId,
   };
 
   @override
@@ -54,11 +61,12 @@ class MarcoJornada {
       other.tipo == tipo &&
       other.data == data &&
       other.titulo == titulo &&
-      other.textoSimples == textoSimples;
+      other.textoSimples == textoSimples &&
+      other.metaId == metaId;
 
   @override
   int get hashCode =>
-      Object.hash(id, pacienteId, tipo, data, titulo, textoSimples);
+      Object.hash(id, pacienteId, tipo, data, titulo, textoSimples, metaId);
 
   @override
   String toString() => 'MarcoJornada${toMap()}';

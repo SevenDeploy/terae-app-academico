@@ -43,6 +43,13 @@ for (const d of daCasa.docs) {
   console.log(`  ${r.dia}  ${r.adesao.padEnd(9)} ${r.quem.padEnd(12)} ${r.situacaoEnvio}` +
     `${r.atualizadoEm ? '  corrigido ' + r.atualizadoEm : ''}${r.excluidoEm ? '  DESFEITO ' + r.excluidoEm : ''}`);
 }
+// Evolução de TO (F3): as metas, sem escore (D25).
+const metas = await paciente.collection('metas').get();
+console.log(`Metas: ${metas.size}`);
+for (const d of metas.docs) {
+  const m = d.data();
+  console.log(`  ${m.ocupacao.padEnd(14)} ${m.situacao.padEnd(12)} prazo ${m.prazo}  ${m.descricao}`);
+}
 // Evolução de TO (F2): as respostas de presença, por sessão.
 const confirmacoes = await paciente.collection('confirmacoes').get();
 console.log(`Respostas de presença: ${confirmacoes.size}`);

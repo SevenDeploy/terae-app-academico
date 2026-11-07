@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
+import '../../../dados/enums/ocupacao.dart';
 import '../../../dados/enums/situacao_agendamento.dart';
+import '../../../dados/modelos/meta_terapeutica.dart';
 import '../../../dados/modelos/paciente.dart';
 import '../../../dados/modelos/receita_uso_continuo.dart';
+import '../../../dados/repositorios/metas_repositorio.dart';
 import '../../../dados/repositorios/paciente_repositorio.dart';
 import '../../../nucleo/rotas/rotas.dart';
 import '../../../nucleo/sessao/sessao.dart';
@@ -14,12 +17,16 @@ import '../../../nucleo/tempo/relogio.dart';
 import '../../../nucleo/textos/encontros.dart';
 import '../../../nucleo/widgets/cartao.dart';
 import '../componentes_paciente.dart';
+import '../metas/componentes_metas.dart';
+import '../registros/componentes_registros.dart';
 import 'jornada_controlador.dart';
 
 /// TM06 — Jornada. RFM06. Aba 3: orientação vigente, próximos passos
 /// (consultas marcadas e marcos à frente) e a história até aqui, em linguagem
 /// simples (RNFM01) — nada da evolução clínica chega aqui (só `MarcoJornada`).
 /// Tocar numa sessão ou consulta abre a TM18 (F2), para responder a presença.
+/// Para quem faz TO, "Nossas metas" (F3) mostra as metas por área da vida, e
+/// a meta ou o marco dela abre a TM20.
 ///
 /// A `Key('TM06')` no Scaffold raiz faz parte do contrato (testes de
 /// navegação).
@@ -39,6 +46,9 @@ class JornadaTela extends StatelessWidget {
                 repositorio: context.read<RepositorioPaciente>(),
                 relogio: context.read<Relogio>(),
                 pacienteId: perfil.pacienteId,
+                metas: perfil.paciente.temTerapiaOcupacional
+                    ? context.read<RepositorioMetas>()
+                    : null,
               )..carregar(),
               child: const _ConteudoJornada(),
             ),
@@ -60,56 +70,68 @@ class _ConteudoJornada extends StatelessWidget {
     final encontros = paciente == null
         ? 'consultas'
         : encontrosDoPaciente(paciente);
-    return CorpoDaTela(
-      children: [
-        const CabecalhoDaTela(
-          titulo: 'Sua jornada',
-          subtitulo: 'Cada passo seu conta. Veja o que já aconteceu e o que vem por aí.',
-        ),
-        const SizedBox(height: MedidasTerae.espacoGrande),
-        if (c.carregando)
-          const Carregando()
-        else if (c.falhou)
-          AvisoDeFalha(
-            mensagem: 'Não foi possível mostrar sua jornada agora.',
-            aoTentarDeNovo: c.carregar,
-          )
-        else if (c.vazia)
-          Cartao(
-            child: Text(
-              'Sua jornada começa agora. Quando houver $encontros e '
-              'orientações, tudo aparece aqui.',
-              style: textos.bodyMedium,
-            ),
-          )
-        else ...[
-          // D21 — a orientação do remédio só no acompanhamento clínico.
-          if (clinico) ...[
-            _OrientacaoAgora(receita: c.receita),
-            const SizedBox(height: MedidasTerae.espacoGrande),
-          ],
-          const RotuloDeSecao('Próximos passos', icone: Icons.flag_outlined),
-          const SizedBox(height: MedidasTerae.espaco),
-          if (c.proximos.isEmpty)
-            Text(
-              'Nada marcado por enquanto. Combine o próximo passo com a '
-              'clínica.',
-              style: textos.bodyMedium,
+    // F3 (revisão): "puxar para atualizar" e a releitura quando a
+    // sincronização termina trazem de volta o que não pôde ser lido (as
+    // metas, sem cópia e sem conexão).
+    return RecarregaAoSincronizar(
+      aoMudar: () => c.carregar(emSilencio: true),
+      child: CorpoDaTela(
+        aoAtualizar: () => c.carregar(emSilencio: true),
+        children: [
+          const CabecalhoDaTela(
+            titulo: 'Sua jornada',
+            subtitulo: 'Cada passo seu conta. Veja o que já aconteceu e o que vem por aí.',
+          ),
+          const SizedBox(height: MedidasTerae.espacoGrande),
+          if (c.carregando)
+            const Carregando()
+          else if (c.falhou)
+            AvisoDeFalha(
+              mensagem: 'Não foi possível mostrar sua jornada agora.',
+              aoTentarDeNovo: c.carregar,
             )
-          else
-            _LinhaDoTempo(key: const Key('proximos'), itens: c.proximos),
-          if (c.historia.isNotEmpty) ...[
-            const SizedBox(height: MedidasTerae.espacoGrande),
-            const RotuloDeSecao(
-              'Sua história até aqui',
-              icone: Icons.history,
-              cor: CoresTerae.neutro600,
-            ),
+          else if (c.vazia)
+            Cartao(
+              child: Text(
+                'Sua jornada começa agora. Quando houver $encontros e '
+                'orientações, tudo aparece aqui.',
+                style: textos.bodyMedium,
+              ),
+            )
+          else ...[
+            // D21 — a orientação do remédio só no acompanhamento clínico.
+            if (clinico) ...[
+              _OrientacaoAgora(receita: c.receita),
+              const SizedBox(height: MedidasTerae.espacoGrande),
+            ],
+            // F3 — as metas da terapia ocupacional, por área da vida (D25).
+            if (c.nossasMetas.isNotEmpty) ...[
+              _NossasMetas(grupos: c.nossasMetas),
+              const SizedBox(height: MedidasTerae.espacoGrande),
+            ],
+            const RotuloDeSecao('Próximos passos', icone: Icons.flag_outlined),
             const SizedBox(height: MedidasTerae.espaco),
-            _LinhaDoTempo(key: const Key('historia'), itens: c.historia),
+            if (c.proximos.isEmpty)
+              Text(
+                'Nada marcado por enquanto. Combine o próximo passo com a '
+                'clínica.',
+                style: textos.bodyMedium,
+              )
+            else
+              _LinhaDoTempo(key: const Key('proximos'), itens: c.proximos),
+            if (c.historia.isNotEmpty) ...[
+              const SizedBox(height: MedidasTerae.espacoGrande),
+              const RotuloDeSecao(
+                'Sua história até aqui',
+                icone: Icons.history,
+                cor: CoresTerae.neutro600,
+              ),
+              const SizedBox(height: MedidasTerae.espaco),
+              _LinhaDoTempo(key: const Key('historia'), itens: c.historia),
+            ],
           ],
         ],
-      ],
+      ),
     );
   }
 }
@@ -206,10 +228,28 @@ class _PontoDaLinha extends StatelessWidget {
         CoresTerae.primaria700,
         'Próximo passo',
       ),
+      TipoItemJornada.metaAlcancada => (
+        Icons.emoji_events_outlined,
+        CoresTerae.clinico700,
+        'Meta alcançada',
+      ),
+      TipoItemJornada.alta => (
+        Icons.verified_outlined,
+        CoresTerae.clinico700,
+        'Alta',
+      ),
     };
     final situacao = item.situacao;
     final rotulo = item.rotulo ?? tipo;
     final ehEncontro = item.tipo == TipoItemJornada.consulta;
+    final metaId = item.metaId;
+    // F2 — a sessão ou consulta abre a TM18 (presença); F3 — o marco de uma
+    // meta abre a TM20.
+    final VoidCallback? aoTocar = ehEncontro
+        ? () => context.push(Rotas.pacienteSessoes)
+        : metaId != null
+        ? () => context.push(Rotas.meta(metaId))
+        : null;
     return IntrinsicHeight(
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -250,11 +290,8 @@ class _PontoDaLinha extends StatelessWidget {
               ),
               child: MergeSemantics(
                 child: Cartao(
-                  key: ehEncontro ? Key('jornada-${item.id}') : null,
-                  // F2 — a sessão ou consulta abre a TM18 (presença).
-                  aoTocar: ehEncontro
-                      ? () => context.push(Rotas.pacienteSessoes)
-                      : null,
+                  key: aoTocar != null ? Key('jornada-${item.id}') : null,
+                  aoTocar: aoTocar,
                   padding: const EdgeInsets.symmetric(
                     horizontal: 14,
                     vertical: 12,
@@ -301,6 +338,77 @@ class _PontoDaLinha extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// "Nossas metas" (F3; D25): por área da vida, cada meta com a situação e, se
+/// em andamento, o prazo. Tocar abre a TM20. Nada de escore.
+class _NossasMetas extends StatelessWidget {
+  const _NossasMetas({required this.grupos});
+
+  final Map<Ocupacao, List<MetaTerapeutica>> grupos;
+
+  @override
+  Widget build(BuildContext context) {
+    final textos = Theme.of(context).textTheme;
+    final secundario = textos.bodySmall?.copyWith(
+      color: CoresTerae.textoSecundario,
+    );
+    return Column(
+      key: const Key('nossas-metas'),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const RotuloDeSecao('Nossas metas', icone: Icons.track_changes),
+        const SizedBox(height: MedidasTerae.espacoPequeno),
+        Text(
+          'Combinadas com a terapia. Toque numa meta para ver o que ajuda em '
+          'casa.',
+          style: secundario,
+        ),
+        for (final MapEntry(key: ocupacao, value: metas) in grupos.entries) ...[
+          const SizedBox(height: MedidasTerae.espaco),
+          Semantics(
+            header: true,
+            child: Text(
+              ocupacao.rotulo,
+              style: textos.titleSmall?.copyWith(color: CoresTerae.neutro700),
+            ),
+          ),
+          const SizedBox(height: MedidasTerae.espacoPequeno),
+          for (final m in metas) ...[
+            Cartao(
+              key: Key('meta-${m.id}'),
+              aoTocar: () => context.push(Rotas.meta(m.id)),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(m.descricao, style: textos.titleSmall),
+                        const SizedBox(height: MedidasTerae.espacoPequeno),
+                        Wrap(
+                          spacing: MedidasTerae.espacoPequeno,
+                          runSpacing: 4,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            EtiquetaDaMeta(situacao: m.situacao),
+                            if (textoDoPrazo(m) case final prazo?)
+                              Text(prazo, style: secundario),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const ExcludeSemantics(child: Icon(Icons.chevron_right)),
+                ],
+              ),
+            ),
+            const SizedBox(height: MedidasTerae.espacoPequeno),
+          ],
+        ],
+      ],
     );
   }
 }

@@ -4,9 +4,11 @@ import '../../../dados/enums/adesao_em_casa.dart';
 import '../../../dados/enums/quem_registrou.dart';
 import '../../../dados/enums/situacao_envio.dart';
 import '../../../dados/modelos/atividade_de_casa.dart';
+import '../../../dados/modelos/meta_terapeutica.dart';
 import '../../../dados/modelos/registro_de_atividade.dart';
 import '../../../dados/regras/programa_em_casa.dart';
 import '../../../dados/repositorios/falhas.dart';
+import '../../../dados/repositorios/metas_repositorio.dart';
 import '../../../dados/repositorios/paciente_repositorio.dart';
 import '../../../dados/repositorios/programa_em_casa_repositorio.dart';
 import '../../../nucleo/tempo/data_civil.dart';
@@ -22,6 +24,7 @@ class AtividadeControlador extends ChangeNotifier {
     required this.pacienteId,
     required this.atividadeId,
     required this.quem,
+    this.metas,
   });
 
   final RepositorioProgramaEmCasa programa;
@@ -33,6 +36,9 @@ class AtividadeControlador extends ChangeNotifier {
   /// Quem conta como foi (D24): o titular ou quem cuida.
   final QuemRegistrou quem;
 
+  /// F3 — para mostrar a meta que a atividade ajuda.
+  final RepositorioMetas? metas;
+
   /// "Quer contar como foi?" — opcional.
   final TextEditingController reflexao = TextEditingController();
 
@@ -41,6 +47,7 @@ class AtividadeControlador extends ChangeNotifier {
   bool _naoEncontrada = false;
   bool _descartado = false;
   AtividadeDeCasa? _atividade;
+  MetaTerapeutica? _meta;
   String _profissional = '';
   List<RegistroDeAtividade> _registros = const [];
   AdesaoEmCasa? _adesao;
@@ -55,6 +62,10 @@ class AtividadeControlador extends ChangeNotifier {
   /// A atividade não existe, não é deste paciente ou foi encerrada.
   bool get naoEncontrada => _naoEncontrada;
   AtividadeDeCasa? get atividade => _atividade;
+
+  /// F3 — a meta que a atividade ajuda; `null` sem meta ou se a leitura
+  /// falhou.
+  MetaTerapeutica? get meta => _meta;
   String get profissional => _profissional;
   AdesaoEmCasa? get adesao => _adesao;
   bool get corrigindo => _corrigindo;
@@ -88,11 +99,14 @@ class AtividadeControlador extends ChangeNotifier {
       if (r.dia != hoje && r.reflexao != null) r,
   ];
 
-  Future<void> carregar() async {
-    _carregando = true;
+  /// Lê tudo. [emSilencio] (ao voltar da TM20) relê sem o "carregando".
+  Future<void> carregar({bool emSilencio = false}) async {
     _falhou = false;
     _naoEncontrada = false;
-    _avisar();
+    if (!emSilencio) {
+      _carregando = true;
+      _avisar();
+    }
     try {
       final atividade = await programa.atividade(pacienteId, atividadeId);
       _atividade = atividade;
@@ -103,6 +117,7 @@ class AtividadeControlador extends ChangeNotifier {
       } on Object {
         _profissional = '';
       }
+      _meta = await _metaDe(atividade);
     } on RecusaDeRegra catch (r) {
       if (r.motivo == MotivoRecusa.atividadeInexistente) {
         _naoEncontrada = true;
@@ -114,6 +129,18 @@ class AtividadeControlador extends ChangeNotifier {
     }
     _carregando = false;
     _avisar();
+  }
+
+  /// F3 — a meta da atividade: um extra; se a leitura falhar, some.
+  Future<MetaTerapeutica?> _metaDe(AtividadeDeCasa atividade) async {
+    final metas = this.metas;
+    final metaId = atividade.metaId;
+    if (metas == null || metaId == null) return null;
+    try {
+      return await metas.meta(pacienteId, metaId);
+    } on Object {
+      return null;
+    }
   }
 
   Future<void> _lerRegistros() async {

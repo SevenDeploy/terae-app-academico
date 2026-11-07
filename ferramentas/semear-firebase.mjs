@@ -190,6 +190,13 @@ async function semear() {
     lote.set(doPaciente(pid, 'itensCuidador', i.id), i);
   }
   for (const m of dados.marcos) lote.set(doPaciente(m.pacienteId, 'marcos', m.id), m);
+  // Evolução de TO (F3): as metas da terapia ocupacional (só o titular lê). Só os campos que a
+  // família vê (D25): nunca escore, nível GAS nem peso, mesmo que entrem no JSON.
+  for (const m of dados.metas ?? []) {
+    const { id, pacienteId, profissionalId, ocupacao, descricao, combinadaCom, prazo, situacao } = m;
+    lote.set(doPaciente(pacienteId, 'metas', id),
+      { id, pacienteId, profissionalId, ocupacao, descricao, combinadaCom, prazo, situacao });
+  }
   // Evolução de TO (F2): respostas de presença já dadas (uma por agendamento).
   for (const c of dados.confirmacoes ?? []) {
     lote.set(doPaciente(c.pacienteId, 'confirmacoes', c.agendamentoId), {

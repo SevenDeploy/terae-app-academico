@@ -10,8 +10,10 @@ import '../../nucleo/validacao/cpf.dart';
 import '../conversao_mapa.dart';
 import '../enums/situacao_conta.dart';
 import '../enums/situacao_envio.dart';
+import '../enums/situacao_meta.dart';
 import '../enums/situacao_vinculo.dart';
 import '../enums/tipo_convite.dart';
+import '../enums/tipo_marco.dart';
 import '../modelos/agendamento.dart';
 import '../modelos/alerta.dart';
 import '../modelos/atividade_de_casa.dart';
@@ -21,6 +23,7 @@ import '../modelos/conta_usuario.dart';
 import '../modelos/convite_acesso.dart';
 import '../modelos/item_medicacao.dart';
 import '../modelos/marco_jornada.dart';
+import '../modelos/meta_terapeutica.dart';
 import '../modelos/paciente.dart';
 import '../modelos/profissional_saude.dart';
 import '../modelos/receita_uso_continuo.dart';
@@ -111,6 +114,7 @@ const Set<String> _chavesConhecidas = {
   'atividadesCasa',
   'registrosCasa',
   'confirmacoes',
+  'metas',
 };
 
 List<Mapa> _entradas(Mapa dados, String chave) {
@@ -193,6 +197,7 @@ class EstadoMemoria {
       (r.situacaoEnvio == SituacaoEnvio.enviado ? registros : fila)[r.id] = r;
     }
     _carregar(d, 'alertas', alertas, Alerta.fromMap, (x) => x.id);
+    _carregar(d, 'metas', metas, MetaTerapeutica.fromMap, (x) => x.id);
     _carregar(
       d,
       'atividadesCasa',
@@ -260,6 +265,9 @@ class EstadoMemoria {
 
   /// Evolução de TO (F1): atividades de casa (só a clínica cria).
   final Map<String, AtividadeDeCasa> atividadesCasa = {};
+
+  /// F3 — as metas da terapia ocupacional (só leitura).
+  final Map<String, MetaTerapeutica> metas = {};
 
   /// Registros das atividades que o servidor recebeu (`enviado`), na última
   /// versão confirmada (corrigido ou desfeito no mesmo dia, D26).
@@ -389,6 +397,14 @@ class EstadoMemoria {
           _exigir(v.revogadoEm != null, 'vínculo revogado sem data', v.id);
       }
     }
+    for (final m in metas.values) {
+      _exigir(pacientes.containsKey(m.pacienteId), 'paciente da meta', m.id);
+      _exigir(
+        profissionais.containsKey(m.profissionalId),
+        'profissional da meta',
+        m.id,
+      );
+    }
     for (final a in atividadesCasa.values) {
       _exigir(
         pacientes.containsKey(a.pacienteId),
@@ -400,6 +416,13 @@ class EstadoMemoria {
         'profissional da atividade',
         a.id,
       );
+      if (a.metaId case final metaId?) {
+        _exigir(
+          metas[metaId]?.pacienteId == a.pacienteId,
+          'meta da atividade',
+          a.id,
+        );
+      }
     }
     final diasPorAtividade = <String>{};
     for (final r in {...registrosCasa, ...filaCasa}.values) {
@@ -469,6 +492,20 @@ class EstadoMemoria {
     }
     for (final m in marcos.values) {
       _exigir(pacientes.containsKey(m.pacienteId), 'paciente do marco', m.id);
+      if (m.metaId case final metaId?) {
+        _exigir(
+          metas[metaId]?.pacienteId == m.pacienteId,
+          'meta do marco',
+          m.id,
+        );
+      }
+      if (m.tipo == TipoMarco.metaAlcancada) {
+        _exigir(
+          metas[m.metaId]?.situacao == SituacaoMeta.alcancada,
+          'marco de meta alcançada sem a meta alcançada',
+          m.id,
+        );
+      }
     }
     for (final r in [...registros.values, ...fila.values]) {
       _exigir(
@@ -691,6 +728,7 @@ class EstadoMemoria {
     'registrosCasa': [for (final x in registrosCasa.values) x.toMap()],
     'filaCasa': [for (final x in filaCasa.values) x.toMap()],
     'confirmacoes': [for (final x in confirmacoes.values) x.toMap()],
+    'metas': [for (final x in metas.values) x.toMap()],
     'filaPresenca': [for (final x in filaPresenca.values) x.toMap()],
   };
 }

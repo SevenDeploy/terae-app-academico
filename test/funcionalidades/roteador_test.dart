@@ -236,6 +236,9 @@ void main() {
         Rotas.pacienteInicio,
       );
       expect(guardaDePerfil(to, Rotas.pacienteAtividade), isNull);
+      // F3: a TM20 (metas) também.
+      expect(guardaDePerfil(clinico, Rotas.pacienteMeta), Rotas.pacienteInicio);
+      expect(guardaDePerfil(to, Rotas.pacienteMeta), isNull);
       // F2: a TM18 é de todos; a medicação do cuidador, só do clínico.
       expect(guardaDePerfil(clinico, Rotas.pacienteSessoes), isNull);
       expect(guardaDePerfil(to, Rotas.pacienteSessoes), isNull);

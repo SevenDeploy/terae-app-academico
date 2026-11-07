@@ -7,6 +7,7 @@ import '../../../dados/enums/quem_registrou.dart';
 import '../../../dados/enums/situacao_envio.dart';
 import '../../../dados/modelos/atividade_de_casa.dart';
 import '../../../dados/modelos/registro_de_atividade.dart';
+import '../../../dados/repositorios/metas_repositorio.dart';
 import '../../../dados/repositorios/paciente_repositorio.dart';
 import '../../../dados/repositorios/programa_em_casa_repositorio.dart';
 import '../../../nucleo/rotas/rotas.dart';
@@ -19,6 +20,7 @@ import '../../../nucleo/widgets/botao_grande.dart';
 import '../../../nucleo/widgets/cartao.dart';
 import '../../../nucleo/widgets/seletor_opcoes.dart';
 import '../componentes_paciente.dart';
+import '../metas/componentes_metas.dart';
 import 'atividade_controlador.dart';
 import 'componentes_casa.dart';
 
@@ -69,6 +71,7 @@ class AtividadeTela extends StatelessWidget {
                 quem: perfil.falaDeOutraPessoa
                     ? QuemRegistrou.responsavel
                     : QuemRegistrou.paciente,
+                metas: context.read<RepositorioMetas>(),
               )..carregar(),
               child: _ConteudoDaAtividade(perfil: perfil),
             ),
@@ -110,6 +113,14 @@ class _ConteudoDaAtividade extends StatelessWidget {
           )
         else ...[
           _OQueFazer(atividade: atividade, profissional: c.profissional),
+          // F3 — a meta que a atividade ajuda; abre a TM20.
+          if (c.meta case final meta?) ...[
+            const SizedBox(height: MedidasTerae.espaco),
+            CartaoDaMetaLigada(
+              meta: meta,
+              aoVoltar: () => c.carregar(emSilencio: true),
+            ),
+          ],
           espacoDaCasa,
           const RotuloDeSecao('Hoje', icone: Icons.today),
           const SizedBox(height: MedidasTerae.espaco),

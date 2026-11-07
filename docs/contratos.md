@@ -249,3 +249,37 @@ termina ou a fila muda. Pedidos durante um em curso viram um só, depois dele.
 **TM18 e Jornada:** a TM18 relê sem o "carregando" quando a fila sai (`RecarregaAoSincronizar`) e o "puxar" chama
 `atualizar`. Na Jornada, `ItemJornada.rotulo` troca o rótulo do tipo ("Sessão"), e a sessão ou consulta tem
 `Key('jornada-<id>')` e abre a TM18.
+
+## Evolução de TO — F3, metas e progresso (06/11/2026)
+
+**`RepositorioMetas`** (`Repositorios.metas`; o padrão não tem metas):
+- `metas(pacienteId)`: todas, em qualquer situação, na ordem de `ordenarMetas`;
+- `meta(pacienteId, metaId)`: recusa `metaInexistente` se ela não existe ou é de outro paciente.
+- `MetasMemoria` e `MetasPersistente` (`LeituraComCopia` sobre `pacientes/{pid}/metas`, que só o titular lê). A cópia
+  local guarda só os campos do modelo (D25).
+
+**Modelos e regras:**
+- `MetaTerapeutica`: `id`, `pacienteId`, `profissionalId`, `ocupacao`, `descricao` (≤ 200), `combinadaCom` (≤ 120),
+  `prazo` (`DataCivil`) e `situacao` (`SituacaoMeta`: `ativa`, `alcancada`, `interrompida`, `substituida`). Sem escore,
+  nível GAS nem peso (D25); o que vier a mais no mapa é ignorado.
+- `AtividadeDeCasa.metaId` e `MarcoJornada.metaId`, opcionais (D37).
+- `TipoMarco.metaAlcancada` e `TipoMarco.alta` (D36).
+- `regras/metas.dart`: `ordenarMetas`, `metasPorOcupacao` e `dataDaAlta(marcos, hoje)`.
+- `nucleo/textos/encontros.dart` não muda.
+
+**Rota:** `pacienteMeta` TM20 `/paciente/meta?id=` (`Rotas.meta(id)`), em `doPaciente` e `daTerapiaOcupacional`.
+Empilha e desempilha; por link direto, a seta vai à Jornada.
+
+**Telas:**
+- `JornadaControlador(metas:)` (só para quem faz TO) expõe `nossasMetas` (`Map<Ocupacao, List<MetaTerapeutica>>`); a
+  seção tem `Key('nossas-metas')` e cada meta `Key('meta-<id>')`. `ItemJornada.metaId` faz o marco abrir a TM20. A
+  Jornada tem "puxar para atualizar" e relê quando a sincronização termina (`carregar(emSilencio:)`).
+- `MetaControlador`: a meta, quem acompanha, as atividades (`Key('atividade-da-meta-<id>')`; `null` se a leitura
+  falhou, com `Key('atividades-da-meta-falharam')`; vazia, `Key('sem-atividades-da-meta')`) e os marcos
+  (`Key('marco-da-meta-<id>')`); `Key('meta-inexistente')`, `Key('prazo-da-meta')`.
+- `EmCasaControlador(metas:)`: `metaDe(atividade)` e `programaEncerradoEm` (alta e nenhuma atividade valendo hoje);
+  `carregar(emSilencio:)`, chamado também ao voltar à aba (`RecarregaAoVoltar`); `Key('programa-encerrado')` e
+  `Key('ver-a-jornada')`.
+- `AtividadeControlador(metas:)`: `meta` e `carregar(emSilencio:)`; o cartão `CartaoDaMetaLigada(aoVoltar:)` tem
+  `Key('meta-da-atividade')` e relê a TM17 quando a TM20 desempilha.
+- `componentes_metas.dart`: `EtiquetaDaMeta`, `textoDoPrazo` e `CartaoDaMetaLigada`.
