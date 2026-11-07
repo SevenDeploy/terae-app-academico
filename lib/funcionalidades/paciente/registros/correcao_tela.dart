@@ -73,6 +73,7 @@ class _Correcao extends StatelessWidget {
                     aoMudarAdesao: c.escolherAdesao,
                     aoMudarIntensidade: c.escolherIntensidade,
                     aoMudarSintoma: c.escolherSintoma,
+                    palavras: palavrasDoDiario(context),
                   ),
                   const SizedBox(height: MedidasTerae.espaco),
                 ],

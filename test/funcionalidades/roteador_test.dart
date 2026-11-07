@@ -229,6 +229,12 @@ void main() {
       final to = Sessao()..entrar(vinculosAntonio());
       expect(guardaDePerfil(clinico, Rotas.pacienteCasa), Rotas.pacienteInicio);
       expect(guardaDePerfil(to, Rotas.pacienteCasa), isNull);
+      // F1: a TM17 também é só de quem faz TO.
+      expect(
+        guardaDePerfil(clinico, Rotas.pacienteAtividade),
+        Rotas.pacienteInicio,
+      );
+      expect(guardaDePerfil(to, Rotas.pacienteAtividade), isNull);
       // O diário vale para todos (o alerta da crítica também protege a
       // família de TO).
       for (final sessao in [clinico, to]) {

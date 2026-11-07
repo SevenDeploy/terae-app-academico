@@ -4,8 +4,10 @@
 ///   `situacao_envio = 'naFila'`) e o texto de busca da TM13;
 /// - `alertas`: os alertas confirmados dos registros do paciente;
 /// - `cache_documentos`: as cópias de leitura da §23 (paciente,
-///   profissional, consultas, receita, marcos, vínculos), cada uma guardada
-///   como o JSON do `toMap` do modelo.
+///   profissional, consultas, receita, marcos, vínculos, atividades de casa),
+///   cada uma guardada como o JSON do `toMap` do modelo;
+/// - `registros_casa` (versão 2, evolução de TO): os registros das atividades
+///   de casa, com a fila de envio deles.
 ///
 /// Sem cifra nesta versão (D15: limitação declarada; os dados são fictícios).
 ///
@@ -56,11 +58,15 @@ class BancoLocal {
     'registros_diario',
     'alertas',
     'cache_documentos',
+    'registros_casa',
   ];
 
   /// Migrações em ordem: a de índice `i` leva o banco da versão `i` à `i + 1`.
   /// Nunca se muda uma migração publicada; corrige-se com outra.
-  static const List<Future<void> Function(Database db)> migracoes = [_versao1];
+  static const List<Future<void> Function(Database db)> migracoes = [
+    _versao1,
+    _versao2,
+  ];
 
   static Future<void> _migrar(
     Database db, {
@@ -113,6 +119,36 @@ class BancoLocal {
           sincronizado_em TEXT NOT NULL,
           PRIMARY KEY (colecao, id)
         )''');
+    await lote.commit(noResult: true);
+  }
+
+  /// Versão 2 (evolução de TO, F1): os registros das atividades de casa, com
+  /// a fila de envio (`situacao_envio = 'naFila'`).
+  static Future<void> _versao2(Database db) async {
+    final lote = db.batch()
+      ..execute('''
+        CREATE TABLE registros_casa (
+          id TEXT PRIMARY KEY,
+          paciente_id TEXT NOT NULL,
+          atividade_id TEXT NOT NULL,
+          dia TEXT NOT NULL,
+          adesao TEXT NOT NULL,
+          reflexao TEXT,
+          quem TEXT NOT NULL,
+          registrado_em TEXT NOT NULL,
+          situacao_envio TEXT NOT NULL,
+          atualizado_em TEXT,
+          excluido_em TEXT
+        )''')
+      ..execute(
+        'CREATE INDEX idx_casa_paciente ON registros_casa (paciente_id, dia)',
+      )
+      ..execute(
+        'CREATE INDEX idx_casa_atividade ON registros_casa (atividade_id, dia)',
+      )
+      ..execute(
+        'CREATE INDEX idx_casa_fila ON registros_casa (situacao_envio)',
+      );
     await lote.commit(noResult: true);
   }
 

@@ -1,4 +1,4 @@
-/// As 17 telas (TM00–TM16) montadas como no aparelho: o `TeraeApp` com a
+/// As 18 telas (TM00–TM17) montadas como no aparelho: o `TeraeApp` com a
 /// memória real (`lib/dados/memoria/` sobre `assets/dados/demonstracao.json`),
 /// o relógio parado em 2/10/2026 10:00 na clínica e a sessão de cada persona
 /// (sem sessão, Ana, Patrícia, Regina ou Antônio). Base dos testes de acessibilidade e
@@ -344,11 +344,34 @@ final List<TelaReal> telasReais = [
   TelaReal(
     tela: 'TM16',
     arquivo: 'TM16-em-casa',
-    descricao: 'TM16 Em casa (Antônio), ainda sem atividades',
+    descricao: 'TM16 Em casa (Antônio), com 1 de 2 atividades registradas',
     abrir: (t) =>
         abrirComMemoria(t, persona: Persona.antonio, em: Rotas.pacienteCasa),
   ),
+  TelaReal(
+    tela: 'TM17',
+    arquivo: 'TM17-atividade',
+    descricao: 'TM17 Atividade (Antônio), "Em parte" marcado para hoje',
+    abrir: (t) async {
+      await abrirComMemoria(
+        t,
+        persona: Persona.antonio,
+        em: Rotas.atividade(atividadeAbotoar),
+      );
+      await tocar(
+        t,
+        find.descendant(
+          of: find.byKey(const Key('seletor-adesao-casa')),
+          matching: find.text('Em parte'),
+        ),
+      );
+      await voltarAoTopo(t, 'TM17');
+    },
+  ),
 ];
+
+/// "Abotoar a camisa com a mão mais fraca" (Antônio, F1), sem registro hoje.
+const String atividadeAbotoar = 'ca000000-0000-4000-8000-000000000005';
 
 /// Celular de 360×800 lógicos com [densidade] e a fonte do aparelho em
 /// [escala]. Desfaz tudo no fim do teste.

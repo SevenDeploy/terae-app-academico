@@ -187,9 +187,14 @@ class Sincronizador {
       try {
         await fila.enviarPendentes();
       } on RecusaDeRegra catch (recusa) {
-        if (!ehSemConexao(recusa)) rethrow;
-        _servidorRespondeu = false;
-        break;
+        if (ehSemConexao(recusa)) {
+          _servidorRespondeu = false;
+          break;
+        }
+        // F1 (achado da revisão da F0): o servidor recusou um item desta
+        // fila. Ele continua na fila (o aviso mostra os pendentes) e não
+        // derruba o diário, as outras filas nem a busca.
+        debugPrint('Fila ${fila.runtimeType} recusada: ${recusa.motivo}');
       }
     }
     if (_filas.isNotEmpty) await atualizarSituacao();

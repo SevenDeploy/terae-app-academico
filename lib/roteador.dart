@@ -9,6 +9,7 @@ import 'funcionalidades/cuidador/agenda_avisos_tela.dart';
 import 'funcionalidades/cuidador/inicio_cuidador_tela.dart';
 import 'funcionalidades/cuidador/medicacao_tela.dart';
 import 'funcionalidades/paciente/abas_paciente.dart';
+import 'funcionalidades/paciente/casa/atividade_tela.dart';
 import 'funcionalidades/paciente/casa/em_casa_tela.dart';
 import 'funcionalidades/paciente/cuidadores/cuidadores_tela.dart';
 import 'funcionalidades/paciente/diario/ajuda_imediata_tela.dart';
@@ -180,6 +181,13 @@ GoRouter criarRoteador({
           ),
         ),
       ),
+      // F1: a TM17 empilha sobre as abas e desempilha ao voltar (a TM16
+      // espera a volta para reler o dia); por link direto, a seta leva à TM16.
+      GoRoute(
+        path: Rotas.pacienteAtividade,
+        pageBuilder: (context, state) =>
+            _pagina(state, AtividadeTela(atividadeId: _id(state))),
+      ),
       GoRoute(
         path: Rotas.pacienteRegistros,
         pageBuilder: (context, state) => _pagina(state, const RegistrosTela()),
@@ -228,8 +236,8 @@ GoRouter criarRoteador({
 Page<void> _pagina(GoRouterState state, Widget tela) =>
     MaterialPage<void>(key: state.pageKey, name: state.uri.path, child: tela);
 
-/// O id do registro na consulta (`?id=`) da TM14/TM15; vazio se faltar (a
-/// tela mostra "não encontramos este registro").
+/// O id na consulta (`?id=`) da TM14/TM15/TM17; vazio se faltar (a tela
+/// mostra "não encontramos").
 String _id(GoRouterState state) => state.uri.queryParameters['id'] ?? '';
 
 /// O `ResultadoEnvio` passado pelo diário em `extra`; nulo em link direto.

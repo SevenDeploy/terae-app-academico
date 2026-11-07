@@ -277,8 +277,9 @@ void main() {
       'cuidador/inicio_cuidador_tela.dart',
       'cuidador/medicacao_tela.dart',
       'cuidador/agenda_avisos_tela.dart',
-      // Evolução de TO (D22).
+      // Evolução de TO (D22, F1).
       'paciente/casa/em_casa_tela.dart',
+      'paciente/casa/atividade_tela.dart',
     ];
     final existentes = _em('funcionalidades/').map((f) => f.caminho).toSet();
     for (final tela in telas) {
@@ -287,9 +288,10 @@ void main() {
     expect(existentes, contains('funcionalidades/paciente/abas_paciente.dart'));
   });
 
-  test('12 modelos e 12 enums em dados/ (os 11 do §22 + linha de cuidado, '
-      'D21)', () {
-    expect(_em('dados/modelos/'), hasLength(12));
-    expect(_em('dados/enums/'), hasLength(12));
+  test('14 modelos e 15 enums em dados/ (os do §22 + evolução de TO: linha '
+      'de cuidado na F0; atividade, registro, ocupação, adesão em casa e quem '
+      'registrou na F1)', () {
+    expect(_em('dados/modelos/'), hasLength(14));
+    expect(_em('dados/enums/'), hasLength(15));
   });
 }

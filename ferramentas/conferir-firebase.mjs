@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Confere o Firebase ACADÊMICO terae-app-academico (Atividade 4): mostra os
-// registros mais recentes de um paciente, os alertas e as contas criadas no
-// app. Só leitura. Usa as mesmas variáveis da semente (.env, fora do git).
+// registros mais recentes de um paciente (diário e atividades de casa), os
+// alertas e as contas criadas no app. Só leitura. Usa as mesmas variáveis da semente (.env, fora do git).
 //
 // Uso: node ferramentas/conferir-firebase.mjs [pacienteId]
 
@@ -34,6 +34,14 @@ for (const d of registros.docs) {
   const r = d.data();
   console.log(`  ${r.registradoEm}  ${r.intensidade.padEnd(9)} ${r.sintomaPredominante.padEnd(12)} ${r.situacaoEnvio}` +
     `${r.atualizadoEm ? '  corrigido ' + r.atualizadoEm : ''}${r.excluidoEm ? '  EXCLUÍDO ' + r.excluidoEm : ''}`);
+}
+// Evolução de TO (F1): os registros mais recentes das atividades de casa.
+const daCasa = await paciente.collection('registrosCasa').orderBy('registradoEm', 'desc').limit(4).get();
+console.log(`Atividades de casa: ${(await paciente.collection('atividadesCasa').get()).size}; registros mais recentes:`);
+for (const d of daCasa.docs) {
+  const r = d.data();
+  console.log(`  ${r.dia}  ${r.adesao.padEnd(9)} ${r.quem.padEnd(12)} ${r.situacaoEnvio}` +
+    `${r.atualizadoEm ? '  corrigido ' + r.atualizadoEm : ''}${r.excluidoEm ? '  DESFEITO ' + r.excluidoEm : ''}`);
 }
 const alertas = await paciente.collection('alertas').get();
 console.log(`Alertas: ${alertas.size}; avisos do cuidador: ${(await paciente.collection('avisosCuidador').get()).size}`);

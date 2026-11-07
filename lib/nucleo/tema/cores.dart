@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 
 import '../../dados/enums/adesao.dart';
+import '../../dados/enums/adesao_em_casa.dart';
 import '../../dados/enums/intensidade.dart';
 
 /// Paleta do Terae, copiada dos tokens de `terae/packages/ui/src/tokens.css`
@@ -87,6 +88,14 @@ abstract final class CoresTerae {
     Adesao.total => const ParDeCores(clinico700, clinico50),
     Adesao.parcial => const ParDeCores(aviso700, aviso50),
     Adesao.nenhuma => const ParDeCores(negativo700, negativo50),
+  };
+
+  /// Cores da resposta "Conseguiu fazer hoje?" (TM16, TM17). "Não deu" é
+  /// neutro, nunca vermelho: é um dia comum, não uma falta (D26).
+  static ParDeCores daAdesaoEmCasa(AdesaoEmCasa adesao) => switch (adesao) {
+    AdesaoEmCasa.feito => const ParDeCores(clinico700, clinico50),
+    AdesaoEmCasa.emParte => const ParDeCores(aviso700, aviso50),
+    AdesaoEmCasa.naoFeito => const ParDeCores(neutro600, neutro100),
   };
 }
 

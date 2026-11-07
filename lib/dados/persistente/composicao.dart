@@ -11,10 +11,12 @@ import '../../nucleo/tempo/relogio.dart';
 import '../local/banco_local.dart';
 import '../local/cache_dao.dart';
 import '../local/preferencias_locais.dart';
+import '../local/registro_de_atividade_dao.dart';
 import '../local/registro_diario_dao.dart';
 import '../remoto/fonte_firestore.dart';
 import '../repositorios/demonstracao_repositorio.dart';
 import '../repositorios/repositorios.dart';
+import '../sincronizacao/fila_registros_casa.dart';
 import '../sincronizacao/monitor_conexao.dart';
 import '../sincronizacao/sincronizador.dart';
 import 'autenticacao_firebase.dart';
@@ -22,6 +24,7 @@ import 'cuidadores_firebase.dart';
 import 'diario_persistente.dart';
 import 'leitura_com_copia.dart';
 import 'paciente_persistente.dart';
+import 'programa_em_casa_persistente.dart';
 import 'visao_cuidador_persistente.dart';
 
 /// Tudo o que o app usa com a persistência real.
@@ -42,7 +45,8 @@ class Persistencia {
 }
 
 /// Abre o banco, lê as preferências, liga o monitor de conexão e monta os
-/// seis contratos. [fabricaDoBanco], [caminhoDoBanco], [preferencias] e
+/// contratos (os seis da Atividade 4 e o programa em casa da evolução de TO,
+/// cuja fila entra no sincronizador). [fabricaDoBanco], [caminhoDoBanco], [preferencias] e
 /// [monitor] existem para o teste.
 Future<Persistencia> montarPersistencia({
   required FirebaseAuth auth,
@@ -64,12 +68,19 @@ Future<Persistencia> montarPersistencia({
   final dao = RegistroDiarioDao(banco);
   final cache = CacheDao(banco, agora: relogio.agora);
   final leitura = LeituraComCopia(cache: cache, monitor: conexao);
+  final daoCasa = RegistroDeAtividadeDao(banco);
+  final filaCasa = FilaRegistrosCasa(
+    dao: daoCasa,
+    fonte: fonte,
+    monitor: conexao,
+  );
   final sincronizador = Sincronizador(
     dao: dao,
     fonte: fonte,
     monitor: conexao,
     relogio: relogio,
     preferencias: prefs,
+    filas: [filaCasa],
   );
   final repositorios = Repositorios(
     autenticacao: AutenticacaoFirebase(
@@ -108,6 +119,14 @@ Future<Persistencia> montarPersistencia({
       monitor: conexao,
       sincronizador: sincronizador,
       banco: banco,
+    ),
+    programaEmCasa: ProgramaEmCasaPersistente(
+      fonte: fonte,
+      leitura: leitura,
+      dao: daoCasa,
+      fila: filaCasa,
+      sincronizador: sincronizador,
+      relogio: relogio,
     ),
     conexao: sincronizador.situacao,
   );

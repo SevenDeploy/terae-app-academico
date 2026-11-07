@@ -15,6 +15,7 @@ import '../../../nucleo/widgets/aviso_de_conexao.dart';
 import '../../../nucleo/widgets/botao_grande.dart';
 import '../../../nucleo/widgets/cartao.dart';
 import '../componentes_paciente.dart';
+import '../diario/campos_do_diario.dart';
 import 'componentes_registros.dart';
 import 'registro_controlador.dart';
 
@@ -189,6 +190,7 @@ class _Detalhes extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textos = Theme.of(context).textTheme;
+    final palavras = palavrasDoDiario(context);
     final atualizado = registro.atualizadoEm;
     final enviado = registro.situacaoEnvio == SituacaoEnvio.enviado;
     return Column(
@@ -223,9 +225,15 @@ class _Detalhes extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _Linha('Remédios', registro.adesao.rotulo),
+              _Linha(
+                palavras.resumoAdesao,
+                palavras.rotuloDaAdesao(registro.adesao),
+              ),
               _Linha('Intensidade', registro.intensidade.rotulo),
-              _Linha('O que mais incomodou', registro.sintomaPredominante),
+              _Linha(
+                palavras.resumoSintomaNoRegistro,
+                registro.sintomaPredominante,
+              ),
               _Linha(
                 'Observação',
                 registro.observacao ?? 'Sem observação',

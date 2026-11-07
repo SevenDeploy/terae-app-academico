@@ -144,6 +144,29 @@ service cloud.firestore {
         allow delete: if false;
       }
 
+      // Evolução de TO (F1, D26): como foi cada atividade de casa no dia. O
+      // titular (ou o responsável legal, dono da conta) cria e corrige; a
+      // atividade precisa ser deste paciente; nada é apagado (desfazer é
+      // lógico, excluidoEm). Corrigir não muda a atividade nem o dia.
+      match /registrosCasa/{rid} {
+        function registroCasaValido() {
+          let d = request.resource.data;
+          return d.id == rid
+            && d.pacienteId == pid
+            && d.situacaoEnvio == 'enviado'
+            && d.adesao in ['feito', 'emParte', 'naoFeito']
+            && d.quem in ['paciente', 'responsavel']
+            && (d.reflexao == null || (d.reflexao is string && d.reflexao.size() <= 500))
+            && exists(/databases/$(db)/documents/pacientes/$(pid)/atividadesCasa/$(d.atividadeId));
+        }
+        allow read: if ehTitular(pid);
+        allow create: if ehTitular(pid) && registroCasaValido();
+        allow update: if ehTitular(pid) && registroCasaValido()
+          && request.resource.data.atividadeId == resource.data.atividadeId
+          && request.resource.data.dia == resource.data.dia;
+        allow delete: if false;
+      }
+
       // Convites completos (com o CPF) que o titular gerou na TM07.
       match /convites/{cid} {
         allow read: if ehTitular(pid);
@@ -154,7 +177,8 @@ service cloud.firestore {
       // Cópias completas: só o titular lê; quem grava é a clínica (semente).
       match /{colecao}/{id} {
         allow read: if ehTitular(pid)
-          && colecao in ['agendamentos', 'receitas', 'itensMedicacao', 'marcos'];
+          && colecao in ['agendamentos', 'receitas', 'itensMedicacao', 'marcos',
+            'atividadesCasa'];
       }
 
       // Cópias reduzidas do cuidador (sem motivo do retorno, orientação nem

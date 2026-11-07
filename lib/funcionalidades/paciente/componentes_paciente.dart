@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../nucleo/tema/cores.dart';
 import '../../nucleo/tema/tema.dart';
@@ -11,23 +12,86 @@ import '../../nucleo/tema/tema.dart';
 /// `SingleChildScrollView` + `Column` (e não `ListView`) de propósito: as
 /// telas são curtas e tudo fica montado, o que deixa o teste de estouro com
 /// fonte grande enxergar a tela inteira.
+///
+/// Com [aoAtualizar], ganha o "puxar para atualizar" (F1, TM16): a rolagem
+/// passa a aceitar o gesto mesmo quando o conteúdo cabe na tela.
 class CorpoDaTela extends StatelessWidget {
-  const CorpoDaTela({super.key, required this.children});
+  const CorpoDaTela({super.key, required this.children, this.aoAtualizar});
 
   final List<Widget> children;
+  final Future<void> Function()? aoAtualizar;
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: SingleChildScrollView(
-        padding: MedidasTerae.paddingTela,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: children,
-        ),
+    final aoAtualizar = this.aoAtualizar;
+    final rolagem = SingleChildScrollView(
+      physics: aoAtualizar == null
+          ? null
+          : const AlwaysScrollableScrollPhysics(),
+      padding: MedidasTerae.paddingTela,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: children,
       ),
     );
+    return SafeArea(
+      child: aoAtualizar == null
+          ? rolagem
+          : RefreshIndicator(onRefresh: aoAtualizar, child: rolagem),
+    );
   }
+}
+
+/// Chama [aoVoltar] quando a rota [rota] volta a ser a atual (F1): a aba
+/// Início continua montada no `StatefulShellRoute` e precisa refazer o
+/// resumo das atividades de casa depois que a pessoa registra na TM17.
+class RecarregaAoVoltar extends StatefulWidget {
+  const RecarregaAoVoltar({
+    super.key,
+    required this.rota,
+    required this.aoVoltar,
+    required this.child,
+  });
+
+  final String rota;
+  final VoidCallback aoVoltar;
+  final Widget child;
+
+  @override
+  State<RecarregaAoVoltar> createState() => _RecarregaAoVoltarState();
+}
+
+class _RecarregaAoVoltarState extends State<RecarregaAoVoltar> {
+  GoRouterDelegate? _delegado;
+  bool _naRota = true;
+
+  String? get _local => _delegado?.currentConfiguration.uri.path;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final delegado = GoRouter.maybeOf(context)?.routerDelegate;
+    if (identical(delegado, _delegado)) return;
+    _delegado?.removeListener(_aoMudarRota);
+    _delegado = delegado;
+    _naRota = _local == widget.rota;
+    delegado?.addListener(_aoMudarRota);
+  }
+
+  void _aoMudarRota() {
+    final agora = _local == widget.rota;
+    if (agora && !_naRota) widget.aoVoltar();
+    _naRota = agora;
+  }
+
+  @override
+  void dispose() {
+    _delegado?.removeListener(_aoMudarRota);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
 }
 
 /// Título da tela (cabeçalho para leitor de tela) e a frase de apoio.
