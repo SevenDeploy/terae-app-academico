@@ -4,8 +4,10 @@
 /// medidas reais de altura de linha e de largura do texto, as do aparelho.
 library;
 
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:terae_app/nucleo/rotas/rotas.dart';
 
 import 'telas_reais.dart';
 
@@ -22,6 +24,43 @@ void main() {
           expect(find.byKey(Key(tela.tela)), findsOneWidget);
           expect(tester.takeException(), isNull);
         });
+      }
+    });
+  }
+
+  // D22: com 5 abas, "Cuidadores" quebrava em duas linhas a 360 dp mesmo
+  // com a fonte normal, e o teste de estouro não pega quebra de linha. Ana
+  // tem a barra mais cheia (as duas linhas de cuidado: quatro abas).
+  for (final escala in [1.0, 2.0]) {
+    testWidgets('rótulo de aba em uma linha só a 360 dp com a Lexend em '
+        '${(escala * 100).round()}%', (tester) async {
+      aparelho(tester, escala: escala);
+      await abrirComMemoria(
+        tester,
+        persona: Persona.ana,
+        em: Rotas.pacienteInicio,
+      );
+      // Os ícones também são RichText; ficam só os rótulos.
+      const nomes = {'Início', 'Diário', 'Em casa', 'Jornada'};
+      final rotulos = find.descendant(
+        of: find.byType(NavigationBar),
+        matching: find.byWidgetPredicate(
+          (w) => w is RichText && nomes.contains(w.text.toPlainText()),
+        ),
+      );
+      expect(rotulos, findsNWidgets(nomes.length));
+      for (final paragrafo in tester.renderObjectList<RenderParagraph>(
+        rotulos,
+      )) {
+        // O tamanho já na escala do rótulo (a barra limita a escala do texto).
+        final tamanho = paragrafo.textScaler.scale(
+          paragrafo.text.style!.fontSize!,
+        );
+        expect(
+          paragrafo.size.height,
+          lessThan(tamanho * 2),
+          reason: '"${paragrafo.text.toPlainText()}" quebrou de linha',
+        );
       }
     });
   }

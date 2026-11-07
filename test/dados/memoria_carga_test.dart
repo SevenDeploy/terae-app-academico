@@ -1,5 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:terae_app/dados/enums/intensidade.dart';
+import 'package:terae_app/dados/enums/linha_de_cuidado.dart';
+import 'package:terae_app/dados/enums/qualidade_consentimento.dart';
 import 'package:terae_app/dados/enums/situacao_vinculo.dart';
 import 'package:terae_app/dados/enums/tipo_convite.dart';
 import 'package:terae_app/dados/memoria/estado_memoria.dart';
@@ -119,6 +121,54 @@ void main() {
       expect(idade(idMiguel), 7);
       expect(idade(idLaura), 4);
       expect(idade(idJoao), greaterThanOrEqualTo(18));
+      expect(idade(idAntonio), 71);
+    });
+
+    test('linhas de cuidado das personas (D21, D23)', () {
+      Set<LinhaDeCuidado> linhas(String id) => e.pacientes[id]!.linhasDeCuidado;
+      expect(linhas(idAna), {
+        LinhaDeCuidado.acompanhamentoClinico,
+        LinhaDeCuidado.terapiaOcupacional,
+      });
+      expect(linhas(idMiguel), {LinhaDeCuidado.terapiaOcupacional});
+      expect(linhas(idLaura), {LinhaDeCuidado.terapiaOcupacional});
+      expect(linhas(idJoao), {LinhaDeCuidado.acompanhamentoClinico});
+      expect(linhas(idAntonio), {LinhaDeCuidado.terapiaOcupacional});
+    });
+
+    test('Antônio: titular, com o Tiago, sem receita, com sessões e '
+        'marcos', () {
+      final antonio = e.pacientes[idAntonio]!;
+      expect(antonio.contaId, contaAntonio);
+      expect(antonio.profissionalRefId, idTiago);
+      expect(e.profissionais[idTiago]!.especialidade, 'Terapia ocupacional');
+      expect(
+        e.receitas.values.where((r) => r.pacienteId == idAntonio),
+        isEmpty,
+      );
+      expect(
+        e.agendamentos.values.where((a) => a.pacienteId == idAntonio),
+        hasLength(3),
+      );
+      expect(
+        e.marcos.values.where((m) => m.pacienteId == idAntonio),
+        hasLength(2),
+      );
+      final v = e.vinculosDaConta(e.contas[contaAntonio]!);
+      expect(v.pacientes.single.id, idAntonio);
+      expect(v.qualidades, {idAntonio: QualidadeConsentimento.titular});
+    });
+
+    test('a qualidade do termo vem do consentimento vigente (D24)', () {
+      final patricia = e.vinculosDaConta(e.contas[contaPatricia]!);
+      expect(patricia.qualidades, {
+        idMiguel: QualidadeConsentimento.responsavelLegal,
+        idLaura: QualidadeConsentimento.responsavelLegal,
+      });
+      final ana = e.vinculosDaConta(e.contas[contaAna]!);
+      expect(ana.qualidades, {idAna: QualidadeConsentimento.titular});
+      final regina = e.vinculosDaConta(e.contas[contaRegina]!);
+      expect(regina.qualidades, isEmpty);
     });
 
     test('Ana: 2/2 cuidadores, Regina ativa e Paulo pendente', () {
@@ -270,7 +320,7 @@ void main() {
         latencia: Duration.zero,
       ),
     );
-    expect(m!.estado.pacientes, hasLength(4));
+    expect(m!.estado.pacientes, hasLength(5));
     expect(m.latencia, Duration.zero);
     expect(
       MemoriaDemonstracao.latenciaDoApp,

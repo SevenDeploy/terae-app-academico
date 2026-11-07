@@ -99,3 +99,38 @@ sincronização), entregue às telas como `ConexaoDoApp` e mostrado pelo `AvisoD
 **Camadas** — telas só falam com contratos: `funcionalidades/` não importa `dados/local|remoto|persistente|
 sincronizacao` nem sqflite/Firebase (exceção: `situacao_sincronizacao.dart`); só `main.dart` monta a persistência
 (`dados/persistente/composicao.dart`). Conferido por `test/arquitetura_test.dart`.
+
+## Evolução de TO — F0, fundação (06/11/2026)
+
+Plano: `C:\Users\willi\.claude\plans\c-users-willi-projetos-terae-terae-app-jiggly-floyd.md`. Decisões D21–D24 em
+`docs/estado.md`.
+
+**`Paciente.linhasDeCuidado`** — `Set<LinhaDeCuidado>` (`acompanhamentoClinico`, `terapiaOcupacional`), nunca vazio,
+no mapa como lista de `name` na ordem do enum (`lerEnums` em `conversao_mapa.dart`). Sem o campo (dados e cópias
+anteriores), vale `Paciente.linhasPadrao` = só o clínico. Vai também na cópia do cuidador (`paraCuidador`). Atalhos
+`temAcompanhamentoClinico` e `temTerapiaOcupacional`.
+
+**`VinculosDaConta.qualidades`** — `Map<pacienteId, QualidadeConsentimento>` do termo vigente da conta (memória:
+`consentimentos`; Firebase: `consentimentos where contaId == uid`, sem os revogados; a cópia local guarda o mapa).
+Paciente sem entrada fala como titular.
+
+**`Perfil.voz`** — `Voz.primeiraPessoa` (titular) ou `Voz.terceiraPessoa` (responsável legal e todo cuidador),
+calculada em `Sessao.perfisDe`; `Perfil.falaDeOutraPessoa`. Não entra na igualdade do perfil.
+
+**Rotas** — `pacienteCasa` TM16 `/paciente/casa`, em `doPaciente` e em `daTerapiaOcupacional`: a guarda leva ao
+Início quem não tem terapia ocupacional. A TM07 `pacienteCuidadores` deixou a barra: é rota empilhada, aberta pelo
+menu do Início (`Key('menu-cuidadores')`, `context.push`), com `BackButton`, e voltar leva ao Início.
+
+**Abas** — `AbaDoPaciente` (`inicio`, `diario`, `casa`, `jornada`): o índice do enum é o índice do ramo do
+`StatefulShellRoute`. `abasVisiveis(temTerapiaOcupacional:)` tira "Em casa" de quem não tem TO. A barra tem no máximo
+4 abas, e o rótulo fica numa linha só a 360 dp com a Lexend em 100%, conferido em
+`test/acessibilidade/telas_fonte_real_test.dart`.
+
+**`FilaDeEntidade`** (`dados/sincronizacao/fila_de_entidade.dart`) — `contarPendentes()`, `enviarPendentes()` (lança
+`RecusaDeRegra(semConexao)` para parar) e `buscar(pacienteId)`. O `Sincronizador(filas: [...])` envia o diário primeiro
+e depois cada fila em ordem. `situacao.pendentes` soma todas. No primeiro "sem conexão" o envio para (o resto fica na
+fila), mas a busca do servidor ainda roda, como no diário da A4: se a leitura responder, o app volta a "online".
+
+**`BancoLocal`** — esquema por migrações numeradas (`BancoLocal.migracoes`; `versao` = quantas são): o banco novo roda
+todas, e o antigo só as que faltam (`onUpgrade`). Tabela nova = migração nova no fim da lista e o nome dela em
+`BancoLocal.tabelas` (o "Sair" apaga, D20). Na F0 só existe a versão 1; a primeira migração real (v2) vem com a F1.

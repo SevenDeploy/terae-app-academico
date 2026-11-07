@@ -7,6 +7,7 @@ import 'package:firebase_auth_mocks/firebase_auth_mocks.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:terae_app/dados/enums/canal_autorizado.dart';
 import 'package:terae_app/dados/enums/qualidade_consentimento.dart';
+import 'package:terae_app/dados/modelos/paciente.dart';
 import 'package:terae_app/dados/remoto/fonte_firestore.dart';
 import 'package:terae_app/dados/repositorios/autenticacao_repositorio.dart';
 import 'package:terae_app/dados/repositorios/falhas.dart';
@@ -166,6 +167,46 @@ void main() {
         auth.entrar(email: 'ana.lucia.martins@exemplo.test', senha: 'x'),
         _recusa(MotivoRecusa.semConexao),
       );
+    });
+
+    test('sem linha gravada é acompanhamento clínico; sem termo, fala como '
+        'titular (D21, D24)', () async {
+      final v = await auth.entrar(
+        email: 'ana.lucia.martins@exemplo.test',
+        senha: 'senha-de-teste',
+      );
+      expect(v.pacientes.single.linhasDeCuidado, Paciente.linhasPadrao);
+      expect(v.qualidades, isEmpty);
+    });
+
+    test('traz as linhas do paciente e a qualidade do termo vigente, e a '
+        'cópia local guarda as duas (D21, D24)', () async {
+      await m.firestore.collection('pacientes').doc(_pidAna).update({
+        'linhasDeCuidado': ['acompanhamentoClinico', 'terapiaOcupacional'],
+      });
+      for (final (id, revogado) in [('cs-antigo', true), ('cs-novo', false)]) {
+        await m.firestore.collection('consentimentos').doc(id).set({
+          'id': id,
+          'pacienteId': _pidAna,
+          'contaId': _uidAna,
+          'qualidade': revogado ? 'responsavelLegal' : 'titular',
+          'versaoTermo': '1.0',
+          'canalAutorizado': 'aplicativo',
+          'aceitoEm': '2026-08-15T23:18:00.000Z',
+          'revogadoEm': revogado ? '2026-08-20T12:00:00.000Z' : null,
+        });
+      }
+      final v = await auth.entrar(
+        email: 'ana.lucia.martins@exemplo.test',
+        senha: 'senha-de-teste',
+      );
+      expect(v.pacientes.single.temTerapiaOcupacional, isTrue);
+      expect(v.qualidades, {_pidAna: QualidadeConsentimento.titular});
+
+      await m.conexao.desligar();
+      final guardada = (await auth.sessaoGuardada())!;
+      expect(guardada.pacientes.single.temTerapiaOcupacional, isTrue);
+      expect(guardada.qualidades, {_pidAna: QualidadeConsentimento.titular});
     });
 
     test('a sessão guardada reabre sem conexão pela cópia local', () async {

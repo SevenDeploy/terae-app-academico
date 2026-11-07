@@ -9,6 +9,7 @@ import 'funcionalidades/cuidador/agenda_avisos_tela.dart';
 import 'funcionalidades/cuidador/inicio_cuidador_tela.dart';
 import 'funcionalidades/cuidador/medicacao_tela.dart';
 import 'funcionalidades/paciente/abas_paciente.dart';
+import 'funcionalidades/paciente/casa/em_casa_tela.dart';
 import 'funcionalidades/paciente/cuidadores/cuidadores_tela.dart';
 import 'funcionalidades/paciente/diario/ajuda_imediata_tela.dart';
 import 'funcionalidades/paciente/diario/diario_enviado_tela.dart';
@@ -37,6 +38,8 @@ String inicioDoPapel(Papel papel) => switch (papel) {
 /// - com perfil ativo, rota pública (e a seleção) leva ao início do perfil, e
 ///   cada papel só alcança as próprias rotas — nem por link direto o cuidador
 ///   chega ao diário;
+/// - D22: rota de linha de cuidado que o paciente não tem (a aba "Em casa"
+///   sem terapia ocupacional) leva ao início, como as de outro papel;
 /// - caminho desconhecido segue a mesma regra (cai no início ou na TM00).
 String? guardaDePerfil(Sessao sessao, String caminho) {
   if (!sessao.autenticada) {
@@ -50,11 +53,18 @@ String? guardaDePerfil(Sessao sessao, String caminho) {
     Papel.pacienteFamilia => Rotas.doPaciente,
     Papel.cuidador => Rotas.doCuidador,
   };
-  return permitidas.contains(caminho) ? null : inicioDoPapel(ativo.papel);
+  final foraDaLinha =
+      Rotas.daTerapiaOcupacional.contains(caminho) &&
+      !ativo.paciente.temTerapiaOcupacional;
+  return permitidas.contains(caminho) && !foraDaLinha
+      ? null
+      : inicioDoPapel(ativo.papel);
 }
 
 /// GoRouter do app: guarda única, abas do paciente num
-/// `StatefulShellRoute.indexedStack`, TM04/TM05 no navegador raiz (tela cheia,
+/// `StatefulShellRoute.indexedStack` (ramos fixos na ordem de
+/// [AbaDoPaciente]; a barra mostra só os da linha de cuidado, D22),
+/// TM04/TM05 no navegador raiz (tela cheia,
 /// acima das abas), TM11/TM12 sobre a TM08 e, na Atividade 4, TM13 → TM14 →
 /// TM15 empilhadas sobre as abas. Reavalia a guarda a cada mudança da
 /// [sessao].
@@ -141,22 +151,34 @@ GoRouter criarRoteador({
           StatefulShellBranch(
             routes: [
               GoRoute(
-                path: Rotas.pacienteJornada,
+                path: Rotas.pacienteCasa,
                 pageBuilder: (context, state) =>
-                    _pagina(state, const JornadaTela()),
+                    _pagina(state, const EmCasaTela()),
               ),
             ],
           ),
           StatefulShellBranch(
             routes: [
               GoRoute(
-                path: Rotas.pacienteCuidadores,
+                path: Rotas.pacienteJornada,
                 pageBuilder: (context, state) =>
-                    _pagina(state, const CuidadoresTela()),
+                    _pagina(state, const JornadaTela()),
               ),
             ],
           ),
         ],
+      ),
+      // D22: a TM07 saiu da barra de abas e abre pelo menu do Início,
+      // empilhada; voltar leva ao Início, mesmo por link direto.
+      GoRoute(
+        path: Rotas.pacienteCuidadores,
+        pageBuilder: (context, state) => _pagina(
+          state,
+          const _VoltaPara(
+            destino: Rotas.pacienteInicio,
+            child: CuidadoresTela(),
+          ),
+        ),
       ),
       GoRoute(
         path: Rotas.pacienteRegistros,
@@ -218,7 +240,7 @@ ResultadoEnvio? _envio(GoRouterState state) {
 
 /// Voltar (Android, seta da AppBar) vai a [destino] em vez de desempilhar:
 /// TM04/TM05 → Início, nunca de volta ao formulário (evita reenvio); TM11/TM12
-/// → TM08, mesmo se abertas por link direto (§21).
+/// → TM08, e TM07 → TM02 (D22), mesmo se abertas por link direto (§21).
 class _VoltaPara extends StatelessWidget {
   const _VoltaPara({required this.destino, required this.child});
 

@@ -178,10 +178,19 @@ class AutenticacaoFirebase implements RepositorioAutenticacao {
       ))
         Paciente.fromMap(publico),
     ].where((p) => p.ativo).map((p) => p.paraCuidador()).toList();
+    // D24 — a qualidade do termo vigente de cada paciente desta conta.
+    final qualidades = <String, QualidadeConsentimento>{
+      for (final mapa in await _fonte.listar(
+        _fonte.consentimentos.where('contaId', isEqualTo: conta.id),
+      ))
+        if (Consentimento.fromMap(mapa) case final c when c.revogadoEm == null)
+          c.pacienteId: c.qualidade,
+    };
     return VinculosDaConta(
       conta: conta,
       pacientes: List.unmodifiable(titulares),
       acompanhados: List.unmodifiable(acompanhados),
+      qualidades: Map.unmodifiable(qualidades),
     );
   }
 
@@ -449,17 +458,27 @@ Mapa vinculosParaMapa(VinculosDaConta v) => {
   'conta': v.conta.toMap(),
   'pacientes': [for (final p in v.pacientes) p.toMap()],
   'acompanhados': [for (final p in v.acompanhados) p.toMap()],
+  'qualidades': {
+    for (final MapEntry(key: pid, value: q) in v.qualidades.entries)
+      pid: q.name,
+  },
 };
 
-/// Mapa da cópia local → [VinculosDaConta].
+/// Mapa da cópia local → [VinculosDaConta]. Cópia anterior à D24 (sem
+/// `qualidades`) volta sem nenhuma, e todo perfil fala como titular.
 VinculosDaConta vinculosDoMapa(Mapa m) {
   List<Paciente> lista(String chave) => [
     for (final item in (m[chave] as List<Object?>? ?? const []))
       Paciente.fromMap(item! as Mapa),
   ];
+  final qualidades = (m['qualidades'] as Map<String, Object?>?) ?? const {};
   return VinculosDaConta(
     conta: ContaUsuario.fromMap(m['conta']! as Mapa),
     pacientes: lista('pacientes'),
     acompanhados: lista('acompanhados'),
+    qualidades: Map.unmodifiable({
+      for (final pid in qualidades.keys)
+        pid: lerEnum(qualidades, pid, QualidadeConsentimento.values),
+    }),
   );
 }

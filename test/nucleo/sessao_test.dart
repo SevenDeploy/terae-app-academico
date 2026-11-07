@@ -90,6 +90,43 @@ void main() {
     expect(sessao.autenticada, isTrue);
   });
 
+  group('voz do perfil (D24)', () {
+    test('titular fala de si; sem qualidade, também', () {
+      sessao.entrar(vinculosAna());
+      expect(sessao.perfilAtivo?.voz, Voz.primeiraPessoa);
+      expect(sessao.perfilAtivo?.falaDeOutraPessoa, isFalse);
+
+      sessao.entrar(
+        VinculosDaConta(
+          conta: contaDe('c-x', 'X'),
+          pacientes: [pacienteDe('p-x', 'X', contaId: 'c-x')],
+        ),
+      );
+      expect(sessao.perfilAtivo?.voz, Voz.primeiraPessoa);
+    });
+
+    test('responsável legal e cuidador falam do paciente', () {
+      sessao.entrar(vinculosMistos());
+      final porPapel = {for (final p in sessao.perfis) p.papel: p.voz};
+      expect(porPapel, {
+        Papel.pacienteFamilia: Voz.terceiraPessoa,
+        Papel.cuidador: Voz.terceiraPessoa,
+      });
+    });
+
+    test('a voz não entra na identidade do perfil', () {
+      final paciente = pacienteDe('p', 'P');
+      expect(
+        Perfil(papel: Papel.pacienteFamilia, paciente: paciente),
+        Perfil(
+          papel: Papel.pacienteFamilia,
+          paciente: paciente,
+          voz: Voz.terceiraPessoa,
+        ),
+      );
+    });
+  });
+
   test('sair limpa tudo e avisa', () {
     sessao.entrar(vinculosAna());
     sessao.sair();

@@ -17,8 +17,10 @@ import '../componentes_paciente.dart';
 import 'inicio_controlador.dart';
 
 /// TM02 — Início. RFM02. Aba 1: saudação, atalho grande ao diário (um toque
-/// do Início, §12), próxima consulta e orientação/receita vigente só leitura;
-/// menu com "Sair" e, com vários perfis, "Trocar perfil" (§21).
+/// do Início, §12), próxima consulta e orientação/receita vigente só leitura
+/// (esta só no acompanhamento clínico, D21); menu com "Sair" e, com vários
+/// perfis, "Trocar perfil" (§21). A saudação fala do paciente quando quem usa
+/// é o responsável (D24).
 ///
 /// A `Key('TM02')` no Scaffold raiz faz parte do contrato (testes de
 /// navegação). Sair e trocar perfil só chamam a [Sessao]: o roteador leva ao
@@ -81,7 +83,10 @@ class _ConteudoInicio extends StatelessWidget {
         ),
         CabecalhoDaTela(
           titulo: 'Olá, $primeiroNome',
-          subtitulo: 'Que bom te ver por aqui. Vamos cuidar de você hoje?',
+          subtitulo: perfil.falaDeOutraPessoa
+              ? 'Que bom te ver por aqui. Vamos cuidar de '
+                    '${paciente.primeiroNome} hoje?'
+              : 'Que bom te ver por aqui. Vamos cuidar de você hoje?',
         ),
         if (mostrarPerfil) ...[
           const SizedBox(height: MedidasTerae.espacoPequeno),
@@ -106,26 +111,31 @@ class _ConteudoInicio extends StatelessWidget {
             aoTentarDeNovo: controlador.carregar,
           )
         else ...[
-          if (controlador.receita case final receita?)
-            _LembreteDeRenovacao(
-              receita: receita,
-              hoje: DataCivil.hoje(relogio),
-            ),
+          // D21 — receita e remédios só no acompanhamento clínico.
+          if (paciente.temAcompanhamentoClinico)
+            if (controlador.receita case final receita?)
+              _LembreteDeRenovacao(
+                receita: receita,
+                hoje: DataCivil.hoje(relogio),
+              ),
           _ProximaConsulta(controlador: controlador, relogio: relogio),
-          const SizedBox(height: MedidasTerae.espaco),
-          _OrientacaoVigente(
-            receita: controlador.receita,
-            itens: controlador.itens,
-          ),
+          if (paciente.temAcompanhamentoClinico) ...[
+            const SizedBox(height: MedidasTerae.espaco),
+            _OrientacaoVigente(
+              receita: controlador.receita,
+              itens: controlador.itens,
+            ),
+          ],
         ],
       ],
     );
   }
 }
 
-enum _AcaoMenu { trocarPerfil, sair }
+enum _AcaoMenu { cuidadores, trocarPerfil, sair }
 
-/// Menu da TM02: "Trocar perfil" (só com vários perfis) e "Sair".
+/// Menu da TM02: "Cuidadores" (a TM07, desde a D22), "Trocar perfil" (só com
+/// vários perfis) e "Sair".
 class _MenuDoInicio extends StatelessWidget {
   const _MenuDoInicio({required this.variosPerfis});
 
@@ -140,6 +150,8 @@ class _MenuDoInicio extends StatelessWidget {
       onSelected: (acao) {
         final sessao = context.read<Sessao>();
         switch (acao) {
+          case _AcaoMenu.cuidadores:
+            context.push(Rotas.pacienteCuidadores);
           case _AcaoMenu.trocarPerfil:
             sessao.trocarPerfil();
           case _AcaoMenu.sair:
@@ -147,6 +159,14 @@ class _MenuDoInicio extends StatelessWidget {
         }
       },
       itemBuilder: (context) => [
+        const PopupMenuItem(
+          key: Key('menu-cuidadores'),
+          value: _AcaoMenu.cuidadores,
+          child: ListTile(
+            leading: Icon(Icons.group_outlined),
+            title: Text('Cuidadores'),
+          ),
+        ),
         if (variosPerfis)
           const PopupMenuItem(
             key: Key('menu-trocar-perfil'),

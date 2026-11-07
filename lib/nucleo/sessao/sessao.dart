@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 
+import '../../dados/enums/qualidade_consentimento.dart';
 import '../../dados/modelos/conta_usuario.dart';
 import '../../dados/modelos/paciente.dart';
 import '../../dados/repositorios/autenticacao_repositorio.dart';
@@ -16,16 +17,36 @@ enum Papel {
   final String rotulo;
 }
 
+/// D24 — de quem o app fala neste perfil.
+enum Voz {
+  /// O próprio paciente usa o app: "Como foi hoje?", "Fiz".
+  primeiraPessoa,
+
+  /// Outra pessoa usa o app pelo paciente (responsável legal ou cuidador):
+  /// "Como foi com Miguel hoje?", "Fizemos".
+  terceiraPessoa,
+}
+
 /// O perfil: um papel exercido em relação a um paciente. Não é escolhido
 /// livremente nem gravado na conta — decorre dos vínculos (§19, §23).
 @immutable
 class Perfil {
-  const Perfil({required this.papel, required this.paciente});
+  const Perfil({
+    required this.papel,
+    required this.paciente,
+    this.voz = Voz.primeiraPessoa,
+  });
 
   final Papel papel;
 
   /// No papel cuidador, é a cópia sem CPF nem nascimento (RNFM05).
   final Paciente paciente;
+
+  /// D24 — calculada uma vez pela [Sessao.perfisDe]: o cuidador e o
+  /// responsável legal falam do paciente; o titular fala de si.
+  final Voz voz;
+
+  bool get falaDeOutraPessoa => voz == Voz.terceiraPessoa;
 
   String get pacienteId => paciente.id;
 
@@ -84,17 +105,28 @@ class Sessao extends ChangeNotifier {
   bool get temVariosPerfis => _perfis.length > 1;
 
   /// Deriva os perfis dos vínculos: um paciente/família por paciente ativo da
-  /// conta e um cuidador por paciente acompanhado ativo.
+  /// conta e um cuidador por paciente acompanhado ativo. A voz (D24) vem da
+  /// qualidade do termo: responsável legal e cuidador falam do paciente.
   static List<Perfil> perfisDe(VinculosDaConta vinculos) {
     int porNome(Perfil a, Perfil b) =>
         a.paciente.nome.compareTo(b.paciente.nome);
     final familia = [
       for (final p in vinculos.pacientes)
-        if (p.ativo) Perfil(papel: Papel.pacienteFamilia, paciente: p),
+        if (p.ativo)
+          Perfil(
+            papel: Papel.pacienteFamilia,
+            paciente: p,
+            voz:
+                vinculos.qualidades[p.id] ==
+                    QualidadeConsentimento.responsavelLegal
+                ? Voz.terceiraPessoa
+                : Voz.primeiraPessoa,
+          ),
     ]..sort(porNome);
     final cuidador = [
       for (final p in vinculos.acompanhados)
-        if (p.ativo) Perfil(papel: Papel.cuidador, paciente: p),
+        if (p.ativo)
+          Perfil(papel: Papel.cuidador, paciente: p, voz: Voz.terceiraPessoa),
     ]..sort(porNome);
     return List.unmodifiable([...familia, ...cuidador]);
   }

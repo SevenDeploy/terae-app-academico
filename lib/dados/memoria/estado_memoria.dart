@@ -471,6 +471,11 @@ class EstadoMemoria {
             pacientes[v.pacienteId]!.ativo)
           pacientes[v.pacienteId]!.paraCuidador(),
     ]),
+    qualidades: Map.unmodifiable({
+      for (final c in consentimentos.values)
+        if (c.contaId == conta.id && c.revogadoEm == null)
+          c.pacienteId: c.qualidade,
+    }),
   );
 
   /// A conta tem vínculo de cuidador ativo com o paciente, e os dois estão

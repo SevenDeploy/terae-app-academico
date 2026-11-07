@@ -8,6 +8,12 @@
 ///   como o JSON do `toMap` do modelo.
 ///
 /// Sem cifra nesta versão (D15: limitação declarada; os dados são fictícios).
+///
+/// Esquema por migrações numeradas ([migracoes]): o banco novo roda todas, e
+/// o banco de uma versão anterior roda só as que faltam (`onUpgrade`), sem
+/// perder o que já está no aparelho. Tabela nova = migração nova no fim da
+/// lista (a [BancoLocal.versao] sobe sozinha) e o nome dela em
+/// [BancoLocal.tabelas], senão o "Sair" não a apaga (D20).
 library;
 
 import 'package:path/path.dart' as caminhos;
@@ -29,15 +35,19 @@ class BancoLocal {
         caminho ?? caminhos.join(await f.getDatabasesPath(), nomeDoArquivo);
     final db = await f.openDatabase(
       destino,
-      options: OpenDatabaseOptions(version: versao, onCreate: _criar),
+      options: OpenDatabaseOptions(
+        version: versao,
+        onCreate: (db, versao) => _migrar(db, de: 0, ate: versao),
+        onUpgrade: (db, de, ate) => _migrar(db, de: de, ate: ate),
+      ),
     );
     return BancoLocal._(db);
   }
 
   static const String nomeDoArquivo = 'terae.db';
 
-  /// Versão do esquema; mudar uma tabela pede `onUpgrade`.
-  static const int versao = 1;
+  /// Versão do esquema = quantidade de [migracoes].
+  static int get versao => migracoes.length;
 
   final Database db;
 
@@ -48,7 +58,22 @@ class BancoLocal {
     'cache_documentos',
   ];
 
-  static Future<void> _criar(Database db, int versao) async {
+  /// Migrações em ordem: a de índice `i` leva o banco da versão `i` à `i + 1`.
+  /// Nunca se muda uma migração publicada; corrige-se com outra.
+  static const List<Future<void> Function(Database db)> migracoes = [_versao1];
+
+  static Future<void> _migrar(
+    Database db, {
+    required int de,
+    required int ate,
+  }) async {
+    for (var v = de; v < ate; v++) {
+      await migracoes[v](db);
+    }
+  }
+
+  /// Versão 1 (Atividade 4): diário, alertas e cópias de leitura.
+  static Future<void> _versao1(Database db) async {
     final lote = db.batch()
       ..execute('''
         CREATE TABLE registros_diario (

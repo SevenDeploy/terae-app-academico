@@ -1,7 +1,8 @@
 import 'package:flutter/foundation.dart';
 
 /// O que o aviso de conexão mostra (Atividade 4, D16): se há conexão, quantos
-/// registros do diário esperam envio e quando foi a última sincronização.
+/// registros esperam envio (do diário e das outras filas) e quando foi a
+/// última sincronização.
 ///
 /// É o único objeto da sincronização que as telas enxergam
 /// (`test/arquitetura_test.dart`): chega por provider como
@@ -19,7 +20,8 @@ class SituacaoSincronizacao {
   /// servidor deu certo.
   final bool online;
 
-  /// Registros do diário (novos, corrigidos ou excluídos) na fila.
+  /// Registros na fila: do diário (novos, corrigidos ou excluídos) e das
+  /// outras entidades gravadas no aparelho (`FilaDeEntidade`).
   final int pendentes;
 
   /// Envio ou busca em andamento.

@@ -78,6 +78,17 @@ T lerEnum<T extends Enum>(Mapa mapa, String chave, List<T> valores) {
   throw _invalido(chave, nome);
 }
 
+/// Lista de enums pelos `name` gravados (ex.: `Paciente.linhasDeCuidado`),
+/// na ordem do mapa e devolvida imutável.
+List<T> lerEnums<T extends Enum>(Mapa mapa, String chave, List<T> valores) =>
+    List.unmodifiable([
+      for (final nome in lerTextos(mapa, chave))
+        valores.firstWhere(
+          (v) => v.name == nome,
+          orElse: () => throw _invalido(chave, nome),
+        ),
+    ]);
+
 /// Lista de textos (ex.: `ItemMedicacao.horarios`), devolvida imutável.
 List<String> lerTextos(Mapa mapa, String chave) {
   final lista = lerCampo<List<Object?>>(mapa, chave);

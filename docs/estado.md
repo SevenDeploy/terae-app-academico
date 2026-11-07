@@ -1,7 +1,78 @@
-# Estado do terae_app — 06/11/2026 (Atividade 4)
+# Estado do terae_app — 06/11/2026 (Atividade 4 e evolução de TO)
 
 Projeto acadêmico (Dispositivos Móveis, UNEMAT 2026). Não é o app do Terae produção: o produto é um SaaS web, e o
 canal do paciente no produto é um PWA na Play Store.
+
+## Evolução de TO (evolução livre, desde 06/11/2026)
+
+Pedido do dono (06/11/2026): desenvolver mais funções "como se fosse o app do Terae que o espaço de TO usaria com os
+pacientes", sem integrar com o Terae web. Respostas dele: **evolução livre / portfólio** (sem enunciado nem prazo) e
+**somar TO para todas as idades** (o que as A1–A4 documentaram fica). O plano aprovado está em
+`C:\Users\willi\.claude\plans\c-users-willi-projetos-terae-terae-app-jiggly-floyd.md`. Fases:
+- F0 — fundação;
+- F1 — Em casa;
+- F2 — sessões, presença e lembretes;
+- F3 — metas;
+- F4 — rotina visual;
+- F5 e F6 — opcionais.
+
+### Decisões (do líder, por delegação do dono)
+
+| # | Decisão |
+|---|---|
+| D21 | Linhas de cuidado por paciente (`acompanhamentoClinico`, `terapiaOcupacional`). Receita e remédios só no clínico; a aba "Em casa" só na TO. **O diário vale para todos** (ajuste do plano em F0): o alerta da crítica também protege a família de TO, como o acompanhamento F04 do Terae web |
+| D22 | A barra de abas mostra só as abas da linha do paciente, e a guarda recusa a rota de TO a quem não a tem. **Cuidadores saiu da barra para o menu do Início** (a saída prevista na D22): com 5 abas, o rótulo "Cuidadores" quebrava em duas linhas a 360 dp mesmo com a fonte em 100%. Ficam Início, Diário, Em casa (TO) e Jornada |
+| D23 | Personas: Laura (4) e Miguel (7) só com TO, pela mãe; Ana (16) com psiquiatria e TO; **Antônio Carlos Ribeiro (71)**, titular, só TO depois de um AVC, com o terapeuta ocupacional **Tiago Moreira**; João sem mudança |
+| D24 | Voz do app: o titular lê sobre si ("Vamos cuidar de você hoje?"); o responsável legal e o cuidador leem sobre o paciente ("Vamos cuidar de Miguel hoje?"). A voz vem da qualidade do termo vigente |
+| D25–D30 | Do plano, a aplicar nas fases seguintes: metas sem escore; registro da atividade de casa um por dia; presença que não cancela; lembretes só locais; o cuidador vê sessões e rotina, não atividades; fora do app ficam ABA, foto, chat e o lado da clínica |
+
+### F0 — Fundação (06/11/2026, branch `to-f0-fundacao`)
+
+O que entrou:
+- `LinhaDeCuidado` e `Paciente.linhasDeCuidado`; sem linha gravada, vale só o clínico.
+- `VinculosDaConta.qualidades` e `Perfil.voz`.
+- TM16 "Em casa" em estado vazio, aba adaptável e guarda por linha.
+- A TM07 abre pelo menu do Início.
+- O Início e a Jornada escondem os remédios de quem não tem acompanhamento clínico.
+- `FilaDeEntidade` no `Sincronizador`. Toda fila segue a regra da A4: "sem conexão" no envio para de enviar, mas a
+  busca do servidor ainda roda, e se a leitura responder o app volta a "online".
+- `BancoLocal` passou a migrações numeradas, ainda só com a versão 1.
+- Tiago e Antônio entraram no `demonstracao.json`, e os 5 pacientes ganharam linhas de cuidado.
+
+O que a verificação achou:
+- **A captura mostrou "Cuidadores" quebrado em duas linhas.** O teste de estouro não pega quebra de linha. Entrou um
+  teste com a Lexend real, a 100% e a 200%; conferi que ele falha com 5 abas.
+- **A revisão em contexto limpo bloqueou uma regressão minha.** Eu tinha tomado como defeito a fila voltar a "online"
+  depois de um "sem conexão" no envio, e a "correção" fazia a sincronização parar sem buscar o servidor. Isso mudava o
+  diário da A4: com a rede de volta e só o envio demorando, o app ficava em "Sem conexão" e não trazia o histórico. A
+  correção foi desfeita. Entrou um teste do caminho do diário (o envio passa do prazo, a leitura responde): ele busca o
+  servidor e volta a "online", e com a correção ele falhava.
+- A revisão também pediu o teste das duas vozes da TM16 (`test/funcionalidades/paciente/em_casa_test.dart`).
+
+**Adiado para a F1, desvio do plano da F0:**
+- O enum `Ocupacao` fica para a F1, que é a primeira a usá-lo.
+- O SQLite v2 (`onUpgrade` 1→2) e o teste "abre um banco v1 com registros e migra" também ficam para a F1. Sem uma
+  tabela nova, não há o que migrar. A F0 deixou só o mecanismo, e o `onUpgrade` ainda não roda em nenhum teste.
+
+Pendências:
+1. **Firebase acadêmico** — a semente (`node ferramentas/semear-firebase.mjs --reiniciar`) ainda não rodou com Antônio,
+   Tiago e as linhas de cuidado. Ela mexe no Firebase do dono e pede o ok dele. Até lá, no Firebase:
+   - os pacientes aparecem como só clínicos, sem a aba "Em casa";
+   - Antônio não existe.
+
+   As `firestore.rules` não mudaram na F0.
+2. **Textos ainda da saúde mental para quem só tem TO.** A F1 (diário com textos da TO) e a F2 (sessões) cuidam disso:
+   - no diário, "Tomei tudo" e os sintomas;
+   - no Início, "Sua próxima consulta";
+   - na TM07, "horários de remédio".
+3. **Roteiro no emulador da F0 não feito.** Falta a semente, e não há tela nova com dados.
+4. Da revisão, a decidir na F1:
+   - Hoje um erro de uma fila que não seja "sem conexão" (por exemplo `acessoNegado`) aborta o `sincronizar()` antes
+     da busca, e o "puxar para atualizar" da TM13 passa a lançar por causa de outra entidade. Ainda não afeta nada,
+     porque nenhuma fila está registrada.
+   - Tabela nova entra também em `BancoLocal.tabelas`, para o "Sair" apagá-la (D20).
+5. Da revisão, para a F2 (D29): para paciente que só tem TO, o cuidador ainda vê o atalho "Medicação" na TM08. Nenhuma
+   persona passa por isso hoje.
 
 ## Atividade 4 — Persistência local e integração com o Firebase (06/11/2026)
 
