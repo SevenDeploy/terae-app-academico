@@ -191,3 +191,61 @@ escolhe o mesmo.
 
 **Início** — `InicioControlador(programa:, relogio:)` calcula `emCasa` (o resumo de hoje), que aparece como o cartão
 `Key('atalho-em-casa')`.
+
+## Evolução de TO — F2, sessões, presença e lembretes (06/11/2026)
+
+**`RepositorioPresenca`** (`Repositorios.presenca`; o padrão não tem respostas):
+- `respostas(pacienteId)` → `Map<agendamentoId, ConfirmacaoDePresenca>`, com as da fila;
+- `atualizar(pacienteId)` é o "puxar para atualizar" da TM18: envia as filas e busca o servidor; sem conexão, não faz
+  nada;
+- `responder({pacienteId, agendamentoId, resposta})` (D27) recusa `agendamentoInexistente` e `sessaoEncerrada`.
+
+**`RepositorioVisaoCuidador.respostasDePresenca({contaCuidadorId, pacienteId})`** devolve
+`Map<agendamentoId, RespostaPresenca>`: só o que o servidor confirmou, sem quem nem quando (D29).
+
+**Modelos e regras:**
+- `ConfirmacaoDePresenca`: `agendamentoId` (também o id do documento; no mapa vai `id` igual), `pacienteId`, `resposta`,
+  `respondidaEm`, `situacaoEnvio`.
+- `RespostaPresenca`: `vamos`, `naoVamos`, com `rotulo` e `rotuloNaPrimeiraPessoa`.
+- `podeResponder(agendamento, agora)`: a sessão está marcada e ainda não começou.
+- `ProfissionalSaude.ehTerapiaOcupacional`.
+- `nucleo/textos/encontros.dart`: `nomeDoEncontro`, `tituloDoEncontro` ("Sessão" ou "Consulta"),
+  `palavraDoEncontro`, `encontrosDoPaciente`, `palavraDoPaciente`.
+
+**Persistência:**
+- SQLite v3 com `confirmacoes_presenca`, em `BancoLocal.tabelas`.
+- `ConfirmacaoDePresencaDao`. Depois do envio, `marcarEnviada` só passa a `enviado` a linha que ainda é a mesma
+  resposta: trocada durante o envio, a nova continua na fila.
+- `FilaConfirmacoes` (`FilaDeEntidade`), que grava `pacientes/{pid}/confirmacoes/{agendamentoId}`.
+- `Sincronizador.buscarDoServidor`: a busca recusada de uma fila (que não seja "sem conexão") vai ao log, e as outras
+  filas e os outros pacientes seguem.
+- `PresencaPersistente` confere a sessão nos agendamentos com a cópia local.
+
+**`RepositorioLembretes`** (`Repositorios.lembretes`; o padrão vem desligado):
+- `preferencias`, `salvar`, `pedirPermissao`, `notificacoesPermitidas` (sem pedir), `reagendar(pacienteIds)` (troca
+  todos), `testar` e `cancelarTudo` (chamado no "Sair" pelo `main.dart`, também na demonstração).
+- `reagendar` seguidos rodam em ordem, cada um com as preferências do momento em que começa. `cancelarTudo` não espera
+  o `reagendar` em curso: ele desiste e devolve a lista vazia.
+- `Lembrete` e `PreferenciasDeLembrete` ficam em `dados/lembretes/lembrete.dart`, com as horas oferecidas
+  (`horasDaVespera`, `horasDasAtividades`, que contêm as padrão). A regra pura é `lembretesPara(...)`, em
+  `dados/regras/lembretes.dart`.
+- `calcularLembretes` lê as sessões e as atividades.
+- `LembretesLocais` (plugin, só em `dados/persistente`; o teste de arquitetura recusa o plugin nas telas) e
+  `LembretesMemoria` (web e testes).
+
+**Rotas:** `pacienteSessoes` TM18 `/paciente/sessoes` e `pacienteLembretes` TM19 `/paciente/lembretes`, em
+`doPaciente`. As duas empilham e desempilham; por link direto, a seta vai ao Início. `Rotas.doAcompanhamentoClinico =
+{cuidadorMedicacao}`.
+
+**Início:**
+- `InicioControlador(presenca:)`: lê `respostaDaProxima`;
+- `carregar(emSilencio:)` relê ao voltar da TM18;
+- o menu ganhou `Key('menu-lembretes')`.
+
+**Abas do paciente:** `ReagendaLembretes(noInicio:)` envolve as abas e chama `reagendar` com os perfis
+paciente/família da conta: ao abrir, ao voltar do segundo plano, ao voltar à aba Início e quando uma sincronização
+termina ou a fila muda. Pedidos durante um em curso viram um só, depois dele.
+
+**TM18 e Jornada:** a TM18 relê sem o "carregando" quando a fila sai (`RecarregaAoSincronizar`) e o "puxar" chama
+`atualizar`. Na Jornada, `ItemJornada.rotulo` troca o rótulo do tipo ("Sessão"), e a sessão ou consulta tem
+`Key('jornada-<id>')` e abre a TM18.
