@@ -83,6 +83,8 @@ Situação dessas pendências depois da F1:
 - 4 foi decidida (D33), e `registros_casa` está em `BancoLocal.tabelas`.
 - 5 continua para a F2.
 
+A 5 foi feita na F2 (D29): a TM08 só mostra "Medicação" para paciente com acompanhamento clínico.
+
 ### F1 — "Em casa" (06/11/2026, branch `to-f1-em-casa`)
 
 O que entrou:
@@ -243,21 +245,38 @@ Desvios conscientes:
   "Consulta com …".
 - A confirmação leva `id` (= `agendamentoId`) no mapa, porque a `LeituraComCopia` usa `id` como chave.
 
+**Firebase e emulador (06/11/2026, com o ok do dono):**
+- As `firestore.rules` com `confirmacoes` foram publicadas e compilaram no servidor.
+- A semente rodou com `--reiniciar`: 4 contas, 5 pacientes e 19 registros do diário, com a consulta da Ana já
+  confirmada.
+- No emulador `Terae_Pixel` (Android 16), com o APK de depuração e o Firebase real, foi conferido:
+  - **Lembretes (Antônio):**
+    - a TM19 pediu a permissão do Android ao salvar a véspera às 19:00;
+    - o sistema registrou o alarme de 12/11 às 23:00 UTC (19:00 na clínica, véspera da sessão de 13/11 às 08:00);
+    - o lembrete de teste chegou no canal `lembretes`, com visibilidade privada;
+    - depois das correções da revisão, o alarme foi refeito ao abrir o app, e a TM19 não mostrou mais o texto da
+      permissão, já dada.
+  - **"Sair":** os alarmes pendentes do app caíram de 1 para 0.
+  - **Presença (Antônio, depois de entrar de novo):** "Sim, vou" → "A clínica recebeu sua resposta.". O servidor
+    mostrou `vamos`, enviado, o que prova a regra de criação.
+  - **Sem conexão:**
+    - "Mudar a resposta" → "Não vou conseguir" → "Guardado no aparelho", com 1 registro aguardando envio;
+    - com a rede de volta e sem nenhum toque, a TM18 passou sozinha a "A clínica foi avisada…", o que confirma no
+      aparelho o achado 1 da revisão;
+    - o servidor mostrou `naoVamos`, enviado, com a hora em que a resposta foi dada, o que prova a regra de
+      atualização;
+    - o Início passou a "Avisou que não vai".
+  - **Jornada:** a sessão abre a TM18, e o voltar traz de volta.
+  - **Cuidadora (Regina):** a TM08 e a TM12 mostram "Presença confirmada" na consulta da Ana, sem conteúdo clínico,
+    o que prova a regra de leitura do cuidador.
+- Todas as passagens foram conferidas com `node ferramentas/conferir-firebase.mjs`. As capturas estão em
+  `docs/evidencias-f2/`.
+- Ficou no servidor a resposta "não vou" do Antônio. Para voltar ao início, rode a semente com `--reiniciar`.
+
 Pendências da F2:
-1. **Firebase acadêmico:** publicar as regras novas (`confirmacoes`) e rodar a semente. As duas coisas pedem o ok do
-   dono. Até lá, no aparelho, a resposta de presença é recusada e fica na fila ("aguardando envio"); a TM08 e a
-   sincronização seguem sem ela.
-2. **Roteiro no emulador:** os lembretes já foram conferidos em 06/11 (`Terae_Pixel`, Android 16, Antônio):
-   - o cartão "Sua próxima sessão" mostrou "Você vai? Responda";
-   - a TM19 salvou a véspera às 19:00 depois do pedido de permissão do Android;
-   - o sistema registrou o alarme de 12/11 às 23:00 UTC (19:00 na clínica, véspera da sessão de 13/11 às 08:00);
-   - o lembrete de teste chegou no canal `lembretes`, com visibilidade privada.
-
-   Depois das correções da revisão, também a Jornada → TM18, a TM19 sem o texto da permissão e o alarme refeito ao
-   abrir o app.
-
-   Falta responder a presença e ver a cuidadora, o que depende das regras novas no Firebase (item 1).
-3. **Limitações declaradas:**
+1. As regras de `confirmacoes` continuam sem teste automático, porque o projeto não usa o emulador de regras. Elas
+   foram provadas só pelo roteiro acima.
+2. **Limitações declaradas:**
    - com várias contas no mesmo aparelho, os lembretes são da última que abriu as abas do paciente. Com a Patrícia,
      eles cobrem Miguel e Laura juntos;
    - o cuidador lê o documento inteiro de `confirmacoes`, com o `respondidaEm`, porque a regra não escolhe campos na
