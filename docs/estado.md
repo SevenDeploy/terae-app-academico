@@ -345,12 +345,29 @@ O que a verificação achou:
     atividade ligada) ganharam teste.
 - **Portão depois das correções:** 730 testes e 23 capturas.
 
+**Firebase e emulador (07/11/2026, com o ok do dono):**
+- As `firestore.rules` com `metas` foram publicadas e compilaram no servidor.
+- A semente rodou com `--reiniciar`: 4 contas, 5 pacientes, 19 registros do diário e 3 metas para o Antônio e 3 para o
+  Miguel (o `conferir-firebase.mjs` mostra as metas sem escore).
+- No emulador `Terae_Pixel` (Android 16), com o APK de depuração e o Firebase real, o Antônio entrou de novo e foi
+  conferido:
+  - **Jornada:** "Nossas metas", em Autocuidado, com "Em andamento" e os prazos, e a alcançada por último. Isso prova
+    a regra de leitura do titular.
+  - **TM20:** "Vestir a camisa de botão sozinho", "Combinada com Antônio e a família", "Acompanhada por Tiago
+    Moreira", a atividade "Abotoar…" e o marco "Vestir a camisa sozinho", ligados pelo `metaId` vindo do servidor.
+  - **TM17 pela meta:** o cartão "Esta atividade ajuda na meta"; "Sim" → "Registrado. Obrigado por contar!", com o
+    registro no servidor como enviado.
+  - **Achado 1 da revisão, no aparelho:** depois de voltar à Jornada e tocar na aba Em casa, a TM16 passou sozinha a
+    "Hoje: 2 de 2 atividades registradas", com "Ajuda na meta: …" em cada atividade.
+  - **Marco "Meta alcançada":** com o troféu na história; ele abre a TM20 da meta alcançada, sem prazo e com "Nenhuma
+    atividade de casa ligada a esta meta agora".
+- As capturas estão em `docs/evidencias-f3/`.
+- Ficou no servidor o registro de hoje do "Abotoar". Para voltar ao início, rode a semente com `--reiniciar`.
+
 Pendências da F3:
-1. **Firebase acadêmico:** publicar as regras novas (`metas`) e rodar a semente com `--reiniciar`. As duas coisas pedem
-   um ok novo do dono. Até lá, no aparelho, a Jornada aparece sem "Nossas metas" (a leitura é recusada e a seção
-   some).
-2. **Roteiro no emulador:** "Nossas metas", TM20 → TM17 → TM20, o marco "Meta alcançada" e o cartão da TM17, com o
-   Firebase real.
+1. As regras de `metas` continuam sem teste automático, porque o projeto não usa o emulador de regras. O roteiro
+   provou a leitura do titular; a recusa ao cuidador (D29) fica provada só pela regra, que deixa `metas` fora da
+   lista do cuidador.
 
 ## Atividade 4 — Persistência local e integração com o Firebase (06/11/2026)
 
