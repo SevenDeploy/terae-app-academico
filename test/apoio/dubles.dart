@@ -7,6 +7,7 @@ library;
 
 import 'package:terae_app/dados/enums/canal_autorizado.dart';
 import 'package:terae_app/dados/enums/intensidade.dart';
+import 'package:terae_app/dados/enums/linha_de_cuidado.dart';
 import 'package:terae_app/dados/enums/qualidade_consentimento.dart';
 import 'package:terae_app/dados/enums/situacao_conta.dart';
 import 'package:terae_app/dados/modelos/agendamento.dart';
@@ -223,7 +224,12 @@ ContaUsuario contaDe(String id, String nome) => ContaUsuario(
   situacao: SituacaoConta.ativa,
 );
 
-Paciente pacienteDe(String id, String nome, {String? contaId}) => Paciente(
+Paciente pacienteDe(
+  String id,
+  String nome, {
+  String? contaId,
+  Set<LinhaDeCuidado> linhas = Paciente.linhasPadrao,
+}) => Paciente(
   id: id,
   contaId: contaId,
   profissionalRefId: 'pr-helena',
@@ -231,12 +237,44 @@ Paciente pacienteDe(String id, String nome, {String? contaId}) => Paciente(
   cpf: '52998224725',
   dataNascimento: DataCivil(2010, 3, 14),
   ativo: true,
+  linhasDeCuidado: linhas,
 );
 
-/// Ana Lúcia: titular, um perfil paciente/família.
-VinculosDaConta vinculosAna() => VinculosDaConta(
+/// Terapia ocupacional só (D21): Miguel, Laura, Antônio.
+const Set<LinhaDeCuidado> soTerapiaOcupacional = {
+  LinhaDeCuidado.terapiaOcupacional,
+};
+
+/// As duas linhas (D21): Ana na demonstração.
+const Set<LinhaDeCuidado> asDuasLinhas = {
+  LinhaDeCuidado.acompanhamentoClinico,
+  LinhaDeCuidado.terapiaOcupacional,
+};
+
+/// Ana Lúcia: titular, um perfil paciente/família. Com [linhas], o
+/// acompanhamento que o teste quiser (D21; padrão: só o clínico).
+VinculosDaConta vinculosAna({
+  Set<LinhaDeCuidado> linhas = Paciente.linhasPadrao,
+}) => VinculosDaConta(
   conta: contaDe('c-ana', 'Ana Lúcia'),
-  pacientes: [pacienteDe('p-ana', 'Ana Lúcia Martins', contaId: 'c-ana')],
+  pacientes: [
+    pacienteDe('p-ana', 'Ana Lúcia Martins', contaId: 'c-ana', linhas: linhas),
+  ],
+  qualidades: const {'p-ana': QualidadeConsentimento.titular},
+);
+
+/// Antônio: titular, só terapia ocupacional (D21, D23).
+VinculosDaConta vinculosAntonio() => VinculosDaConta(
+  conta: contaDe('c-antonio', 'Antônio'),
+  pacientes: [
+    pacienteDe(
+      'p-antonio',
+      'Antônio Carlos Ribeiro',
+      contaId: 'c-antonio',
+      linhas: soTerapiaOcupacional,
+    ),
+  ],
+  qualidades: const {'p-antonio': QualidadeConsentimento.titular},
 );
 
 /// Regina: cuidadora de Ana, um perfil cuidador (cópia sem CPF/nascimento).
@@ -245,20 +283,41 @@ VinculosDaConta vinculosRegina() => VinculosDaConta(
   acompanhados: [pacienteDe('p-ana', 'Ana Lúcia Martins').paraCuidador()],
 );
 
-/// Patrícia: mãe de Miguel e de Laura, dois perfis paciente/família.
+/// Patrícia: mãe (responsável legal) de Miguel e de Laura, dois perfis
+/// paciente/família, só terapia ocupacional (D21, D24).
 VinculosDaConta vinculosPatricia() => VinculosDaConta(
   conta: contaDe('c-patricia', 'Patrícia'),
   pacientes: [
-    pacienteDe('p-miguel', 'Miguel Andrade Neves', contaId: 'c-patricia'),
-    pacienteDe('p-laura', 'Laura Andrade Neves', contaId: 'c-patricia'),
+    pacienteDe(
+      'p-miguel',
+      'Miguel Andrade Neves',
+      contaId: 'c-patricia',
+      linhas: soTerapiaOcupacional,
+    ),
+    pacienteDe(
+      'p-laura',
+      'Laura Andrade Neves',
+      contaId: 'c-patricia',
+      linhas: soTerapiaOcupacional,
+    ),
   ],
+  qualidades: const {
+    'p-miguel': QualidadeConsentimento.responsavelLegal,
+    'p-laura': QualidadeConsentimento.responsavelLegal,
+  },
 );
 
 /// Conta com os dois papéis: família de Miguel e cuidadora de Ana.
 VinculosDaConta vinculosMistos() => VinculosDaConta(
   conta: contaDe('c-misto', 'Conta mista'),
   pacientes: [
-    pacienteDe('p-miguel', 'Miguel Andrade Neves', contaId: 'c-misto'),
+    pacienteDe(
+      'p-miguel',
+      'Miguel Andrade Neves',
+      contaId: 'c-misto',
+      linhas: soTerapiaOcupacional,
+    ),
   ],
   acompanhados: [pacienteDe('p-ana', 'Ana Lúcia Martins').paraCuidador()],
+  qualidades: const {'p-miguel': QualidadeConsentimento.responsavelLegal},
 );

@@ -48,6 +48,9 @@ class _ConteudoJornada extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.watch<JornadaControlador>();
     final textos = Theme.of(context).textTheme;
+    final clinico = context.select<Sessao, bool>(
+      (s) => s.perfilAtivo?.paciente.temAcompanhamentoClinico ?? false,
+    );
     return CorpoDaTela(
       children: [
         const CabecalhoDaTela(
@@ -71,8 +74,11 @@ class _ConteudoJornada extends StatelessWidget {
             ),
           )
         else ...[
-          _OrientacaoAgora(receita: c.receita),
-          const SizedBox(height: MedidasTerae.espacoGrande),
+          // D21 — a orientação do remédio só no acompanhamento clínico.
+          if (clinico) ...[
+            _OrientacaoAgora(receita: c.receita),
+            const SizedBox(height: MedidasTerae.espacoGrande),
+          ],
           const RotuloDeSecao('Próximos passos', icone: Icons.flag_outlined),
           const SizedBox(height: MedidasTerae.espaco),
           if (c.proximos.isEmpty)

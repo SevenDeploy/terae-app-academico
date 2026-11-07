@@ -15,6 +15,7 @@ import '../remoto/fonte_firestore.dart';
 import '../repositorios/diario_repositorio.dart';
 import '../repositorios/falhas.dart';
 import '../repositorios/visao_cuidador_repositorio.dart';
+import 'fila_de_entidade.dart';
 import 'monitor_conexao.dart';
 import 'situacao_sincronizacao.dart';
 
@@ -33,15 +34,18 @@ String idDoAlertaDe(String registroId) {
       '$variante${hex(9, 10)}-${hex(10, 16)}';
 }
 
-/// O fluxo online/offline do diário (Atividade 4, D16, D18).
+/// O fluxo online/offline do diário (Atividade 4, D16, D18) e das outras
+/// entidades gravadas no aparelho ([FilaDeEntidade], evolução de TO).
 ///
 /// - Envia a fila do SQLite (registros novos, corrigidos e excluídos), do
 ///   mais antigo ao mais novo, um lote do Firestore por registro: o registro
 ///   `enviado` e, se a regra do §7.1 disparar, o alerta e o aviso do
 ///   cuidador — tudo confirmado junto ou nada.
+/// - Depois envia as [FilaDeEntidade] das outras entidades gravadas no
+///   aparelho (evolução de TO), na ordem da lista.
 /// - Depois busca no servidor os registros e alertas do paciente e junta com
 ///   os locais (`RegistroDiarioDao.mesclarDoServidor`: a mudança local ainda
-///   na fila vence).
+///   na fila vence), e o mesmo para cada fila.
 /// - Roda ao abrir o app, quando a conexão volta, no "puxar para atualizar"
 ///   da TM13 e depois de cada gravação local; publica a [situacao] para o
 ///   aviso de conexão das telas.
@@ -52,13 +56,17 @@ class Sincronizador {
     required this._monitor,
     required this._relogio,
     this._preferencias,
-  });
+    List<FilaDeEntidade> filas = const [],
+  }) : _filas = List.unmodifiable(filas);
 
   final RegistroDiarioDao _dao;
   final FonteFirestore _fonte;
   final MonitorConexao _monitor;
   final Relogio _relogio;
   final PreferenciasLocais? _preferencias;
+
+  /// As outras entidades gravadas no aparelho, além do diário.
+  final List<FilaDeEntidade> _filas;
 
   final ValueNotifier<SituacaoSincronizacao> _situacao = ValueNotifier(
     const SituacaoSincronizacao(),
@@ -91,11 +99,15 @@ class Sincronizador {
 
   bool get _online => _monitor.online && _servidorRespondeu;
 
-  /// Recalcula a [situacao] (rede e tamanho da fila).
+  /// Recalcula a [situacao] (rede e tamanho de todas as filas).
   Future<void> atualizarSituacao({bool? sincronizando}) async {
+    var pendentes = await _dao.contarPendentes();
+    for (final fila in _filas) {
+      pendentes += await fila.contarPendentes();
+    }
     _situacao.value = _situacao.value.copyWith(
       online: _online,
-      pendentes: await _dao.contarPendentes(),
+      pendentes: pendentes,
       sincronizando: sincronizando,
       ultimaSincronizacao: _preferencias?.ultimaSincronizacao,
     );
@@ -152,8 +164,14 @@ class Sincronizador {
     return ResultadoEnvio(registro: enviado, alerta: alerta ?? existente);
   }
 
-  /// Envia a fila inteira; para no primeiro "sem conexão". Devolve os que
-  /// saíram dela.
+  /// Envia a fila do diário e depois a de cada [FilaDeEntidade]; para de
+  /// enviar no primeiro "sem conexão" (o resto continua na fila). Devolve os
+  /// registros do diário que saíram dela.
+  ///
+  /// Regra da Atividade 4, a mesma para todas as filas: parar de enviar não
+  /// para a sincronização. A busca do servidor ainda roda; se a leitura
+  /// responder, o app volta a "online" (a rede voltou e só o envio demorou),
+  /// e o que ficou na fila sai na próxima vez.
   Future<List<ResultadoEnvio>> enviarFila() async {
     final saidas = <ResultadoEnvio>[];
     if (!_monitor.online) return saidas;
@@ -161,10 +179,20 @@ class Sincronizador {
       try {
         saidas.add(await enviar(r));
       } on RecusaDeRegra catch (recusa) {
-        if (recusa.motivo == MotivoRecusa.semConexao) break;
+        if (recusa.motivo == MotivoRecusa.semConexao) return saidas;
         rethrow;
       }
     }
+    for (final fila in _filas) {
+      try {
+        await fila.enviarPendentes();
+      } on RecusaDeRegra catch (recusa) {
+        if (!ehSemConexao(recusa)) rethrow;
+        _servidorRespondeu = false;
+        break;
+      }
+    }
+    if (_filas.isNotEmpty) await atualizarSituacao();
     return saidas;
   }
 
@@ -180,6 +208,9 @@ class Sincronizador {
       final alertas = await _fonte.listar(_fonte.doPaciente(pid, 'alertas'));
       for (final m in alertas) {
         await _dao.salvarAlerta(Alerta.fromMap(m));
+      }
+      for (final fila in _filas) {
+        await fila.buscar(pid);
       }
     }
   }

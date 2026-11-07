@@ -13,7 +13,8 @@ import '../../../nucleo/widgets/cartao.dart';
 import '../componentes_paciente.dart';
 import 'cuidadores_controlador.dart';
 
-/// TM07 — Cuidadores. RFM07, UC02, §7.4. Aba 4: contador "n/2" (pendentes +
+/// TM07 — Cuidadores. RFM07, UC02, §7.4. Aberta pelo menu do Início (D22;
+/// era a aba 4), com a seta de voltar: contador "n/2" (pendentes +
 /// ativos), lista com a situação de cada um e "Revogar" (com confirmação), e
 /// convite por nome e CPF que mostra o código a repassar. Com 2/2 o convite
 /// some e fica o aviso do limite.
@@ -28,6 +29,10 @@ class CuidadoresTela extends StatelessWidget {
     final perfil = context.select<Sessao, Perfil?>((s) => s.perfilAtivo);
     return Scaffold(
       key: const Key('TM07'),
+      appBar: AppBar(
+        leading: const BackButton(),
+        title: const Text('Cuidadores'),
+      ),
       body: perfil == null
           ? const SizedBox.shrink()
           : ChangeNotifierProvider(

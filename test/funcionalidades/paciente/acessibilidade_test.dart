@@ -103,6 +103,11 @@ final List<_Caso> _casos = [
     await t.ensureVisible(convidar);
     await t.tap(convidar);
     await t.pumpAndSettle();
+    // Com a AppBar da D22, o erro empurra a lista e o "Revogar" ficava com
+    // 12 dp à mostra sob a barra (meio rolado, não alvo pequeno): o
+    // formulário vai ao topo da área rolável, inteiro.
+    await t.ensureVisible(find.byKey(const Key('formulario-convite')));
+    await t.pumpAndSettle();
   }),
 ];
 

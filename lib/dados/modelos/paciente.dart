@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import '../../nucleo/tempo/data_civil.dart';
 import '../conversao_mapa.dart';
+import '../enums/linha_de_cuidado.dart';
 
 /// Centro do modelo; no aplicativo é somente leitura (RF07): cadastrar,
 /// alterar e inativar é ato da clínica, e o app só liga a conta ao registro
@@ -12,7 +13,7 @@ import '../conversao_mapa.dart';
 /// do paciente/família os dois estão sempre preenchidos.
 @immutable
 class Paciente {
-  const Paciente({
+  Paciente({
     required this.id,
     this.contaId,
     required this.profissionalRefId,
@@ -20,7 +21,8 @@ class Paciente {
     this.cpf,
     this.dataNascimento,
     required this.ativo,
-  });
+    Set<LinhaDeCuidado> linhasDeCuidado = linhasPadrao,
+  }) : linhasDeCuidado = _conferirLinhas(linhasDeCuidado);
 
   factory Paciente.fromMap(Mapa mapa) => Paciente(
     id: lerCampo<String>(mapa, 'id'),
@@ -30,7 +32,23 @@ class Paciente {
     cpf: lerOpcional<String>(mapa, 'cpf'),
     dataNascimento: lerDataCivilOpcional(mapa, 'dataNascimento'),
     ativo: lerCampo<bool>(mapa, 'ativo'),
+    linhasDeCuidado: mapa['linhasDeCuidado'] == null
+        ? linhasPadrao
+        : lerEnums(mapa, 'linhasDeCuidado', LinhaDeCuidado.values).toSet(),
   );
+
+  /// D21 — paciente sem linha gravada (dados das Atividades 3 e 4, cópias
+  /// locais antigas) é do acompanhamento clínico, como era o app até ali.
+  static const Set<LinhaDeCuidado> linhasPadrao = {
+    LinhaDeCuidado.acompanhamentoClinico,
+  };
+
+  static Set<LinhaDeCuidado> _conferirLinhas(Set<LinhaDeCuidado> linhas) {
+    if (linhas.isEmpty) {
+      throw ArgumentError.value(linhas, 'linhasDeCuidado', 'vazia');
+    }
+    return Set.unmodifiable(linhas);
+  }
 
   final String id;
 
@@ -51,6 +69,18 @@ class Paciente {
   /// Inativação lógica: nada é apagado.
   final bool ativo;
 
+  /// D21 — o que o paciente faz na clínica (nunca vazio). Decide as abas e o
+  /// Início; vai também na cópia do cuidador, que não traz conteúdo clínico.
+  final Set<LinhaDeCuidado> linhasDeCuidado;
+
+  /// Tem receita e remédios (TM02, TM06, TM11).
+  bool get temAcompanhamentoClinico =>
+      linhasDeCuidado.contains(LinhaDeCuidado.acompanhamentoClinico);
+
+  /// Tem a aba "Em casa" (TM16).
+  bool get temTerapiaOcupacional =>
+      linhasDeCuidado.contains(LinhaDeCuidado.terapiaOcupacional);
+
   /// Primeiro nome, para a saudação (TM02, TM08).
   String get primeiroNome => nome.split(' ').first;
 
@@ -63,6 +93,7 @@ class Paciente {
     cpf: cpf,
     dataNascimento: dataNascimento,
     ativo: ativo ?? this.ativo,
+    linhasDeCuidado: linhasDeCuidado,
   );
 
   /// RNFM05 — cópia para o aparelho do cuidador: sem CPF, sem data de
@@ -72,6 +103,7 @@ class Paciente {
     profissionalRefId: profissionalRefId,
     nome: nome,
     ativo: ativo,
+    linhasDeCuidado: linhasDeCuidado,
   );
 
   Mapa toMap() => {
@@ -82,6 +114,10 @@ class Paciente {
     'cpf': cpf,
     'dataNascimento': dataNascimento?.paraIso(),
     'ativo': ativo,
+    'linhasDeCuidado': [
+      for (final linha in LinhaDeCuidado.values)
+        if (linhasDeCuidado.contains(linha)) linha.name,
+    ],
   };
 
   @override
@@ -93,7 +129,8 @@ class Paciente {
       other.nome == nome &&
       other.cpf == cpf &&
       other.dataNascimento == dataNascimento &&
-      other.ativo == ativo;
+      other.ativo == ativo &&
+      setEquals(other.linhasDeCuidado, linhasDeCuidado);
 
   @override
   int get hashCode => Object.hash(
@@ -104,6 +141,7 @@ class Paciente {
     cpf,
     dataNascimento,
     ativo,
+    Object.hashAllUnordered(linhasDeCuidado),
   );
 
   @override

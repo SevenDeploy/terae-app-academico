@@ -63,6 +63,7 @@ class VinculosDaConta {
     required this.conta,
     this.pacientes = const [],
     this.acompanhados = const [],
+    this.qualidades = const {},
   });
 
   final ContaUsuario conta;
@@ -73,6 +74,13 @@ class VinculosDaConta {
   /// Pacientes com VinculoCuidador ativo desta conta → perfil cuidador. Cópia
   /// do cuidador, sem CPF nem nascimento (`Paciente.paraCuidador`, RNFM05).
   final List<Paciente> acompanhados;
+
+  /// D24 — em que qualidade esta conta aceitou o termo de cada um dos
+  /// [pacientes] (id do paciente → titular ou responsável legal), pelo
+  /// consentimento vigente. Decide a voz do app: "Como foi hoje?" para o
+  /// titular, "Como foi com o Miguel hoje?" para o responsável. Paciente sem
+  /// entrada aqui é tratado como titular.
+  final Map<String, QualidadeConsentimento> qualidades;
 }
 
 /// Código conferido no passo 1 da TM09/TM10, ainda não consumido.

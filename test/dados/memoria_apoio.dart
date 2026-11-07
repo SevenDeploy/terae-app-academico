@@ -43,17 +43,20 @@ String _id(String prefixo, int n) =>
 // Profissionais
 final String idHelena = _id('d0000000', 1);
 final String idLarissa = _id('d0000000', 2);
+final String idTiago = _id('d0000000', 3);
 
 // Contas
 final String contaAna = _id('c0000000', 1);
 final String contaPatricia = _id('c0000000', 2);
 final String contaRegina = _id('c0000000', 3);
+final String contaAntonio = _id('c0000000', 4);
 
 // Pacientes
 final String idAna = _id('a0000000', 1);
 final String idMiguel = _id('a0000000', 2);
 final String idLaura = _id('a0000000', 3);
 final String idJoao = _id('a0000000', 4);
+final String idAntonio = _id('a0000000', 5);
 
 // Vínculos e receitas
 final String vinculoRegina = _id('b0000000', 1);
@@ -91,6 +94,7 @@ const Map<String, String> emailDe = {
   'Ana Lúcia Martins': 'ana.lucia.martins@exemplo.test',
   'Patrícia Andrade Neves': 'patricia.neves@exemplo.test',
   'Regina Martins': 'regina.martins@exemplo.test',
+  'Antônio Carlos Ribeiro': 'antonio.ribeiro@exemplo.test',
   'João Pedro Assis': 'joao.pedro.assis@exemplo.test',
   'Paulo Martins': 'paulo.martins@exemplo.test',
 };

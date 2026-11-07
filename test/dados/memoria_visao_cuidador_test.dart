@@ -61,7 +61,9 @@ Future<List<(String, Mapa)>> _tudoQueVolta(
 /// profissional da consulta vai com o mínimo público do §23. Campo novo num
 /// modelo fica fora da cópia até entrar aqui de propósito.
 const Map<String, Set<String>> _permitidasAoCuidador = {
-  'Paciente': {'id', 'profissionalRefId', 'nome', 'ativo'},
+  // D21/D29: as linhas de cuidado dizem só que tipo de acompanhamento há
+  // (sessões, rotina), sem conteúdo clínico.
+  'Paciente': {'id', 'profissionalRefId', 'nome', 'ativo', 'linhasDeCuidado'},
   'Agendamento': {'id', 'pacienteId', 'profissionalId', 'dataHora', 'situacao'},
   'ProfissionalSaude': {'id', 'nome', 'registroConselho', 'especialidade'},
   'ReceitaUsoContinuo': {

@@ -21,6 +21,11 @@ void main() {
 
       expect(find.text('Sexta-feira, 2 de outubro'), findsOneWidget);
       expect(find.text('Olá, Ana'), findsOneWidget);
+      // D24: a titular lê sobre si.
+      expect(
+        find.text('Que bom te ver por aqui. Vamos cuidar de você hoje?'),
+        findsOneWidget,
+      );
       expect(find.byKey(const Key('atalho-diario')), findsOneWidget);
 
       final consulta = find.byKey(const Key('proxima-consulta'));
@@ -98,11 +103,28 @@ void main() {
   });
 
   group('menu da TM02 (§21)', () {
-    testWidgets('conta de um perfil: só "Sair", que leva à TM00', (
-      tester,
-    ) async {
+    testWidgets('"Cuidadores" abre a TM07 empilhada; voltar leva ao Início '
+        '(D22)', (tester) async {
+      await abrirAppDoPaciente(tester);
+      await _abrirMenu(tester);
+      await tester.tap(find.byKey(const Key('menu-cuidadores')));
+      await tester.pumpAndSettle();
+      // `push` empilha sem trocar o local da configuração do go_router: a
+      // prova é a TM07 na tela.
+      expect(find.byKey(const Key('TM07')), findsOneWidget);
+      expect(find.byKey(const Key('TM02')), findsNothing);
+      expect(find.byType(NavigationBar), findsNothing);
+      await tester.tap(find.byType(BackButton));
+      await tester.pumpAndSettle();
+      expect(localDe(tester), Rotas.pacienteInicio);
+      expect(find.byKey(const Key('TM02')), findsOneWidget);
+    });
+
+    testWidgets('conta de um perfil: "Cuidadores" e "Sair", que leva à '
+        'TM00', (tester) async {
       final app = await abrirAppDoPaciente(tester);
       await _abrirMenu(tester);
+      expect(find.byKey(const Key('menu-cuidadores')), findsOneWidget);
       expect(find.byKey(const Key('menu-trocar-perfil')), findsNothing);
       await tester.tap(find.byKey(const Key('menu-sair')));
       await tester.pumpAndSettle();
@@ -122,6 +144,15 @@ void main() {
       // Saudação a quem usa o app, e de quem é o perfil.
       expect(find.text('Olá, Patrícia'), findsOneWidget);
       expect(find.text('Perfil de Miguel Andrade Neves'), findsOneWidget);
+      // D24: a responsável lê sobre o filho; D21: só TO, sem remédios.
+      expect(
+        find.text('Que bom te ver por aqui. Vamos cuidar de Miguel hoje?'),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('orientacao-vigente')), findsNothing);
+      expect(find.byKey(const Key('lembrete-renovacao')), findsNothing);
+      expect(find.byKey(const Key('proxima-consulta')), findsOneWidget);
+      expect(find.byKey(const Key('atalho-diario')), findsOneWidget);
 
       await _abrirMenu(tester);
       await tester.tap(find.byKey(const Key('menu-trocar-perfil')));

@@ -5,6 +5,7 @@ import 'package:terae_app/dados/conversao_mapa.dart';
 import 'package:terae_app/dados/enums/adesao.dart';
 import 'package:terae_app/dados/enums/canal_autorizado.dart';
 import 'package:terae_app/dados/enums/intensidade.dart';
+import 'package:terae_app/dados/enums/linha_de_cuidado.dart';
 import 'package:terae_app/dados/enums/qualidade_consentimento.dart';
 import 'package:terae_app/dados/enums/regra_alerta.dart';
 import 'package:terae_app/dados/enums/situacao_agendamento.dart';
@@ -378,14 +379,18 @@ void main() {
       expect(conta.situacao, SituacaoConta.inativa);
       expect(conta.ultimoAcessoEm, _instante);
 
-      const paciente = Paciente(
+      final paciente = Paciente(
         id: 'p',
         profissionalRefId: 'pr',
         nome: 'Laura',
         ativo: true,
+        linhasDeCuidado: {LinhaDeCuidado.terapiaOcupacional},
       );
       expect(paciente.copyWith(contaId: 'c').contaId, 'c');
       expect(paciente.copyWith(ativo: false).ativo, isFalse);
+      expect(paciente.copyWith(ativo: false).linhasDeCuidado, {
+        LinhaDeCuidado.terapiaOcupacional,
+      });
 
       final ag = Agendamento(
         id: 'ag',
@@ -472,7 +477,81 @@ void main() {
     );
   });
 
-  group('os 11 enums do §22 (grafia do docx)', () {
+  group('Paciente.linhasDeCuidado (D21)', () {
+    Mapa mapaDoPaciente() => {
+      'id': 'p',
+      'contaId': null,
+      'profissionalRefId': 'pr',
+      'nome': 'Antônio Carlos Ribeiro',
+      'cpf': '81534726071',
+      'dataNascimento': '1955-08-20',
+      'ativo': true,
+    };
+
+    test('sem o campo (dados das Atividades 3 e 4), é acompanhamento '
+        'clínico', () {
+      final p = Paciente.fromMap(_peloJson(mapaDoPaciente()));
+      expect(p.linhasDeCuidado, Paciente.linhasPadrao);
+      expect(p.temAcompanhamentoClinico, isTrue);
+      expect(p.temTerapiaOcupacional, isFalse);
+    });
+
+    test('ida e volta pelo JSON, na ordem do enum, e vai à cópia do '
+        'cuidador', () {
+      final p = Paciente.fromMap(
+        _peloJson({
+          ...mapaDoPaciente(),
+          'linhasDeCuidado': ['terapiaOcupacional', 'acompanhamentoClinico'],
+        }),
+      );
+      expect(p.temTerapiaOcupacional && p.temAcompanhamentoClinico, isTrue);
+      expect(p.toMap()['linhasDeCuidado'], [
+        'acompanhamentoClinico',
+        'terapiaOcupacional',
+      ]);
+      expect(Paciente.fromMap(_peloJson(p.toMap())), p);
+      final copia = p.paraCuidador();
+      expect(copia.linhasDeCuidado, p.linhasDeCuidado);
+      expect(copia.cpf, isNull);
+    });
+
+    test('linha desconhecida ou lista vazia não carregam', () {
+      expect(
+        () => Paciente.fromMap({
+          ...mapaDoPaciente(),
+          'linhasDeCuidado': ['fonoaudiologia'],
+        }),
+        throwsFormatException,
+      );
+      expect(
+        () => Paciente.fromMap({...mapaDoPaciente(), 'linhasDeCuidado': []}),
+        throwsArgumentError,
+      );
+    });
+
+    test('a igualdade não depende da ordem das linhas', () {
+      Paciente com(Set<LinhaDeCuidado> linhas) => Paciente(
+        id: 'p',
+        profissionalRefId: 'pr',
+        nome: 'X',
+        ativo: true,
+        linhasDeCuidado: linhas,
+      );
+      final a = com({
+        LinhaDeCuidado.terapiaOcupacional,
+        LinhaDeCuidado.acompanhamentoClinico,
+      });
+      final b = com({
+        LinhaDeCuidado.acompanhamentoClinico,
+        LinhaDeCuidado.terapiaOcupacional,
+      });
+      expect(a, b);
+      expect(a.hashCode, b.hashCode);
+      expect(a, isNot(com({LinhaDeCuidado.terapiaOcupacional})));
+    });
+  });
+
+  group('os 11 enums do §22 (grafia do docx) e os da evolução de TO', () {
     final enums = <String, List<Enum>>{
       'ContaUsuario.situacao': SituacaoConta.values,
       'ConviteAcesso.tipo': TipoConvite.values,
@@ -485,10 +564,11 @@ void main() {
       'Alerta.regraDisparada': RegraAlerta.values,
       'Agendamento.situacao': SituacaoAgendamento.values,
       'MarcoJornada.tipo': TipoMarco.values,
+      'Paciente.linhasDeCuidado': LinhaDeCuidado.values,
     };
 
-    test('são 11, com os valores da tabela do §22', () {
-      expect(enums, hasLength(11));
+    test('são 12 (os 11 do §22 + D21), com os valores esperados', () {
+      expect(enums, hasLength(12));
       final nomes = enums.map(
         (campo, valores) => MapEntry(campo, valores.map((v) => v.name)),
       );
@@ -527,6 +607,10 @@ void main() {
         'orientacao',
         'proximoPasso',
       ]);
+      expect(nomes['Paciente.linhasDeCuidado'], [
+        'acompanhamentoClinico',
+        'terapiaOcupacional',
+      ]);
     });
 
     test('cada valor volta pelo nome e tem rótulo em linguagem simples', () {
@@ -551,6 +635,7 @@ void main() {
         for (final v in RegraAlerta.values) v.rotulo,
         for (final v in SituacaoAgendamento.values) v.rotulo,
         for (final v in TipoMarco.values) v.rotulo,
+        for (final v in LinhaDeCuidado.values) v.rotulo,
       ];
       expect(rotulos, everyElement(isNotEmpty));
       expect(Adesao.total.rotulo, 'Tomei tudo');

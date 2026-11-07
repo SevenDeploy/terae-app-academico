@@ -62,7 +62,8 @@ void main() {
     });
 
     test('cada papel só alcança as próprias rotas', () {
-      final paciente = Sessao()..entrar(vinculosAna());
+      // Com as duas linhas de cuidado, o paciente alcança todas as suas.
+      final paciente = Sessao()..entrar(vinculosAna(linhas: asDuasLinhas));
       final cuidador = Sessao()..entrar(vinculosRegina());
       for (final rota in Rotas.todas) {
         expect(
@@ -131,9 +132,8 @@ void main() {
       expect(_barraDeAbas, findsOneWidget);
     });
 
-    testWidgets('as quatro abas, TM04 e TM05 abrem; o resto volta ao Início', (
-      tester,
-    ) async {
+    testWidgets('as três abas (sem TO), TM07, TM04 e TM05 abrem; o resto '
+        'volta ao Início', (tester) async {
       final sessao = Sessao()..entrar(vinculosAna());
       final roteador = await _abrir(tester, sessao);
       _naTela('TM02');
@@ -144,9 +144,11 @@ void main() {
       await tester.tap(find.byKey(const Key('aba-jornada')));
       await tester.pumpAndSettle();
       _naTela('TM06');
-      await tester.tap(find.byKey(const Key('aba-cuidadores')));
-      await tester.pumpAndSettle();
+
+      // D22: a TM07 saiu da barra; abre empilhada, sem as abas.
+      await _ir(tester, roteador, Rotas.pacienteCuidadores);
       _naTela('TM07');
+      expect(_barraDeAbas, findsNothing, reason: 'TM07 sem as abas');
 
       await _ir(tester, roteador, Rotas.pacienteDiarioEnviado);
       _naTela('TM04');
@@ -219,6 +221,103 @@ void main() {
       expect(_local(roteador), Rotas.boasVindas);
       _naTela('TM00');
     });
+  });
+
+  group('linhas de cuidado (D21, D22)', () {
+    test('a guarda recusa "Em casa" a quem não tem terapia ocupacional', () {
+      final clinico = Sessao()..entrar(vinculosAna());
+      final to = Sessao()..entrar(vinculosAntonio());
+      expect(guardaDePerfil(clinico, Rotas.pacienteCasa), Rotas.pacienteInicio);
+      expect(guardaDePerfil(to, Rotas.pacienteCasa), isNull);
+      // O diário vale para todos (o alerta da crítica também protege a
+      // família de TO).
+      for (final sessao in [clinico, to]) {
+        expect(guardaDePerfil(sessao, Rotas.pacienteDiario), isNull);
+        expect(guardaDePerfil(sessao, Rotas.pacienteRegistros), isNull);
+      }
+      final cuidador = Sessao()..entrar(vinculosRegina());
+      expect(
+        guardaDePerfil(cuidador, Rotas.pacienteCasa),
+        Rotas.cuidadorInicio,
+      );
+    });
+
+    Iterable<String> abasNaBarra(WidgetTester tester) => [
+      for (final destino in tester.widgetList<NavigationDestination>(
+        find.byType(NavigationDestination),
+      ))
+        (destino.key! as ValueKey<String>).value,
+    ];
+
+    testWidgets('sem TO: três abas e link direto para Em casa volta ao '
+        'Início', (tester) async {
+      final sessao = Sessao()..entrar(vinculosAna());
+      final roteador = await _abrir(tester, sessao, em: Rotas.pacienteCasa);
+      expect(_local(roteador), Rotas.pacienteInicio);
+      _naTela('TM02');
+      expect(abasNaBarra(tester), ['aba-inicio', 'aba-diario', 'aba-jornada']);
+    });
+
+    testWidgets('só TO (Antônio): Em casa entre o Diário e a Jornada, e '
+        'cada aba abre a própria tela', (tester) async {
+      final sessao = Sessao()..entrar(vinculosAntonio());
+      final roteador = await _abrir(tester, sessao);
+      expect(abasNaBarra(tester), [
+        'aba-inicio',
+        'aba-diario',
+        'aba-casa',
+        'aba-jornada',
+      ]);
+      for (final (aba, tela, rota) in [
+        ('aba-casa', 'TM16', Rotas.pacienteCasa),
+        ('aba-jornada', 'TM06', Rotas.pacienteJornada),
+        ('aba-diario', 'TM03', Rotas.pacienteDiario),
+        ('aba-inicio', 'TM02', Rotas.pacienteInicio),
+      ]) {
+        await tester.tap(find.byKey(Key(aba)));
+        await tester.pumpAndSettle();
+        expect(_local(roteador), rota, reason: aba);
+        _naTela(tela);
+      }
+    });
+
+    testWidgets('a barra marca Em casa como selecionada; voltar leva ao '
+        'Início', (tester) async {
+      final semantica = tester.ensureSemantics();
+      final sessao = Sessao()..entrar(vinculosAna(linhas: asDuasLinhas));
+      final roteador = await _abrir(tester, sessao, em: Rotas.pacienteCasa);
+      _naTela('TM16');
+      expect(
+        tester.getSemantics(find.byKey(const Key('aba-casa'))),
+        isSemantics(isSelected: true, isButton: true, hasTapAction: true),
+      );
+      expect(
+        tester.getSemantics(find.byKey(const Key('aba-diario'))),
+        isSemantics(isSelected: false),
+      );
+      await _voltarDoAndroid(tester);
+      expect(_local(roteador), Rotas.pacienteInicio);
+      _naTela('TM02');
+      semantica.dispose();
+    });
+  });
+
+  testWidgets('TM07: voltar (seta ou Android) leva ao Início, mesmo por link '
+      'direto (D22)', (tester) async {
+    final sessao = Sessao()..entrar(vinculosAna());
+    final roteador = await _abrir(tester, sessao, em: Rotas.pacienteCuidadores);
+    _naTela('TM07');
+    await _voltarDoAndroid(tester);
+    expect(_local(roteador), Rotas.pacienteInicio);
+    _naTela('TM02');
+
+    unawaited(roteador.push(Rotas.pacienteCuidadores));
+    await tester.pumpAndSettle();
+    _naTela('TM07');
+    await tester.tap(find.byType(BackButton));
+    await tester.pumpAndSettle();
+    expect(_local(roteador), Rotas.pacienteInicio);
+    _naTela('TM02');
   });
 
   group('perfil cuidador', () {

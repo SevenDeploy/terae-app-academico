@@ -1,7 +1,7 @@
-/// As 16 telas (TM00–TM15) montadas como no aparelho: o `TeraeApp` com a
+/// As 17 telas (TM00–TM16) montadas como no aparelho: o `TeraeApp` com a
 /// memória real (`lib/dados/memoria/` sobre `assets/dados/demonstracao.json`),
 /// o relógio parado em 2/10/2026 10:00 na clínica e a sessão de cada persona
-/// (sem sessão, Ana, Patrícia ou Regina). Base dos testes de acessibilidade e
+/// (sem sessão, Ana, Patrícia, Regina ou Antônio). Base dos testes de acessibilidade e
 /// das capturas (`test/capturas/`).
 library;
 
@@ -32,7 +32,10 @@ enum Persona {
   patricia('Patrícia Andrade Neves'),
 
   /// Cuidadora de Ana (TM08, TM11, TM12).
-  regina('Regina Martins');
+  regina('Regina Martins'),
+
+  /// Titular de 71 anos, só terapia ocupacional (D23; TM16).
+  antonio('Antônio Carlos Ribeiro');
 
   const Persona(this.nomeNaConta);
 
@@ -337,6 +340,13 @@ final List<TelaReal> telasReais = [
       em: Rotas.corrigirRegistro(registroDeHoje),
       preparar: registrarHoje,
     ),
+  ),
+  TelaReal(
+    tela: 'TM16',
+    arquivo: 'TM16-em-casa',
+    descricao: 'TM16 Em casa (Antônio), ainda sem atividades',
+    abrir: (t) =>
+        abrirComMemoria(t, persona: Persona.antonio, em: Rotas.pacienteCasa),
   ),
 ];
 
