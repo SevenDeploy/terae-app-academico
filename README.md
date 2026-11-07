@@ -50,8 +50,9 @@ do `.env` usada na semente (combinada com a equipe, fora do git).
 
 | Persona | Conta simulada | O que mostra |
 |---|---|---|
-| Ana Lúcia Martins (16, titular) | `ana.lucia.martins@exemplo.test` | Início, diário (crítica → ajuda imediata), jornada, cuidadores 2/2 |
-| Patrícia Andrade Neves (mãe) | `patricia.neves@exemplo.test` | dois perfis (Miguel, 7, e Laura, 4) → seleção de perfil |
+| Ana Lúcia Martins (16, titular) | `ana.lucia.martins@exemplo.test` | psiquiatria e terapia ocupacional: Início, diário (crítica → ajuda imediata), Em casa, jornada, cuidadores 2/2 — as cinco abas |
+| Patrícia Andrade Neves (mãe) | `patricia.neves@exemplo.test` | dois perfis (Miguel, 7, e Laura, 4, só terapia ocupacional) → seleção de perfil; o app fala das crianças ("Vamos cuidar de Miguel hoje?") |
+| Antônio Carlos Ribeiro (71, titular) | `antonio.ribeiro@exemplo.test` | terapia ocupacional depois de um AVC, com o Tiago Moreira: sem receita nem remédios, com a aba Em casa |
 | Regina Martins (cuidadora da Ana) | `regina.martins@exemplo.test` | início do cuidador, medicação, agenda e avisos, sem conteúdo clínico |
 
 **Primeiro acesso** (na tela inicial):
