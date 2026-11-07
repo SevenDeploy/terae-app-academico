@@ -16,6 +16,7 @@ import 'demonstracao_memoria.dart';
 import 'diario_memoria.dart';
 import 'estado_memoria.dart';
 import 'lembretes_memoria.dart';
+import 'metas_memoria.dart';
 import 'paciente_memoria.dart';
 import 'presenca_memoria.dart';
 import 'programa_em_casa_memoria.dart';
@@ -117,6 +118,7 @@ class MemoriaDemonstracao {
     programaEmCasa: ProgramaEmCasaMemoria(this),
     presenca: PresencaMemoria(this),
     lembretes: LembretesMemoria(this),
+    metas: MetasMemoria(this),
     conexao: conexao,
   );
 

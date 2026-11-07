@@ -75,10 +75,29 @@ void main() {
     },
   );
 
-  test('marcos da jornada em ordem de data, dos três tipos', () async {
+  test('marcos da jornada em ordem de data, dos três tipos das Atividades 3 '
+      'e 4; "Meta alcançada" é da TO (F3)', () async {
     final repo = memoriaDeTeste().repositorios.paciente;
     final marcos = await repo.marcos(idAna);
-    expect(marcos.map((m) => m.tipo).toSet(), TipoMarco.values.toSet());
+    expect(marcos.map((m) => m.tipo).toSet(), {
+      TipoMarco.reavaliacao,
+      TipoMarco.orientacao,
+      TipoMarco.proximoPasso,
+    });
+    // Nenhuma persona tem alta (D36): ela aparece só nos testes que a
+    // preparam.
+    for (final p in [idAna, idMiguel, idLaura, idJoao, idAntonio]) {
+      expect(
+        (await repo.marcos(p)).where((m) => m.tipo == TipoMarco.alta),
+        isEmpty,
+      );
+    }
+    for (final p in [idMiguel, idAntonio]) {
+      expect(
+        (await repo.marcos(p)).map((m) => m.tipo),
+        contains(TipoMarco.metaAlcancada),
+      );
+    }
     for (var i = 1; i < marcos.length; i++) {
       expect(marcos[i].data.ehAntesDe(marcos[i - 1].data), isFalse);
     }

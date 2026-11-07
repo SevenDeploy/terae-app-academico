@@ -136,8 +136,8 @@ void main() {
       expect(linhas(idAntonio), {LinhaDeCuidado.terapiaOcupacional});
     });
 
-    test('Antônio: titular, com o Tiago, sem receita, com sessões e '
-        'marcos', () {
+    test('Antônio: titular, com o Tiago, sem receita, com sessões, marcos e '
+        'metas', () {
       final antonio = e.pacientes[idAntonio]!;
       expect(antonio.contaId, contaAntonio);
       expect(antonio.profissionalRefId, idTiago);
@@ -150,9 +150,14 @@ void main() {
         e.agendamentos.values.where((a) => a.pacienteId == idAntonio),
         hasLength(3),
       );
+      // F3: + "Meta alcançada" (escovar os dentes).
       expect(
         e.marcos.values.where((m) => m.pacienteId == idAntonio),
-        hasLength(2),
+        hasLength(3),
+      );
+      expect(
+        e.metas.values.where((m) => m.pacienteId == idAntonio),
+        hasLength(3),
       );
       final v = e.vinculosDaConta(e.contas[contaAntonio]!);
       expect(v.pacientes.single.id, idAntonio);

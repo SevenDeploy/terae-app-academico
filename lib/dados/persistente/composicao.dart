@@ -26,6 +26,7 @@ import 'cuidadores_firebase.dart';
 import 'diario_persistente.dart';
 import 'leitura_com_copia.dart';
 import 'lembretes_locais.dart';
+import 'metas_persistente.dart';
 import 'paciente_persistente.dart';
 import 'presenca_persistente.dart';
 import 'programa_em_casa_persistente.dart';
@@ -147,6 +148,7 @@ Future<Persistencia> montarPersistencia({
       relogio: relogio,
     ),
     programaEmCasa: programa,
+    metas: MetasPersistente(leitura: leitura, fonte: fonte),
     lembretes: LembretesLocais(
       preferencias: prefs,
       paciente: paciente,

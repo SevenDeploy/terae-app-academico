@@ -1,4 +1,5 @@
-/// As 20 telas (TM00–TM19) montadas como no aparelho: o `TeraeApp` com a
+/// As 21 telas (TM00–TM20), e a TM16 também depois da alta, montadas como no
+/// aparelho: o `TeraeApp` com a
 /// memória real (`lib/dados/memoria/` sobre `assets/dados/demonstracao.json`),
 /// o relógio parado em 2/10/2026 10:00 na clínica e a sessão de cada persona
 /// (sem sessão, Ana, Patrícia, Regina ou Antônio). Base dos testes de acessibilidade e
@@ -12,8 +13,11 @@ import 'package:terae_app/app.dart';
 import 'package:terae_app/dados/enums/adesao.dart';
 import 'package:terae_app/dados/enums/intensidade.dart';
 import 'package:terae_app/dados/enums/situacao_envio.dart';
+import 'package:terae_app/dados/enums/tipo_marco.dart';
 import 'package:terae_app/dados/memoria/estado_memoria.dart';
 import 'package:terae_app/dados/memoria/memoria_demonstracao.dart';
+import 'package:terae_app/dados/modelos/atividade_de_casa.dart';
+import 'package:terae_app/dados/modelos/marco_jornada.dart';
 import 'package:terae_app/dados/modelos/registro_diario.dart';
 import 'package:terae_app/nucleo/rotas/rotas.dart';
 import 'package:terae_app/nucleo/sessao/sessao.dart';
@@ -383,7 +387,65 @@ final List<TelaReal> telasReais = [
       await voltarAoTopo(t, 'TM19');
     },
   ),
+  TelaReal(
+    tela: 'TM20',
+    arquivo: 'TM20-meta',
+    descricao: 'TM20 Meta (Antônio), "Vestir a camisa de botão sozinho"',
+    abrir: (t) => abrirComMemoria(
+      t,
+      persona: Persona.antonio,
+      em: Rotas.meta(metaCamisaDoAntonio),
+    ),
+  ),
+  TelaReal(
+    tela: 'TM16',
+    arquivo: 'TM16-em-casa-alta',
+    descricao:
+        'TM16 Em casa (Antônio) depois da alta (D36, preparada no teste)',
+    abrir: (t) => abrirComMemoria(
+      t,
+      persona: Persona.antonio,
+      em: Rotas.pacienteCasa,
+      preparar: darAltaAoAntonio,
+    ),
+  ),
 ];
+
+/// "Vestir a camisa de botão sozinho", meta do Antônio (F3).
+const String metaCamisaDoAntonio = 'ce000000-0000-4000-8000-000000000007';
+
+/// D36 — a alta da terapia ocupacional do Antônio hoje, às 10h, como a
+/// clínica a faria: o marco "Alta" e as atividades encerradas na hora, depois
+/// do registro das 8h10 (que fica na faixa). Só nos testes: nenhuma persona
+/// da demonstração tem alta.
+Future<void> darAltaAoAntonio(MemoriaDemonstracao memoria) async {
+  final hoje = memoria.hoje();
+  memoria.estado.marcos['f0000000-0000-4000-8000-000000000099'] = MarcoJornada(
+    id: 'f0000000-0000-4000-8000-000000000099',
+    pacienteId: idAntonio,
+    tipo: TipoMarco.alta,
+    data: hoje,
+    titulo: 'Alta da terapia ocupacional',
+    textoSimples:
+        'Você e o Tiago encerraram a terapia ocupacional. Parabéns pelo '
+        'caminho!',
+  );
+  for (final a in [...memoria.estado.atividadesCasa.values]) {
+    if (a.pacienteId != idAntonio) continue;
+    memoria.estado.atividadesCasa[a.id] = AtividadeDeCasa(
+      id: a.id,
+      pacienteId: a.pacienteId,
+      profissionalId: a.profissionalId,
+      titulo: a.titulo,
+      texto: a.texto,
+      vezesPorSemana: a.vezesPorSemana,
+      ocupacao: a.ocupacao,
+      publicadaEm: a.publicadaEm,
+      encerradaEm: memoria.agora(),
+      metaId: a.metaId,
+    );
+  }
+}
 
 /// TM18 (F2): a agenda do Antônio, com a sessão de daqui a 7 dias sem
 /// resposta de presença.

@@ -67,6 +67,9 @@ enum MotivoRecusa {
     'Não encontramos esta atividade. Ela pode ter sido encerrada na terapia.',
   ),
 
+  /// TM20 (F3) — a meta não existe ou não é deste paciente.
+  metaInexistente('Não encontramos esta meta. Fale com a clínica.'),
+
   /// TM18 — D27: a sessão já começou, já passou ou foi cancelada.
   sessaoEncerrada(
     'Esta sessão já começou ou foi cancelada. Para remarcar, fale com a '

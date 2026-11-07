@@ -209,10 +209,11 @@ service cloud.firestore {
       }
 
       // Cópias completas: só o titular lê; quem grava é a clínica (semente).
+      // As metas da TO (F3) também: o cuidador não vê metas (D29).
       match /{colecao}/{id} {
         allow read: if ehTitular(pid)
           && colecao in ['agendamentos', 'receitas', 'itensMedicacao', 'marcos',
-            'atividadesCasa'];
+            'atividadesCasa', 'metas'];
       }
 
       // Cópias reduzidas do cuidador (sem motivo do retorno, orientação nem

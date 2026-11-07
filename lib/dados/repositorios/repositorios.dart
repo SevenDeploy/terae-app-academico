@@ -6,6 +6,7 @@ import '../enums/resposta_presenca.dart';
 import '../lembretes/lembrete.dart';
 import '../modelos/atividade_de_casa.dart';
 import '../modelos/confirmacao_de_presenca.dart';
+import '../modelos/meta_terapeutica.dart';
 import '../modelos/registro_de_atividade.dart';
 import '../sincronizacao/situacao_sincronizacao.dart';
 import 'autenticacao_repositorio.dart';
@@ -14,6 +15,7 @@ import 'demonstracao_repositorio.dart';
 import 'diario_repositorio.dart';
 import 'falhas.dart';
 import 'lembretes_repositorio.dart';
+import 'metas_repositorio.dart';
 import 'paciente_repositorio.dart';
 import 'presenca_repositorio.dart';
 import 'programa_em_casa_repositorio.dart';
@@ -37,6 +39,7 @@ class Repositorios {
     this.programaEmCasa = const _ProgramaVazio(),
     this.presenca = const _PresencaVazia(),
     this.lembretes = const _LembretesDesligados(),
+    this.metas = const _SemMetas(),
     this.conexao = const _SempreOnline(),
   });
 
@@ -59,6 +62,10 @@ class Repositorios {
   /// Evolução de TO (F2, D28): os lembretes locais. O padrão (desligado)
   /// serve aos dublês de teste que não os usam.
   final RepositorioLembretes lembretes;
+
+  /// Evolução de TO (F3): as metas do plano de terapia ocupacional. O padrão
+  /// (sem metas) serve aos dublês de teste que não as usam.
+  final RepositorioMetas metas;
 
   /// Situação da conexão e da fila do diário (D16), para o aviso das telas.
   final ValueListenable<SituacaoSincronizacao> conexao;
@@ -103,6 +110,18 @@ class _LembretesDesligados implements RepositorioLembretes {
 
   @override
   Future<void> cancelarTudo() async {}
+}
+
+/// Sem metas (dublês de teste que não as usam).
+class _SemMetas implements RepositorioMetas {
+  const _SemMetas();
+
+  @override
+  Future<List<MetaTerapeutica>> metas(String pacienteId) async => const [];
+
+  @override
+  Future<MetaTerapeutica> meta(String pacienteId, String metaId) =>
+      Future.error(const RecusaDeRegra(MotivoRecusa.metaInexistente));
 }
 
 /// Presença sem respostas (dublês de teste que não a usam).
