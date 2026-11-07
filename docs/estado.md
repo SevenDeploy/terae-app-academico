@@ -28,6 +28,9 @@ pacientes", sem integrar com o Terae web. Respostas dele: **evolução livre / p
 | D31 | (F1) O registro da atividade de casa tem id UUID v4 gerado no aparelho, e "um por atividade por dia" (D26) é garantido pela busca do registro do dia, que é corrigido no lugar. Não usamos id derivado porque as regras do Firestore não calculam hash, e um id que elas conseguissem conferir (`atividadeId_dia`) não seria UUID, o que o §23 pede. As regras não garantem a unicidade entre aparelhos (limitação declarada). Se dois aparelhos registrarem o mesmo dia, vale o mais recente, e é ele que a TM17 mostra, que a faixa e a semana contam e que a correção altera |
 | D32 | (F1) Quem só faz TO tem o mesmo diário, com o mesmo alerta da crítica, mas com as palavras da TO: "E a rotina combinada, deu para seguir?" (Segui/Seguimos, Em parte, Não deu hoje), "O quanto o dia foi difícil?" e "O que mais pesou hoje?" (crise ou desregulação, sono, alimentação…), na voz do perfil. Quem tem acompanhamento clínico, com ou sem TO, continua com o diário das A3/A4 |
 | D33 | (F1) Se o servidor recusar um item de uma fila por algo que não seja "sem conexão", o item fica na fila (o aviso conta), e o diário, as outras filas e a busca seguem. A recusa vai para o log de depuração. Isso resolve a pendência 4 da F0. A regra da rotina local do plano (F4) passa a ser a D34 |
+| D35 | (F3) As metas da TO são só leitura, num contrato próprio (`RepositorioMetas`). A família lê descrição, área da vida, prazo (só da meta em andamento: na alcançada, a etiqueta basta), situação em palavras ("Em andamento", "Alcançada", "Interrompida", "Substituída por outra") e com quem foi combinada. O modelo não tem escore, nível GAS nem peso, e o que vier a mais no documento é ignorado, também na cópia local e na semente (D25). O cuidador não lê metas: a regra do Firestore é só do titular, e nenhuma tela do cuidador as mostra (D29) |
+| D36 | (F3) A alta da terapia ocupacional é um marco "Alta" com data até hoje. A clínica encerra as atividades no mesmo dia (`encerradaEm`), e por isso o registro já é recusado pela vigência, os lembretes de casa param e o cartão do Início some. A TM16 mostra "Programa encerrado", com a faixa dos 14 dias, só para leitura, quando há alta **e nenhuma atividade vale hoje**: quem decide é a vigência, como no registro, no Início e nos lembretes. Se a clínica publicar atividades depois da alta (a volta à TO), o programa reabre sozinho. Nenhuma persona da demonstração tem alta, para o programa continuar à mostra; a alta aparece nos testes que a preparam e numa captura |
+| D37 | (F3) A atividade de casa e o marco apontam para a meta por um `metaId` opcional. A carga da memória exige que a meta seja do mesmo paciente e que o marco "Meta alcançada" aponte para uma meta alcançada. Os dados das fases anteriores, sem o campo, continuam valendo |
 
 ### F0 — Fundação (06/11/2026, branch `to-f0-fundacao`)
 
@@ -285,6 +288,69 @@ Pendências da F2:
      a resposta depois da sessão (como na D31);
    - se a sessão for cancelada no servidor enquanto a resposta espera na fila, a regra recusa e ela fica "aguardando
      envio" (D33). Hoje nada no app cancela sessão, porque não existe o lado da clínica.
+
+### F3 — Metas e progresso (06/11/2026, branch `to-f3-metas`)
+
+O que entrou:
+- **Metas (D35):**
+  - `MetaTerapeutica` e `SituacaoMeta`, com a regra pura em `regras/metas.dart`: a ordem da Jornada (por área da
+    vida; dentro dela, as em andamento pelo prazo, depois as alcançadas e as que saíram de cena) e o dia da alta.
+  - `RepositorioMetas`, com a memória e o persistente (`LeituraComCopia` sobre `pacientes/{pid}/metas`).
+  - O titular lê as metas no Firestore; o cuidador, não. Só a semente grava.
+- **Jornada (TM06):** "Nossas metas", por área da vida, com a situação e, na meta em andamento, o prazo. Tocar numa
+  meta abre a TM20. Só aparece para quem faz TO.
+- **TM20 Meta** (`/paciente/meta?id=`, empilhada):
+  - a meta, com quem foi combinada, quem acompanha, a situação, a área da vida e o prazo;
+  - "O que ajuda em casa", com as atividades ligadas, que abrem a TM17;
+  - os marcos da meta e uma nota: "Para mudar uma meta, fale com a clínica.";
+  - meta de outro paciente ou inexistente: "Não encontramos esta meta"; por link direto, a seta vai à Jornada.
+- **Ligações (D37):** a TM16 diz "Ajuda na meta: …" em cada atividade, e a TM17 tem o cartão "Esta atividade ajuda
+  na meta", que abre a TM20. Na Jornada, os marcos "Meta alcançada" e "Alta" ganham ícone próprio, e o marco de uma
+  meta abre a TM20.
+- **Alta (D36):** a TM16 mostra "Programa encerrado" com o dia da alta, um botão para a Jornada e a faixa dos 14 dias.
+- **Demonstração:**
+  - Miguel: "Vestir a camiseta sozinho…", "Brincar de massinha…" e "Segurar o lápis com a pinça dos dedos"
+    (alcançada, com o marco);
+  - Ana: "Ir à escola 4 de 5 dias da semana" e "Deitar até as 23h…", com o Tiago;
+  - Antônio: "Vestir a camisa de botão sozinho", "Tomar o café da manhã sem ajuda" e "Escovar os dentes com a mão
+    mais fraca" (alcançada, com o marco);
+  - as 6 atividades de casa e os "próximos passos" do Miguel e do Antônio apontam para as metas; Laura fica sem metas.
+- **Firestore e ferramentas:** `metas` na lista do titular em `firestore.rules`, na semente e no
+  `conferir-firebase.mjs`.
+- **Portão (antes da revisão):** 723 testes e 23 capturas (TM20 e a TM16 depois da alta, novas).
+
+Desvios conscientes:
+- O contrato das metas é próprio (`RepositorioMetas`) e não um método a mais do programa em casa: a Jornada, a TM16,
+  a TM17 e a TM20 leem as metas, e o padrão sem metas serve aos dublês.
+- Nenhuma persona tem alta (D36). O teste do inventário de marcos da demonstração passou a não exigir o tipo "Alta".
+- O prazo aparece só na meta em andamento (D35).
+
+O que a verificação achou:
+- **A revisão em contexto limpo bloqueou três pontos, os três reproduzidos e agora cobertos por testes:**
+  - **A TM16 ficava com o dia velho** quando o registro era feito pelo caminho Jornada → TM20 → TM17: com conexão,
+    os pendentes não mudam e nada relia a aba. Agora a TM16 relê também ao voltar à aba (`RecarregaAoVoltar`).
+  - **A TM17 de baixo não relia** na pilha TM17 → TM20 → TM17, e o "Registrar" nela trocava, sem aviso, o registro
+    feito na de cima (a reflexão sumia). Agora o cartão da meta espera a TM20 desempilhar e a TM17 relê.
+  - **"Programa encerrado" seguia só o marco, mas o registro segue a vigência:** depois de uma alta antiga e da volta
+    à TO, a TM16 escondia as atividades enquanto o Início e a TM17 as aceitavam. Agora o encerrado exige alta e
+    nenhuma atividade valendo hoje (D36).
+- **Do "registra e segue" da revisão, corrigido:**
+  - a cópia local das metas guardava o documento inteiro do servidor; agora guarda só os campos do modelo, e a
+    semente grava só esses campos (D25);
+  - a alta preparada no teste deixava registro depois da alta; agora ela é hoje às 10h, depois do registro das 8h10;
+  - "Nossas metas" que não pôde ser lida sumia sem volta; a Jornada ganhou "puxar para atualizar" e relê quando a
+    sincronização termina, e a TM20 diz quando as atividades não puderam ser lidas, em vez de "nenhuma";
+  - o teste de "quem não faz TO" não testava o filtro; agora a Ana sem TO tem metas na memória e não as vê;
+  - o "nenhuma persona tem alta" ganhou o `expect`, e os estados da TM20 (falha com "Tentar de novo", sem
+    atividade ligada) ganharam teste.
+- **Portão depois das correções:** 730 testes e 23 capturas.
+
+Pendências da F3:
+1. **Firebase acadêmico:** publicar as regras novas (`metas`) e rodar a semente com `--reiniciar`. As duas coisas pedem
+   um ok novo do dono. Até lá, no aparelho, a Jornada aparece sem "Nossas metas" (a leitura é recusada e a seção
+   some).
+2. **Roteiro no emulador:** "Nossas metas", TM20 → TM17 → TM20, o marco "Meta alcançada" e o cartão da TM17, com o
+   Firebase real.
 
 ## Atividade 4 — Persistência local e integração com o Firebase (06/11/2026)
 
