@@ -126,12 +126,30 @@ O que a verificação achou:
   - a dica do diário de TO ainda dizia "o sintoma";
   - o `conferir-firebase.mjs` não mostrava os registros de casa.
 
+**Firebase e emulador (06/11/2026, com o ok do dono):**
+- As `firestore.rules` novas foram publicadas e compilaram no servidor.
+- A semente rodou com `--reiniciar`: 4 contas, 5 pacientes, 19 registros do diário, 6 atividades e 39 registros de
+  casa.
+- No emulador `Terae_Pixel`, com o APK de depuração e o Firebase real, foi conferido:
+  - Antônio entra com e-mail e senha;
+  - o Início mostra o diário com as palavras da TO e "Hoje: 1 de 2 registradas";
+  - a TM16 lê as atividades e a faixa do servidor;
+  - na TM17, "Em parte" → "Registrado. Obrigado por contar!", que só aparece depois da confirmação do servidor; isso
+    prova que a regra de criação de `registrosCasa` aceita;
+  - de volta à TM16, aparece "Hoje: 2 de 2", o que confirma no aparelho a correção da revisão;
+  - "Desfazer" → o servidor mostra o registro DESFEITO, o que prova a regra de atualização.
+- Todas as passagens foram conferidas com `node ferramentas/conferir-firebase.mjs a0000000-0000-4000-8000-000000000005`.
+  As capturas estão em `docs/evidencias-f1/`.
+- Ficou no servidor o registro desfeito de hoje do "Abotoar". Para voltar ao início, rode a semente com `--reiniciar`.
+
 Pendências da F1:
-1. **Firebase acadêmico:** publicar as `firestore.rules` novas (`firebase deploy --only firestore:rules`) e rodar a
-   semente (`--reiniciar`). As duas coisas mexem no projeto do dono e pedem o ok dele. As regras de `registrosCasa`
-   não têm teste automático, porque o projeto não usa o emulador de regras.
-2. **Roteiro no emulador:** Antônio registra, corrige e desfaz; no modo avião, o registro vai para a fila e sai sozinho;
-   Patrícia, como Miguel, vê "Conseguiram fazer hoje?". Depende da pendência 1.
+1. **Partes do roteiro que não foram feitas no aparelho:**
+   - a fila no modo avião, que tem cobertura nos testes de persistência, e cujo mecanismo é o mesmo que o roteiro da A4
+     provou para o diário;
+   - a correção, que usa a mesma regra de atualização do desfazer;
+   - a voz da Patrícia pelo Miguel, que tem cobertura nos testes de tela.
+2. As regras de `registrosCasa` continuam sem teste automático, porque o projeto não usa o emulador de regras. Elas
+   foram provadas só pelo roteiro acima.
 3. **Para a F2:** "Sua próxima consulta" no Início, "horários de remédio" na TM07 e o atalho "Medicação" do cuidador
    para quem só faz TO.
 4. **Da revisão:**
