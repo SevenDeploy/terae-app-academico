@@ -14,7 +14,8 @@ enum VarianteBotao {
   perigo,
 }
 
-/// Botão de largura total, 56 de altura, texto 18 (RNFM01: botões grandes).
+/// Botão de largura total, 48 de altura e texto 16, como os do portal
+/// (`Button` `lg` + `h-12` do `@terae/ui`; RNFM01).
 ///
 /// `aoTocar: null` desabilita. O rótulo quebra linha em vez de cortar quando
 /// a fonte do aparelho está grande.
@@ -35,8 +36,8 @@ class BotaoGrande extends StatelessWidget {
   final bool larguraTotal;
 
   static const TextStyle _texto = TextStyle(
-    fontFamily: 'Lexend',
-    fontSize: 18,
+    fontFamily: 'Inter',
+    fontSize: 16,
     fontWeight: FontWeight.w600,
     height: 1.25,
   );
@@ -46,10 +47,7 @@ class BotaoGrande extends StatelessWidget {
     final conteudo = Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        if (icone != null) ...[
-          Icon(icone, size: 24),
-          const SizedBox(width: 10),
-        ],
+        if (icone != null) ...[Icon(icone, size: 18), const SizedBox(width: 8)],
         Flexible(child: Text(rotulo, textAlign: TextAlign.center)),
       ],
     );
@@ -76,7 +74,7 @@ class BotaoGrande extends StatelessWidget {
         style: FilledButton.styleFrom(
           minimumSize: tamanho,
           textStyle: _texto,
-          backgroundColor: CoresTerae.sevCritica,
+          backgroundColor: CoresTerae.erro,
           foregroundColor: CoresTerae.branco,
         ),
         child: conteudo,

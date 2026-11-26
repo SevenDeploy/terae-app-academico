@@ -493,7 +493,7 @@ void aparelho(WidgetTester tester, {double escala = 1, double densidade = 2}) {
   });
 }
 
-/// Carrega a fonte Lexend de verdade (`assets/fonts/*.ttf`, os pesos do
+/// Carrega as fontes Inter e Lexend de verdade (`assets/fonts/*.ttf`, os pesos do
 /// `pubspec.yaml`) e os ícones Material (`MaterialIcons-Regular.otf`, que o
 /// `flutter test` copia de `bin/cache/artifacts/material_fonts/` para o pacote
 /// de assets por causa do `uses-material-design`). Sem isso o teste desenha
@@ -508,9 +508,16 @@ Future<void> carregarFontesReais() async {
     await carregador.load();
   }
 
+  await carregar('Inter', [
+    for (final peso in ['Regular', 'Medium', 'SemiBold', 'Bold'])
+      'assets/fonts/Inter-$peso.ttf',
+  ]);
   await carregar('Lexend', [
     for (final peso in ['Regular', 'Medium', 'SemiBold', 'Bold'])
       'assets/fonts/Lexend-$peso.ttf',
   ]);
   await carregar('MaterialIcons', ['fonts/MaterialIcons-Regular.otf']);
+  await carregar('packages/lucide_icons_flutter/Lucide', [
+    'packages/lucide_icons_flutter/assets/lucide.ttf',
+  ]);
 }

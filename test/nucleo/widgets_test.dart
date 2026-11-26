@@ -157,7 +157,7 @@ void main() {
   });
 
   group('BotaoGrande', () {
-    testWidgets('tem 56 de altura, largura total e desabilita sem ação', (
+    testWidgets('tem 48 de altura, largura total e desabilita sem ação', (
       tester,
     ) async {
       var tocou = 0;
@@ -176,7 +176,7 @@ void main() {
         ),
       );
       final tamanho = tester.getSize(find.byType(FilledButton));
-      expect(tamanho.height, greaterThanOrEqualTo(56));
+      expect(tamanho.height, greaterThanOrEqualTo(48));
       expect(tamanho.width, 800 - 2 * MedidasTerae.margemLateral);
       await tester.tap(find.text('Enviar'));
       expect(tocou, 1);
@@ -239,7 +239,7 @@ void main() {
     expect(find.text('Projeto acadêmico — UNEMAT 2026'), findsOneWidget);
   });
 
-  test('tema: texto mínimo de 14 e fonte Lexend', () {
+  test('tema: texto mínimo de 14, Inter no corpo e Lexend nos títulos', () {
     final tema = temaTerae();
     final estilos = [
       tema.textTheme.bodySmall,
@@ -250,8 +250,10 @@ void main() {
     ];
     for (final estilo in estilos) {
       expect(estilo?.fontSize, greaterThanOrEqualTo(14));
-      expect(estilo?.fontFamily, 'Lexend');
+      expect(estilo?.fontFamily, 'Inter');
     }
+    expect(tema.textTheme.headlineSmall?.fontFamily, 'Lexend');
+    expect(tema.textTheme.titleMedium?.fontFamily, 'Lexend');
     expect(tema.colorScheme.primary, CoresTerae.primaria600);
   });
 }

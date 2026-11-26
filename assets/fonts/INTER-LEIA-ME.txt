@@ -1,0 +1,1 @@
+Inter (assets/fonts/Inter-*.ttf) — Copyright 2020 The Inter Project Authors (https://github.com/rsms/inter), SIL Open Font License 1.1, convertida do woff2 servido pelo portal do Terae (@fontsource).

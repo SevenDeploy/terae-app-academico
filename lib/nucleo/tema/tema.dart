@@ -5,18 +5,21 @@ import 'cores.dart';
 /// Medidas do Terae para o app (RNFM01: botões grandes; D10: texto ≥ 14 sp).
 abstract final class MedidasTerae {
   static const double raioCartao = 16;
-  static const double raioBotao = 12;
+  static const double raioBotao = 8;
   static const double raioPequeno = 8;
 
-  /// Margem lateral das telas.
-  static const double margemLateral = 20;
-  static const EdgeInsets paddingTela = EdgeInsets.fromLTRB(20, 16, 20, 24);
+  /// Margem lateral das telas (o `px-4` do portal no telefone).
+  static const double margemLateral = 16;
+  static const EdgeInsets paddingTela = EdgeInsets.fromLTRB(16, 24, 16, 24);
+
+  /// Espaço interno e entre cartões (`p-5`, `gap-5`).
+  static const double espacoCartao = 20;
 
   /// Alvo de toque mínimo de qualquer botão (WCAG 2.5.8 / Android 48 dp).
   static const double alturaMinimaBotao = 48;
 
-  /// Altura do [BotaoGrande].
-  static const double alturaBotaoGrande = 56;
+  /// Altura do [BotaoGrande] (o `h-12` dos botões do portal).
+  static const double alturaBotaoGrande = 48;
 
   /// Altura mínima de cada opção do seletor (adesão, intensidade).
   static const double alturaMinimaSeletor = 64;
@@ -32,7 +35,9 @@ abstract final class MedidasTerae {
   static const double espacoGrande = 24;
 }
 
-const String _fonte = 'Lexend';
+/// Inter na interface e na leitura; Lexend nos títulos (como o portal).
+const String _fonte = 'Inter';
+const String _fonteTitulo = 'Lexend';
 
 /// Contorno de 3 px quando o controle tem foco de teclado (WCAG 2.4.7).
 final WidgetStateProperty<BorderSide?> _bordaDeFoco =
@@ -63,27 +68,48 @@ OutlineInputBorder _bordaCampo(Color cor, [double largura = 1.5]) =>
       borderSide: BorderSide(color: cor, width: largura),
     );
 
-/// Tipografia Lexend; o menor tamanho é 14 (D10).
+/// Tipografia do portal: títulos em Lexend (h1 26, cartão 18), corpo em Inter
+/// 16/1,55; o menor tamanho é 14 (D10).
 const TextTheme _textos = TextTheme(
-  displaySmall: TextStyle(fontSize: 32, fontWeight: FontWeight.w700),
-  headlineMedium: TextStyle(fontSize: 28, fontWeight: FontWeight.w700),
-  headlineSmall: TextStyle(
-    fontSize: 24,
-    fontWeight: FontWeight.w700,
-    height: 1.25,
+  displaySmall: TextStyle(
+    fontFamily: _fonteTitulo,
+    fontSize: 30,
+    fontWeight: FontWeight.w600,
+    letterSpacing: -0.6,
   ),
-  titleLarge: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
-  titleMedium: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+  headlineMedium: TextStyle(
+    fontFamily: _fonteTitulo,
+    fontSize: 28,
+    fontWeight: FontWeight.w600,
+    letterSpacing: -0.56,
+  ),
+  headlineSmall: TextStyle(
+    fontFamily: _fonteTitulo,
+    fontSize: 26,
+    fontWeight: FontWeight.w600,
+    height: 32 / 26,
+    letterSpacing: -0.52,
+  ),
+  titleLarge: TextStyle(
+    fontFamily: _fonteTitulo,
+    fontSize: 20,
+    fontWeight: FontWeight.w600,
+  ),
+  titleMedium: TextStyle(
+    fontFamily: _fonteTitulo,
+    fontSize: 18,
+    fontWeight: FontWeight.w600,
+  ),
   titleSmall: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-  bodyLarge: TextStyle(fontSize: 18, height: 1.45),
-  bodyMedium: TextStyle(fontSize: 16, height: 1.45),
+  bodyLarge: TextStyle(fontSize: 17, height: 1.55),
+  bodyMedium: TextStyle(fontSize: 16, height: 1.55),
   bodySmall: TextStyle(fontSize: 14, height: 1.4),
   labelLarge: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
   labelMedium: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
   labelSmall: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
 );
 
-/// ThemeData do app: tokens de `cores.dart`, Lexend, raios 16/12/8, botões
+/// ThemeData do app: tokens de `cores.dart`, Inter + Lexend, raios 16/8, botões
 /// com 48 de altura mínima e foco visível.
 ThemeData temaTerae() {
   const esquema = ColorScheme(
@@ -117,7 +143,7 @@ ThemeData temaTerae() {
     colorScheme: esquema,
     fontFamily: _fonte,
     textTheme: _textos,
-    scaffoldBackgroundColor: CoresTerae.superficieElevada,
+    scaffoldBackgroundColor: CoresTerae.superficie,
     materialTapTargetSize: MaterialTapTargetSize.padded,
     visualDensity: VisualDensity.standard,
     focusColor: CoresTerae.primaria600.withValues(alpha: 0.16),
@@ -128,9 +154,9 @@ ThemeData temaTerae() {
       scrolledUnderElevation: 0,
       centerTitle: false,
       titleTextStyle: TextStyle(
-        fontFamily: _fonte,
-        fontSize: 20,
-        fontWeight: FontWeight.w700,
+        fontFamily: _fonteTitulo,
+        fontSize: 17,
+        fontWeight: FontWeight.w600,
         color: CoresTerae.texto,
       ),
     ),
@@ -175,7 +201,7 @@ ThemeData temaTerae() {
                       color: CoresTerae.foco,
                       width: MedidasTerae.larguraFoco,
                     )
-                  : const BorderSide(color: CoresTerae.neutro300, width: 1.5),
+                  : const BorderSide(color: CoresTerae.borda),
             ),
           ),
     ),
@@ -202,8 +228,8 @@ ThemeData temaTerae() {
       filled: true,
       fillColor: CoresTerae.branco,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      border: _bordaCampo(CoresTerae.neutro400),
-      enabledBorder: _bordaCampo(CoresTerae.neutro400),
+      border: _bordaCampo(CoresTerae.bordaCampo),
+      enabledBorder: _bordaCampo(CoresTerae.bordaCampo),
       focusedBorder: _bordaCampo(CoresTerae.primaria600, 2.5),
       errorBorder: _bordaCampo(CoresTerae.sevCritica),
       focusedErrorBorder: _bordaCampo(CoresTerae.sevCritica, 2.5),
@@ -229,29 +255,28 @@ ThemeData temaTerae() {
       ),
     ),
     navigationBarTheme: NavigationBarThemeData(
-      height: 72,
+      height: 64,
       backgroundColor: CoresTerae.superficieElevada,
       surfaceTintColor: Colors.transparent,
-      indicatorColor: CoresTerae.primaria50,
+      // O portal marca a aba ativa só pela cor do ícone e do rótulo.
+      indicatorColor: Colors.transparent,
       labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
       labelTextStyle: WidgetStateProperty.resolveWith(
         (estados) => TextStyle(
           fontFamily: _fonte,
           fontSize: MedidasTerae.textoMinimo,
-          fontWeight: estados.contains(WidgetState.selected)
-              ? FontWeight.w700
-              : FontWeight.w500,
+          fontWeight: FontWeight.w600,
           color: estados.contains(WidgetState.selected)
               ? CoresTerae.primaria700
-              : CoresTerae.neutro400,
+              : CoresTerae.neutro600,
         ),
       ),
       iconTheme: WidgetStateProperty.resolveWith(
         (estados) => IconThemeData(
-          size: 26,
+          size: 22,
           color: estados.contains(WidgetState.selected)
               ? CoresTerae.primaria700
-              : CoresTerae.neutro400,
+              : CoresTerae.neutro600,
         ),
       ),
     ),
