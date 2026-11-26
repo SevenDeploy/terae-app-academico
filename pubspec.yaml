@@ -38,6 +38,9 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
+  # Atividade 5 — jornada principal no aparelho (integration_test/).
+  integration_test:
+    sdk: flutter
   # Atividade 4 — SQLite no computador (testes) e Firebase de mentira.
   fake_cloud_firestore: ^4.5.0
   firebase_auth_mocks: ^0.16.0
