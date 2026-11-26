@@ -18,9 +18,12 @@ import 'package:terae_app/dados/repositorios/programa_em_casa_repositorio.dart';
 import 'package:terae_app/nucleo/tempo/relogio.dart';
 import 'package:timezone/timezone.dart' as fuso;
 
-/// Guarda o que seria agendado no Android.
+/// Guarda o que seria agendado e o que já está na barra de notificações do
+/// Android. Como no plugin de verdade, `cancelAll` tira os dois, e
+/// `cancelAllPendingNotifications`, só os agendados.
 class _PluginDeMentira implements FlutterLocalNotificationsPlugin {
   final Map<int, Map<Symbol, Object?>> agendados = {};
+  final Set<int> naBarra = {};
   int cancelamentos = 0;
 
   @override
@@ -29,6 +32,11 @@ class _PluginDeMentira implements FlutterLocalNotificationsPlugin {
       case #cancelAll:
         cancelamentos++;
         agendados.clear();
+        naBarra.clear();
+      case #cancelAllPendingNotifications:
+        agendados.clear();
+      case #show:
+        naBarra.add(chamada.namedArguments[#id]! as int);
       case #zonedSchedule:
         agendados[chamada.namedArguments[#id]! as int] = chamada.namedArguments;
     }
@@ -113,12 +121,25 @@ void main() {
     expect(args[#body], 'Amanhã às 08:00 tem compromisso na clínica.');
   });
 
+  test('reagendar troca só os agendados: o lembrete já mostrado fica na '
+      'barra (roteiro da A5, CT16)', () async {
+    await lembretes.salvar(const PreferenciasDeLembrete(vesperaDaSessao: true));
+    await lembretes.testar();
+    expect(plugin.naBarra, {1});
+    // A sincronização e a volta ao app refazem os lembretes (F2).
+    await lembretes.reagendar(['p']);
+    expect(plugin.naBarra, {1});
+    expect(plugin.agendados, hasLength(1));
+  });
+
   test('"Sair": cancela no Android e apaga as escolhas', () async {
     await lembretes.salvar(const PreferenciasDeLembrete(vesperaDaSessao: true));
     await lembretes.reagendar(['p']);
+    await lembretes.testar();
     expect(plugin.agendados, isNotEmpty);
     await lembretes.cancelarTudo();
     expect(plugin.agendados, isEmpty);
+    expect(plugin.naBarra, isEmpty);
     expect(await lembretes.preferencias(), const PreferenciasDeLembrete());
   });
 

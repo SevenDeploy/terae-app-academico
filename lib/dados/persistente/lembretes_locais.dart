@@ -108,7 +108,9 @@ class LembretesLocais implements RepositorioLembretes {
     // A leitura pode levar segundos (RNFM03): se o "Sair" veio no meio, não
     // agenda nada.
     if (geracao != _geracao) return const [];
-    await _plugin.cancelAll();
+    // Troca só os agendados: o lembrete que já está na barra de notificações
+    // fica lá até a pessoa tirar (roteiro da A5, CT16). Só o "Sair" tira tudo.
+    await _plugin.cancelAllPendingNotifications();
     for (final l in lembretes) {
       if (geracao != _geracao) break;
       await _plugin.zonedSchedule(
