@@ -19,6 +19,7 @@ import '../../../nucleo/widgets/aviso_de_conexao.dart';
 import '../../../nucleo/widgets/cartao.dart';
 import '../componentes_paciente.dart';
 import '../diario/campos_do_diario.dart';
+import '../registros/componentes_registros.dart';
 import 'inicio_controlador.dart';
 
 /// TM02 — Início. RFM02. Aba 1: saudação, atalho grande ao diário (um toque
@@ -74,83 +75,89 @@ class _ConteudoInicio extends StatelessWidget {
     final primeiroNome = (conta ?? paciente.nome).split(' ').first;
     final mostrarPerfil = variosPerfis || primeiroNome != paciente.primeiroNome;
 
+    // A5 (ensaio): relê também quando a sincronização termina. Logo depois
+    // de entrar, a cópia local ainda não tem a presença já respondida nem os
+    // registros de casa do servidor, e o cartão dizia "Você vai? Responda".
     return RecarregaAoVoltar(
       rota: Rotas.pacienteInicio,
       aoVoltar: controlador.atualizarEmCasa,
-      child: CorpoDaTela(
-        children: [
-          const AvisoDeConexao(),
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  formatarDiaPorExtenso(relogio.agora()),
-                  style: textos.bodySmall?.copyWith(
-                    color: CoresTerae.textoSecundario,
-                    fontWeight: FontWeight.w600,
+      child: RecarregaAoSincronizar(
+        aoMudar: () => controlador.carregar(emSilencio: true),
+        child: CorpoDaTela(
+          children: [
+            const AvisoDeConexao(),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    formatarDiaPorExtenso(relogio.agora()),
+                    style: textos.bodySmall?.copyWith(
+                      color: CoresTerae.textoSecundario,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
-              ),
-              _MenuDoInicio(variosPerfis: variosPerfis),
-            ],
-          ),
-          CabecalhoDaTela(
-            titulo: 'Olá, $primeiroNome',
-            subtitulo: perfil.falaDeOutraPessoa
-                ? 'Que bom te ver por aqui. Vamos cuidar de '
-                      '${paciente.primeiroNome} hoje?'
-                : 'Que bom te ver por aqui. Vamos cuidar de você hoje?',
-          ),
-          if (mostrarPerfil) ...[
-            const SizedBox(height: MedidasTerae.espacoPequeno),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Etiqueta(
-                icone: Icons.person_outline,
-                texto: 'Perfil de ${paciente.nome}',
-              ),
+                _MenuDoInicio(variosPerfis: variosPerfis),
+              ],
             ),
-          ],
-          const SizedBox(height: MedidasTerae.espaco),
-          const _AtalhoDoDiario(),
-          const SizedBox(height: MedidasTerae.espaco),
-          if (controlador.carregando)
-            const Carregando()
-          else if (controlador.falhou)
-            AvisoDeFalha(
-              mensagem:
-                  'Não foi possível mostrar sua consulta e sua receita '
-                  'agora.',
-              aoTentarDeNovo: controlador.carregar,
-            )
-          else ...[
-            // F1 — o resumo das atividades de casa, para quem tem TO.
-            if (controlador.emCasa case (:final registradas, :final total)
-                when total > 0) ...[
-              _AtalhoEmCasa(registradas: registradas, total: total),
-              const SizedBox(height: MedidasTerae.espaco),
-            ],
-            // D21 — receita e remédios só no acompanhamento clínico.
-            if (paciente.temAcompanhamentoClinico)
-              if (controlador.receita case final receita?)
-                _LembreteDeRenovacao(
-                  receita: receita,
-                  hoje: DataCivil.hoje(relogio),
+            CabecalhoDaTela(
+              titulo: 'Olá, $primeiroNome',
+              subtitulo: perfil.falaDeOutraPessoa
+                  ? 'Que bom te ver por aqui. Vamos cuidar de '
+                        '${paciente.primeiroNome} hoje?'
+                  : 'Que bom te ver por aqui. Vamos cuidar de você hoje?',
+            ),
+            if (mostrarPerfil) ...[
+              const SizedBox(height: MedidasTerae.espacoPequeno),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Etiqueta(
+                  icone: Icons.person_outline,
+                  texto: 'Perfil de ${paciente.nome}',
                 ),
-            _ProximaConsulta(
-              controlador: controlador,
-              relogio: relogio,
-              perfil: perfil,
-            ),
-            if (paciente.temAcompanhamentoClinico) ...[
-              const SizedBox(height: MedidasTerae.espaco),
-              _OrientacaoVigente(
-                receita: controlador.receita,
-                itens: controlador.itens,
               ),
             ],
+            const SizedBox(height: MedidasTerae.espaco),
+            const _AtalhoDoDiario(),
+            const SizedBox(height: MedidasTerae.espaco),
+            if (controlador.carregando)
+              const Carregando()
+            else if (controlador.falhou)
+              AvisoDeFalha(
+                mensagem:
+                    'Não foi possível mostrar sua consulta e sua receita '
+                    'agora.',
+                aoTentarDeNovo: controlador.carregar,
+              )
+            else ...[
+              // F1 — o resumo das atividades de casa, para quem tem TO.
+              if (controlador.emCasa case (:final registradas, :final total)
+                  when total > 0) ...[
+                _AtalhoEmCasa(registradas: registradas, total: total),
+                const SizedBox(height: MedidasTerae.espaco),
+              ],
+              // D21 — receita e remédios só no acompanhamento clínico.
+              if (paciente.temAcompanhamentoClinico)
+                if (controlador.receita case final receita?)
+                  _LembreteDeRenovacao(
+                    receita: receita,
+                    hoje: DataCivil.hoje(relogio),
+                  ),
+              _ProximaConsulta(
+                controlador: controlador,
+                relogio: relogio,
+                perfil: perfil,
+              ),
+              if (paciente.temAcompanhamentoClinico) ...[
+                const SizedBox(height: MedidasTerae.espaco),
+                _OrientacaoVigente(
+                  receita: controlador.receita,
+                  itens: controlador.itens,
+                ),
+              ],
+            ],
           ],
-        ],
+        ),
       ),
     );
   }

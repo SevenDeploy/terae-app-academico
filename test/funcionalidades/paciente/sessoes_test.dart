@@ -7,9 +7,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:terae_app/dados/enums/resposta_presenca.dart';
 import 'package:terae_app/dados/enums/situacao_envio.dart';
+import 'package:terae_app/dados/sincronizacao/situacao_sincronizacao.dart';
 import 'package:terae_app/nucleo/rotas/rotas.dart';
 
 import '../../acessibilidade/telas_reais.dart';
+import '../../dados/memoria_apoio.dart';
 import 'apoio_paciente.dart';
 
 String _ag(int n) => 'ad000000-0000-4000-8000-${n.toString().padLeft(12, '0')}';
@@ -210,6 +212,41 @@ void main() {
       expect(find.byKey(const Key('atalho-medicacao')), findsOneWidget);
       await tocar(tester, find.byKey(const Key('atalho-agenda')));
       expect(find.text('Presença confirmada'), findsOneWidget);
+    });
+
+    testWidgets('o Início relê a presença quando a sincronização termina '
+        '(A5: logo depois de entrar, mostrava "Você vai? Responda")', (
+      tester,
+    ) async {
+      final conexao = ValueNotifier(const SituacaoSincronizacao());
+      addTearDown(conexao.dispose);
+      final m = await abrirComMemoria(
+        tester,
+        persona: Persona.antonio,
+        em: Rotas.pacienteInicio,
+        conexao: conexao,
+      );
+      final cartao = find.byKey(const Key('proxima-consulta'));
+      expect(
+        find.descendant(of: cartao, matching: find.text('Você vai? Responda')),
+        findsOneWidget,
+      );
+
+      // A sincronização traz do servidor a resposta dada antes (aqui, direto
+      // na memória) e termina.
+      conexao.value = const SituacaoSincronizacao(sincronizando: true);
+      await m.repositorios.presenca.responder(
+        pacienteId: idAntonio,
+        agendamentoId: _sessaoAntonio,
+        resposta: RespostaPresenca.vamos,
+      );
+      conexao.value = const SituacaoSincronizacao();
+      await tester.pumpAndSettle();
+
+      expect(
+        find.descendant(of: cartao, matching: find.text('Presença confirmada')),
+        findsOneWidget,
+      );
     });
   });
 }

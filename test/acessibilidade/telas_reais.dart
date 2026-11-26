@@ -6,6 +6,7 @@
 /// das capturas (`test/capturas/`).
 library;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -19,6 +20,8 @@ import 'package:terae_app/dados/memoria/memoria_demonstracao.dart';
 import 'package:terae_app/dados/modelos/atividade_de_casa.dart';
 import 'package:terae_app/dados/modelos/marco_jornada.dart';
 import 'package:terae_app/dados/modelos/registro_diario.dart';
+import 'package:terae_app/dados/repositorios/repositorios.dart';
+import 'package:terae_app/dados/sincronizacao/situacao_sincronizacao.dart';
 import 'package:terae_app/nucleo/rotas/rotas.dart';
 import 'package:terae_app/nucleo/sessao/sessao.dart';
 import 'package:terae_app/nucleo/tempo/relogio.dart';
@@ -53,6 +56,7 @@ Future<MemoriaDemonstracao> abrirComMemoria(
   required Persona persona,
   required String em,
   Future<void> Function(MemoriaDemonstracao memoria)? preparar,
+  ValueListenable<SituacaoSincronizacao>? conexao,
 }) async {
   final memoria = memoriaDeTeste();
   await preparar?.call(memoria);
@@ -63,9 +67,26 @@ Future<MemoriaDemonstracao> abrirComMemoria(
     );
     sessao.entrar(vinculos);
   }
+  final r = memoria.repositorios;
   await tester.pumpWidget(
     TeraeApp(
-      repositorios: memoria.repositorios,
+      // Com [conexao], a mesma memória com a situação da sincronização
+      // controlada pelo teste (releitura ao fim da sincronização).
+      repositorios: conexao == null
+          ? r
+          : Repositorios(
+              autenticacao: r.autenticacao,
+              paciente: r.paciente,
+              diario: r.diario,
+              cuidadores: r.cuidadores,
+              visaoCuidador: r.visaoCuidador,
+              demonstracao: r.demonstracao,
+              programaEmCasa: r.programaEmCasa,
+              presenca: r.presenca,
+              lembretes: r.lembretes,
+              metas: r.metas,
+              conexao: conexao,
+            ),
       sessao: sessao,
       relogio: memoria.relogio,
       localInicial: em,
