@@ -57,6 +57,40 @@ Pendências da A5:
    campo de senha e ela foi digitada no campo de e-mail, que é visível. Ela não foi para arquivo nem para o
    repositório. O dono decide se troca a senha (`.env` e semente).
 
+### Ensaio da demonstração (26/11/2026, com o Firebase real)
+
+O roteiro da apresentação (`roteiro-da-demo.md`, 9 passos, persona Ana) foi feito inteiro no emulador. Antes, a
+validação conferiu PDF, deck, zip, APK e o repositório público. O APK foi o de depuração do kit de demonstração.
+
+Os 9 passos passaram:
+1. entrar;
+2. criar um registro;
+3. buscar "ansie", corrigir e excluir (no servidor, `excluidoEm`);
+4. com o modo avião, o registro ficou "Aguardando envio" e saiu sozinho quando a conexão voltou;
+5. o registro crítico abriu a TM05, com "Seu profissional foi avisado" e um alerta novo no servidor;
+6. Em casa: a TM16 passou a "1 de 2";
+7. a presença foi mudada para "Não vou conseguir";
+8. a meta abriu na TM20;
+9. "Sair" deixou as 4 tabelas do SQLite com 0 linhas e as preferências vazias.
+
+**Achado e corrigido (`3477275`):**
+- **Defeito:** logo depois de entrar, o cartão do Início dizia "Você vai? Responda" mesmo com a presença já
+  confirmada no servidor. O resumo das atividades de casa também ficava defasado. A cópia local só se completa no fim
+  da primeira sincronização, e o Início relia só ao trocar de aba. A captura do CT01 já mostrava isso.
+- **Correção:** o Início passou a usar o `RecarregaAoSincronizar`, como a TM16, a Jornada e a TM18.
+- **Teste de regressão** (`sessoes_test.dart`): ele injeta a situação da sincronização. Falha sem a correção e passa
+  com ela.
+- **Portão:** 734 testes.
+- **No aparelho, depois da correção:** com o app limpo, o Início já entra com "Avisou que não vai" e "1 de 2". As
+  capturas são `evidencias-a5/ensaio-inicio-presenca-antes-da-correcao.png` e `ensaio-inicio-presenca-apos-login.png`.
+
+Duas observações para o roteiro:
+- A TM04 volta sozinha ao Início em cerca de 3 s.
+- O ícone de "Meus registros" só pode ser tocado com o Diário rolado para o topo.
+
+O ensaio deixou no servidor registros de hoje da Ana e a presença "naoVamos". Antes da apresentação, a semente
+precisa rodar de novo, com o ok do dono.
+
 ## Evolução de TO (evolução livre, desde 06/11/2026)
 
 Pedido do dono (06/11/2026): desenvolver mais funções "como se fosse o app do Terae que o espaço de TO usaria com os
