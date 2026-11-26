@@ -90,6 +90,27 @@ void main() {
       expect(sessao.entradas, isEmpty);
     });
 
+    testWidgets('muitas tentativas mostram a espera, não "sem internet" '
+        '(A5, CT03)', (tester) async {
+      final sessao = SessaoEspia();
+      await _abrirEntrar(
+        tester,
+        sessao: sessao,
+        autenticacao: AutenticacaoFake(
+          recusaNaEntrada: {idRegina.email: MotivoRecusa.muitasTentativas},
+        ),
+      );
+      await _entrarCom(tester, idRegina.email, idRegina.senha);
+      expect(
+        find.text(
+          'Muitas tentativas seguidas. Espere alguns minutos e tente de novo.',
+        ),
+        findsOneWidget,
+      );
+      expect(find.text(MotivoRecusa.semConexao.mensagem), findsNothing);
+      expect(sessao.entradas, isEmpty);
+    });
+
     testWidgets('conta sem acesso mostra a recusa e não abre sessão', (
       tester,
     ) async {
