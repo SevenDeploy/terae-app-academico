@@ -169,12 +169,16 @@ class _CadastroCuidadorState extends State<_CadastroCuidador> {
       icone: Icons.check_circle,
       cor: CoresTerae.clinico700,
       corFundo: CoresTerae.clinico50,
+      // O convite só traz o nome: antes da conta, a TM10 não sabe se o
+      // paciente tem acompanhamento clínico ou só TO. Por isso os textos
+      // servem aos dois, e os remédios aparecem "se houver" (D29; roteiro da
+      // A5, CT06).
       itens: [
-        'A agenda: dia, hora e profissional de cada consulta',
-        'A medicação: os horários dos remédios e a data de renovação '
-            'da receita',
-        'Os avisos: consulta cancelada, receita para renovar e aviso '
-            'enviado à equipe',
+        'A agenda: dia, hora e profissional de cada sessão ou consulta',
+        'Se houver remédios no tratamento: os horários e a data de '
+            'renovação da receita',
+        'Os avisos: sessão ou consulta cancelada, receita para renovar e '
+            'aviso enviado à equipe',
       ],
     ),
     const SizedBox(height: MedidasTerae.espacoGrande),
@@ -217,8 +221,8 @@ class _CadastroCuidadorState extends State<_CadastroCuidador> {
         topicos: [
           (
             'Para que serve',
-            'Você vai ver a agenda, os remédios e os avisos de '
-                '$primeiroNome para ajudar no cuidado.',
+            'Você vai ver a agenda, os avisos e, se houver, os horários '
+                'dos remédios de $primeiroNome para ajudar no cuidado.',
           ),
           (
             'Cuide dessas informações',

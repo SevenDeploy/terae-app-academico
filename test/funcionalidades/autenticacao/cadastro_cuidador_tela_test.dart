@@ -109,7 +109,7 @@ void main() {
     await _passo1(tester);
     final vera = find.byKey(const Key('quadro-vera'));
     final naoVera = find.byKey(const Key('quadro-nao-vera'));
-    for (final trecho in ['agenda', 'medicação', 'avisos']) {
+    for (final trecho in ['agenda', 'remédios', 'avisos']) {
       expect(
         find.descendant(of: vera, matching: find.textContaining(trecho)),
         findsOneWidget,
@@ -123,6 +123,41 @@ void main() {
         reason: trecho,
       );
     }
+  });
+
+  testWidgets('o quadro e o termo servem a quem só faz TO: falam de sessão '
+      'ou consulta e só prometem remédios "se houver" (roteiro da A5, CT06; '
+      'D29)', (tester) async {
+    // O convite público só traz o nome do paciente: antes da conta, a TM10
+    // não sabe as linhas de cuidado, e o cuidador de quem só faz TO não vê
+    // medicação (D29).
+    await _abrir(tester, AutenticacaoFake());
+    await _passo1(tester);
+    final vera = find.byKey(const Key('quadro-vera'));
+    expect(
+      find.descendant(
+        of: vera,
+        matching: find.textContaining('sessão ou consulta'),
+      ),
+      findsWidgets,
+    );
+    expect(
+      find.descendant(of: vera, matching: find.textContaining('Se houver')),
+      findsOneWidget,
+    );
+    expect(find.textContaining('A medicação:'), findsNothing);
+    expect(find.textContaining('de cada consulta'), findsNothing);
+
+    await _tocar(tester, _continuar);
+    _noPasso(3);
+    expect(
+      find.textContaining('a agenda, os remédios e os avisos'),
+      findsNothing,
+    );
+    expect(
+      find.textContaining('se houver, os horários dos remédios'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('aceita com a sessão de verdade e cai na TM08', (tester) async {
