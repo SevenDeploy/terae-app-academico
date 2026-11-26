@@ -7,6 +7,7 @@ import 'package:flutter/widgets.dart';
 import 'app.dart';
 import 'dados/memoria/memoria_demonstracao.dart';
 import 'dados/persistente/composicao.dart';
+import 'dados/terae_local/configuracao_terae_local.dart';
 import 'firebase_options.dart';
 import 'nucleo/sessao/sessao.dart';
 import 'nucleo/tempo/relogio.dart';
@@ -22,6 +23,14 @@ import 'nucleo/tempo/relogio.dart';
 ///   demonstração, como na Atividade 3 (D19).
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Trava na partida (26/11): TERAE_LOCAL_URL só aponta para esta máquina.
+  final terae = ConfiguracaoTeraeLocal.doAmbiente();
+  if (terae.fonte == FonteDeDados.local) {
+    throw const ConfiguracaoInvalida(
+      'TERAE_FONTE=local ainda só tem o transporte (lib/dados/terae_local/); '
+      'os repositórios do Terae local vêm depois.',
+    );
+  }
   const relogio = RelogioSistema();
   final opcoes = _opcoesDoFirebase();
   if (opcoes == null) {
