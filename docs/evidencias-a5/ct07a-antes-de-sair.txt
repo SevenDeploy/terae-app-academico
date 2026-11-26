@@ -1,0 +1,11 @@
+== 2026-11-26T15:53:40-04:00 linhas por tabela do SQLite (terae.db)
+registros_diario: 16
+alertas: 2
+cache_documentos: 14
+registros_casa: 13
+confirmacoes_presenca: 1
+== chaves em FlutterSharedPreferences.xml
+name="flutter.perfil_ativo"
+name="flutter.ultima_sincronizacao"
+== alarmes pendentes do app
+0

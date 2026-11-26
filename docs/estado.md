@@ -3,6 +3,60 @@
 Projeto acadêmico (Dispositivos Móveis, UNEMAT 2026). Não é o app do Terae produção: o produto é um SaaS web, e o
 canal do paciente no produto é um PWA na Play Store.
 
+## Atividade 5 — finalização do MVP e testes (26/11/2026, branch `atividade-5`)
+
+Decisão do dono: o MVP final é a main da F3 (`389b7b8`). A F4 fica como evolução, e nenhuma funcionalidade nova
+entra. O líder cuida da mescla na main, do repositório público e do APK final.
+
+**Roteiro.** São 20 casos, CT01–CT20, em [`docs/casos-de-teste-a5.md`](casos-de-teste-a5.md), com o requisito, a
+persona, os passos, o resultado esperado e o obtido, a evidência e o teste automatizado de cada um.
+- O roteiro rodou no emulador `Terae_Pixel`, com o APK de depuração e o Firebase real, um toque por vez.
+- Com o ok do dono, a semente rodou com `--reiniciar` antes e depois do roteiro. As regras não foram publicadas.
+- As evidências estão em `docs/evidencias-a5/`, com nenhuma captura da tela de login nem do passo da senha.
+- Ana: login, recusas, diário, CRUD, fila sem conexão, crítica e "Sair".
+- João: primeiro acesso com `K7M4QX`, código inexistente e código usado.
+- Antônio: Em casa, sessões, lembretes, metas e o convite de cuidador.
+- Carla, cuidadora fictícia criada pelo convite do Antônio: TM10 e TM08.
+- Patrícia: o bloqueio por muitas tentativas, na 7ª tentativa.
+
+**Resultado:** 18 casos aprovados de primeira e 2 reprovados, corrigidos com teste de regressão e aprovados no
+reteste no aparelho:
+1. **CT16, lembretes** (`2f389fa`):
+   - O defeito: o reagendamento, que roda ao fim de cada sincronização e na volta ao app, chamava `cancelAll()`. No
+     Android, isso também tira da barra as notificações já mostradas. O lembrete de teste sumia segundos depois, e um
+     lembrete de véspera já entregue sumiria igual.
+   - A correção: o reagendamento passou a usar `cancelAllPendingNotifications()`, e o "Sair" continua tirando tudo
+     (D20).
+2. **CT06, TM10** (`29a9920`):
+   - O defeito: ao cuidador de quem só faz TO, a TM10 prometia "A medicação…" e falava só de "consulta", e a D29 diz
+     que esse cuidador não vê medicação.
+   - O convite público só traz o nome do paciente, e expor as linhas de cuidado nele seria pior. Por isso, os textos
+     passaram a servir às duas linhas: "sessão ou consulta" e remédios "se houver".
+
+Outros commits:
+- teste de tela da TM01 para "muitas tentativas" (`139b2a9`), que só tinha o teste do mapeamento;
+- **`integration_test/jornada_principal_test.dart`** (`532df58`): entrar → diário → Meus registros → corrigir →
+  excluir → sair, com o app inteiro sobre a memória (D19), sem o Firebase. Passou no `Terae_Pixel` (`flutter test
+  integration_test/jornada_principal_test.dart -d emulator-5554`). Ele fica fora do `flutter test` do portão,
+  porque precisa de aparelho.
+
+**Portão:** `dart format --set-exit-if-changed lib test integration_test` sem mudança e `flutter analyze` sem issue.
+O `flutter test` passou com 733 testes (eram 730 na F3; entraram 2 testes de regressão e o da TM01). Além disso, o
+teste de integração passou no emulador.
+
+**Firebase depois do roteiro (26/11, 16h20):**
+- a semente final deixou livres o `K7M4QX` (João, até 08/12) e o `P4X9RC` (cuidador da Ana, até 01/12); depois de
+  01/12, rode a semente de novo;
+- sobrou no Authentication a conta de teste `carla.ribeiro@exemplo.test`, que fica sem vínculo. A semente só apaga os
+  e-mails que conhece, e apagar a conta é decisão do dono.
+
+Pendências da A5:
+1. Sessões e presença, lembretes e metas não têm número de RFM: o v4.0 é anterior a elas. A tabela usa D27, D28 e
+   D35 e sugere RFM14–RFM16 para o documento v5.0.
+2. A senha de demonstração apareceu uma vez na saída de uma ferramenta da sessão do roteiro: um toque caiu fora do
+   campo de senha e ela foi digitada no campo de e-mail, que é visível. Ela não foi para arquivo nem para o
+   repositório. O dono decide se troca a senha (`.env` e semente).
+
 ## Evolução de TO (evolução livre, desde 06/11/2026)
 
 Pedido do dono (06/11/2026): desenvolver mais funções "como se fosse o app do Terae que o espaço de TO usaria com os

@@ -1,0 +1,3 @@
+Registros mais recentes de a0000000-0000-4000-8000-000000000001:
+  2026-11-26T19:48:38.946651Z  moderada  Sono ruim    enviado  corrigido 2026-11-26T19:50:28.453433Z  EXCLUÍDO 2026-11-26T19:50:44.841946Z
+  2026-11-26T00:40:00.000Z  leve      Cansaço      enviado

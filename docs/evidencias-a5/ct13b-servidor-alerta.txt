@@ -1,0 +1,13 @@
+Registros mais recentes de a0000000-0000-4000-8000-000000000001:
+  2026-11-26T19:53:01.018675Z  critica   Tristeza     enviado
+  2026-11-26T19:51:41.896058Z  grave     Ansiedade    enviado
+  2026-11-26T19:48:38.946651Z  moderada  Sono ruim    enviado  corrigido 2026-11-26T19:50:28.453433Z  EXCLUÍDO 2026-11-26T19:50:44.841946Z
+  2026-11-26T00:40:00.000Z  leve      Cansaço      enviado
+Atividades de casa: 2; registros mais recentes:
+Metas: 2
+  escola         ativa        prazo 2026-12-26  Ir à escola 4 de 5 dias da semana
+  sonoEDescanso  ativa        prazo 2026-12-26  Deitar até as 23h na maior parte das noites
+Respostas de presença: 1
+  sessão ad000000-0000-4000-8000-000000000003  vamos    respondida 2026-11-26T00:45:00.000Z  enviado
+Alertas: 2; avisos do cuidador: 2
+Contas: ana.lucia.martins@exemplo.test, patricia.neves@exemplo.test, regina.martins@exemplo.test, antonio.ribeiro@exemplo.test

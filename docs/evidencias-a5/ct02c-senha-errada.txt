@@ -1,0 +1,8 @@
+74,210 * | 'Voltar'
+273,209 | 'Entrar'
+540,364 | 'Entrar no Terae'
+540,493 | 'Use o e-mail e a senha que você criou no primeiro acesso.'
+540,695 * | 'ana.lucia.martins@exemplo.test'
+964,879 * | 'Mostrar senha'
+540,1084 | 'E-mail ou senha não conferem. Confira e tente de novo.'
+540,1291 * | 'Entrar'
