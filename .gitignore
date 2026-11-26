@@ -60,3 +60,13 @@ ferramentas/node_modules/
 # Log do Firebase CLI
 firebase-debug.log
 firestore-debug.log
+
+# Atividade 5: repositório público — reforço contra segredos e artefatos
+.credenciais/
+*service-account*.json
+*.p12
+*.pem
+**/build/
+node_modules/
+firebase-debug.log
+.claude/settings.local.json
