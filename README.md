@@ -46,7 +46,7 @@ As pastas são estas:
 ## Instalação e execução
 
 Pré-requisitos:
-- Flutter estável, com Dart 3.13 ou mais novo;
+- Flutter 3.47 ou mais novo, com Dart 3.13.5 ou mais novo (o `pubspec.lock` exige isso);
 - Android SDK, com um emulador ou um aparelho Android 8 ou mais novo;
 - Node 20 ou mais novo, só para a semente do Firebase.
 
@@ -111,7 +111,7 @@ o registro ficar na fila, e "reiniciar dados".
 ## Testes
 
 ```powershell
-dart format --set-exit-if-changed lib test
+dart format --set-exit-if-changed lib test integration_test
 flutter analyze
 flutter test                                              # 733 testes (unidade, widget, acessibilidade, capturas)
 flutter test integration_test/jornada_principal_test.dart # precisa de emulador ou aparelho
@@ -126,6 +126,7 @@ flutter test integration_test/jornada_principal_test.dart # precisa de emulador 
 
 ## Limitações conhecidas
 
+- "Sair" apaga do aparelho também o que ainda estava na fila de envio, sem avisar antes.
 - As regras do Firestore de metas, atividades de casa e confirmações não têm teste automático, porque o projeto não
   usa o emulador de regras. Elas foram provadas nos roteiros no emulador.
 - O SQLite não é cifrado.

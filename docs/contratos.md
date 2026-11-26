@@ -102,7 +102,7 @@ sincronizacao` nem sqflite/Firebase (exceção: `situacao_sincronizacao.dart`); 
 
 ## Evolução de TO — F0, fundação (06/11/2026)
 
-Plano: `C:\Users\willi\.claude\plans\c-users-willi-projetos-terae-terae-app-jiggly-floyd.md`. Decisões D21–D24 em
+Plano: o plano de evolução de TO (fora do repositório). Decisões D21–D24 em
 `docs/estado.md`.
 
 **`Paciente.linhasDeCuidado`** — `Set<LinhaDeCuidado>` (`acompanhamentoClinico`, `terapiaOcupacional`), nunca vazio,

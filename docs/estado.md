@@ -62,7 +62,7 @@ Pendências da A5:
 Pedido do dono (06/11/2026): desenvolver mais funções "como se fosse o app do Terae que o espaço de TO usaria com os
 pacientes", sem integrar com o Terae web. Respostas dele: **evolução livre / portfólio** (sem enunciado nem prazo) e
 **somar TO para todas as idades** (o que as A1–A4 documentaram fica). O plano aprovado está em
-`C:\Users\willi\.claude\plans\c-users-willi-projetos-terae-terae-app-jiggly-floyd.md`. Fases:
+o plano de evolução de TO (fora do repositório). Fases:
 - F0 — fundação;
 - F1 — Em casa;
 - F2 — sessões, presença e lembretes;
@@ -425,7 +425,7 @@ Pendências da F3:
 
 ## Atividade 4 — Persistência local e integração com o Firebase (06/11/2026)
 
-Plano: `C:\Users\willi\.claude\plans\crie-um-plano-para-piped-hare.md`. Prazo de entrega: até ~13/11/2026.
+Plano: fora do repositório. Prazo de entrega: até ~13/11/2026.
 
 ### Decisões
 
@@ -437,7 +437,7 @@ Do dono (06/11/2026):
 | D13 | Item principal do CRUD: RegistroDiario |
 | D14 | Usuários com e-mail e senha (Firebase Authentication); o aparelho nunca grava a senha (RNFM04) |
 | D15 | Prazo de 1 semana: sem SQLCipher e sem tela "Minha conta" (cifragem do SQLite fica como limitação declarada) |
-| — | Projeto movido para `C:\Users\willi\Projetos\Terae\terae_app` (fora do OneDrive) e a pasta do curso renomeada para `Dispositivos Moveis` |
+| — | Projeto movido para uma pasta fora do OneDrive e a pasta do curso renomeada para `Dispositivos Moveis` |
 
 Do líder, por delegação do dono (06/11/2026):
 
@@ -465,11 +465,11 @@ Do líder, por delegação do dono (06/11/2026):
 
 ### Firebase de verdade (06/11/2026)
 
-- Projeto `terae-app-academico` (conta `sevendeploy7@gmail.com`, plano Spark), com e-mail/senha ativado pelo dono,
+- Projeto `terae-app-academico` (conta Google do dono, plano Spark), com e-mail/senha ativado pelo dono,
   app Android `br.edu.unemat.terae_app` registrado pelo `flutterfire configure` e `firestore.rules` publicadas.
 - **Região do Firestore: `nam5` (EUA)**, e não `southamerica-east1` como planejado: a primeira publicação das regras
   criou o banco com a região padrão, que não muda depois. Mantida porque os dados são fictícios; registrado no docx.
-- Chave da conta de serviço em `C:\Users\willi\Projetos\Terae\.credenciais\` (fora do OneDrive e do git); `.env`
+- Chave da conta de serviço numa pasta local fora do OneDrive e do git; `.env`
   (fora do git) com o caminho dela e a senha de demonstração, gerada e nunca escrita em chat nem em código.
 - Semente rodada; `node ferramentas/conferir-firebase.mjs [pacienteId]` mostra os registros, alertas e contas.
 

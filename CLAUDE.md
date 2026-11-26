@@ -5,7 +5,7 @@ ver o app do paciente, para a disciplina. Nunca ligar à API nem a dados do prod
 `br.com.terae.*` como identificador.
 
 ## Fonte da verdade
-Docx da Atividade 3 v3.0 (`C:\Users\willi\OneDrive\Documentos\Faculdade\Dispositivos Moveis\Terae - Atividade 3 - Implementacao Inicial e Modelo de Dados.docx`):
+Docx da Atividade 3 v3.0 (`Terae - Atividade 3 - Implementacao Inicial e Modelo de Dados.docx`, na pasta da disciplina):
 §12 história e critérios de aceite, §13–14 e §19 RFM/RNFM, §20–21 telas e rotas, §22–23 modelo e regras de
 integridade, §24 pastas. Decisões D1–D20 em `docs/estado.md` (D12–D20 = Atividade 4: Firebase acadêmico, SQLite, CRUD do diário).
 O único serviço remoto permitido é o Firebase acadêmico `terae-app-academico`; segredo (chave da conta de serviço,
