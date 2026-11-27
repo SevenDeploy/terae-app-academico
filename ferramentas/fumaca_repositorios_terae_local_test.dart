@@ -120,7 +120,7 @@ void main() {
       final contexto = ContextoDoPortal(cliente: cliente);
       final auth = AutenticacaoTeraeLocal(contexto);
 
-      final antes = DateTime.now().toUtc().subtract(const Duration(seconds: 5));
+      final antes = DateTime.now().toUtc().subtract(const Duration(seconds: 1));
       final passo = await auth.iniciarEntrada(email: email!, senha: senha!);
       final VinculosDaConta vinculos;
       if (passo case CodigoDeAcessoPedido()) {
@@ -191,7 +191,7 @@ void main() {
       addTearDown(cliente.fechar);
       final contexto = ContextoDoPortal(cliente: cliente);
       final auth = AutenticacaoTeraeLocal(contexto);
-      final antes = DateTime.now().toUtc().subtract(const Duration(seconds: 5));
+      final antes = DateTime.now().toUtc().subtract(const Duration(seconds: 1));
       final passo = await auth.iniciarEntrada(email: email!, senha: senha!);
       final VinculosDaConta vinculos;
       if (passo case CodigoDeAcessoPedido()) {
