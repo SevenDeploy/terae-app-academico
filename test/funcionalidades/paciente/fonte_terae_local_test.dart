@@ -69,6 +69,11 @@ void main() {
     expect(find.text('Últimos 14 dias'), findsNothing);
     expect(find.byKey(const Key('ver-a-jornada-completa')), findsNothing);
     expect(find.text('Autocuidado'), findsNothing);
+    expect(
+      find.textContaining('Esta semana'),
+      findsNothing,
+      reason: 'sem o histórico, a conta da semana mentiria',
+    );
   });
 
   testWidgets('Atividade: sem a faixa, sem "Desfazer"; "Corrigir" fica', (

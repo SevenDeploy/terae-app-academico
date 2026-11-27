@@ -332,11 +332,14 @@ class _CartaoDaAtividade extends StatelessWidget {
             ],
           ),
           const SizedBox(height: MedidasTerae.espacoPequeno),
-          Text(
-            'Esta semana: $vezes de ${a.vezesPorSemana} '
-            '${a.vezesPorSemana == 1 ? 'vez' : 'vezes'}',
-            style: textos.bodyMedium,
-          ),
+          // Terae local: o portal só dá o registro de hoje; a conta da semana
+          // sairia sempre baixa.
+          if (capacidadesDaFonte(context).faixaDosDias)
+            Text(
+              'Esta semana: $vezes de ${a.vezesPorSemana} '
+              '${a.vezesPorSemana == 1 ? 'vez' : 'vezes'}',
+              style: textos.bodyMedium,
+            ),
           if (profissional.isNotEmpty)
             Text(
               'Combinada com $profissional',
