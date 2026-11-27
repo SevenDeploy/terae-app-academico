@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 
 import '../../../dados/enums/adesao_em_casa.dart';
@@ -14,8 +15,10 @@ import '../../../nucleo/tema/tema.dart';
 import '../../../nucleo/tempo/data_civil.dart';
 import '../../../nucleo/tempo/relogio.dart';
 import '../../../nucleo/widgets/aviso_de_conexao.dart';
+import '../../../nucleo/widgets/botao_grande.dart';
 import '../../../nucleo/widgets/cartao.dart';
 import '../componentes_paciente.dart';
+import '../metas/componentes_metas.dart';
 import '../registros/componentes_registros.dart';
 import 'componentes_casa.dart';
 import 'em_casa_controlador.dart';
@@ -110,6 +113,31 @@ class _ConteudoEmCasa extends StatelessWidget {
               const SizedBox(height: MedidasTerae.espacoPequeno),
               _UltimosDias(controlador: c),
             ],
+            if (!c.carregando && !c.falhou) ...[
+              if (c.nossasMetas.isNotEmpty) ...[
+                const SizedBox(height: MedidasTerae.espacoGrande),
+                NossasMetas(
+                  grupos: c.nossasMetas,
+                  aoAbrirMeta: (id) async {
+                    await context.push<void>(Rotas.meta(id));
+                    await c.carregar(emSilencio: true);
+                  },
+                ),
+              ],
+              const SizedBox(height: MedidasTerae.espaco),
+              BotaoGrande(
+                key: const Key('ver-a-jornada-completa'),
+                rotulo: deOutro
+                    ? 'Ver a jornada de $nome'
+                    : 'Ver a sua jornada',
+                icone: LucideIcons.flag,
+                variante: VarianteBotao.secundario,
+                aoTocar: () async {
+                  await context.push<void>(Rotas.pacienteJornada);
+                  await c.carregar(emSilencio: true);
+                },
+              ),
+            ],
           ],
         ),
       ),
@@ -195,7 +223,7 @@ class _ProgramaEncerrado extends StatelessWidget {
         OutlinedButton.icon(
           key: const Key('ver-a-jornada'),
           onPressed: () => context.push(Rotas.pacienteJornada),
-          icon: const Icon(Icons.map_outlined),
+          icon: const Icon(LucideIcons.flag),
           label: const Text('Ver a Jornada'),
         ),
       ],

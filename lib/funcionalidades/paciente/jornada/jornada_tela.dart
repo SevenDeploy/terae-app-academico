@@ -2,9 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
-import '../../../dados/enums/ocupacao.dart';
 import '../../../dados/enums/situacao_agendamento.dart';
-import '../../../dados/modelos/meta_terapeutica.dart';
 import '../../../dados/modelos/paciente.dart';
 import '../../../dados/modelos/receita_uso_continuo.dart';
 import '../../../dados/repositorios/metas_repositorio.dart';
@@ -106,7 +104,7 @@ class _ConteudoJornada extends StatelessWidget {
             ],
             // F3 — as metas da terapia ocupacional, por área da vida (D25).
             if (c.nossasMetas.isNotEmpty) ...[
-              _NossasMetas(grupos: c.nossasMetas),
+              NossasMetas(grupos: c.nossasMetas),
               const SizedBox(height: MedidasTerae.espacoGrande),
             ],
             const RotuloDeSecao('Próximos passos', icone: Icons.flag_outlined),
@@ -338,77 +336,6 @@ class _PontoDaLinha extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-/// "Nossas metas" (F3; D25): por área da vida, cada meta com a situação e, se
-/// em andamento, o prazo. Tocar abre a TM20. Nada de escore.
-class _NossasMetas extends StatelessWidget {
-  const _NossasMetas({required this.grupos});
-
-  final Map<Ocupacao, List<MetaTerapeutica>> grupos;
-
-  @override
-  Widget build(BuildContext context) {
-    final textos = Theme.of(context).textTheme;
-    final secundario = textos.bodySmall?.copyWith(
-      color: CoresTerae.textoSecundario,
-    );
-    return Column(
-      key: const Key('nossas-metas'),
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const RotuloDeSecao('Nossas metas', icone: Icons.track_changes),
-        const SizedBox(height: MedidasTerae.espacoPequeno),
-        Text(
-          'Combinadas com a terapia. Toque numa meta para ver o que ajuda em '
-          'casa.',
-          style: secundario,
-        ),
-        for (final MapEntry(key: ocupacao, value: metas) in grupos.entries) ...[
-          const SizedBox(height: MedidasTerae.espaco),
-          Semantics(
-            header: true,
-            child: Text(
-              ocupacao.rotulo,
-              style: textos.titleSmall?.copyWith(color: CoresTerae.neutro700),
-            ),
-          ),
-          const SizedBox(height: MedidasTerae.espacoPequeno),
-          for (final m in metas) ...[
-            Cartao(
-              key: Key('meta-${m.id}'),
-              aoTocar: () => context.push(Rotas.meta(m.id)),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(m.descricao, style: textos.titleSmall),
-                        const SizedBox(height: MedidasTerae.espacoPequeno),
-                        Wrap(
-                          spacing: MedidasTerae.espacoPequeno,
-                          runSpacing: 4,
-                          crossAxisAlignment: WrapCrossAlignment.center,
-                          children: [
-                            EtiquetaDaMeta(situacao: m.situacao),
-                            if (textoDoPrazo(m) case final prazo?)
-                              Text(prazo, style: secundario),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                  const ExcludeSemantics(child: Icon(Icons.chevron_right)),
-                ],
-              ),
-            ),
-            const SizedBox(height: MedidasTerae.espacoPequeno),
-          ],
-        ],
-      ],
     );
   }
 }

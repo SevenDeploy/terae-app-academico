@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../../../dados/enums/ocupacao.dart';
 import '../../../dados/enums/situacao_meta.dart';
 import '../../../dados/modelos/meta_terapeutica.dart';
 import '../../../nucleo/rotas/rotas.dart';
@@ -90,6 +92,84 @@ class CartaoDaMetaLigada extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// "Nossas metas" (F3; D25): por área da vida, cada meta com a situação e, se
+/// em andamento, o prazo. Tocar abre a TM20. Nada de escore.
+class NossasMetas extends StatelessWidget {
+  const NossasMetas({super.key, required this.grupos, this.aoAbrirMeta});
+
+  final Map<Ocupacao, List<MetaTerapeutica>> grupos;
+
+  /// Abre a TM20; sem ele, empilha a meta sem esperar a volta.
+  final Future<void> Function(String metaId)? aoAbrirMeta;
+
+  @override
+  Widget build(BuildContext context) {
+    final textos = Theme.of(context).textTheme;
+    final secundario = textos.bodySmall?.copyWith(
+      color: CoresTerae.textoSecundario,
+    );
+    return Column(
+      key: const Key('nossas-metas'),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const RotuloDeSecao('Nossas metas', icone: LucideIcons.target),
+        const SizedBox(height: MedidasTerae.espacoPequeno),
+        Text(
+          'Combinadas com a terapia. Toque numa meta para ver o que ajuda em '
+          'casa.',
+          style: secundario,
+        ),
+        for (final MapEntry(key: ocupacao, value: metas) in grupos.entries) ...[
+          const SizedBox(height: MedidasTerae.espaco),
+          Semantics(
+            header: true,
+            child: Text(
+              ocupacao.rotulo,
+              style: textos.titleSmall?.copyWith(color: CoresTerae.neutro700),
+            ),
+          ),
+          const SizedBox(height: MedidasTerae.espacoPequeno),
+          for (final m in metas) ...[
+            Cartao(
+              key: Key('meta-${m.id}'),
+              aoTocar: () => aoAbrirMeta == null
+                  ? context.push(Rotas.meta(m.id))
+                  : aoAbrirMeta!(m.id),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(m.descricao, style: textos.titleSmall),
+                        const SizedBox(height: MedidasTerae.espacoPequeno),
+                        Wrap(
+                          spacing: MedidasTerae.espacoPequeno,
+                          runSpacing: 4,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            EtiquetaDaMeta(situacao: m.situacao),
+                            if (textoDoPrazo(m) case final prazo?)
+                              Text(prazo, style: secundario),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const ExcludeSemantics(
+                    child: Icon(LucideIcons.chevronRight, size: 20),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: MedidasTerae.espacoPequeno),
+          ],
+        ],
+      ],
     );
   }
 }

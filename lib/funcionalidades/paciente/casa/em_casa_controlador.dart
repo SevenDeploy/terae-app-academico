@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 
+import '../../../dados/enums/ocupacao.dart';
 import '../../../dados/modelos/atividade_de_casa.dart';
 import '../../../dados/modelos/meta_terapeutica.dart';
 import '../../../dados/modelos/registro_de_atividade.dart';
@@ -42,6 +43,10 @@ class EmCasaControlador extends ChangeNotifier {
   bool get carregando => _carregando;
   bool get falhou => _falhou;
   List<AtividadeDeCasa> get atividades => _atividades;
+
+  /// "Nossas metas" (a Jornada saiu da barra): por área da vida.
+  Map<Ocupacao, List<MetaTerapeutica>> get nossasMetas =>
+      metasPorOcupacao(_metas.values.toList());
   DataCivil get hoje => DataCivil.hoje(relogio);
 
   /// F3 — a meta que a atividade ajuda ("Ajuda na meta: …"), se houver.

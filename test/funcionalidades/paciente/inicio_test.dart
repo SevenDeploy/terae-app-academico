@@ -36,12 +36,13 @@ void main() {
       expect(find.byKey(const Key('TM02')), findsOneWidget);
 
       expect(find.text('Sexta-feira, 2 de outubro'), findsOneWidget);
-      expect(find.text('Olá, Ana'), findsOneWidget);
-      // D24: a titular lê sobre si.
+      // A saudação do portal ("Bom dia, Ana.") pela hora do relógio.
       expect(
-        find.text('Que bom te ver por aqui. Vamos cuidar de você hoje?'),
+        find.textContaining(RegExp(r'^(Bom dia|Boa tarde|Boa noite), Ana\.$')),
         findsOneWidget,
       );
+      // D24: a titular lê sobre si.
+      expect(find.text('Como foi o seu dia?'), findsOneWidget);
       expect(find.byKey(const Key('atalho-diario')), findsOneWidget);
 
       final consulta = find.byKey(const Key('proxima-consulta'));
@@ -111,6 +112,8 @@ void main() {
 
     testWidgets('o atalho abre o diário com um toque', (tester) async {
       await abrirAppDoPaciente(tester);
+      await tester.ensureVisible(find.byKey(const Key('atalho-diario')));
+      await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('atalho-diario')));
       await tester.pumpAndSettle();
       expect(localDe(tester), Rotas.pacienteDiario);
@@ -164,13 +167,10 @@ void main() {
       );
       await abrirAppDoPaciente(tester, sessao: sessao);
       // Saudação a quem usa o app, e de quem é o perfil.
-      expect(find.text('Olá, Patrícia'), findsOneWidget);
+      expect(find.textContaining(', Patrícia.'), findsOneWidget);
       expect(find.text('Perfil de Miguel Andrade Neves'), findsOneWidget);
       // D24: a responsável lê sobre o filho; D21: só TO, sem remédios.
-      expect(
-        find.text('Que bom te ver por aqui. Vamos cuidar de Miguel hoje?'),
-        findsOneWidget,
-      );
+      expect(find.text('Como foi o dia de Miguel?'), findsOneWidget);
       expect(find.byKey(const Key('orientacao-vigente')), findsNothing);
       expect(find.byKey(const Key('lembrete-renovacao')), findsNothing);
       expect(find.byKey(const Key('proxima-consulta')), findsOneWidget);

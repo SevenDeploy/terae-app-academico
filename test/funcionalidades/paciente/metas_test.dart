@@ -244,21 +244,18 @@ void main() {
     expect(find.text('Ir à escola 4 de 5 dias da semana'), findsOneWidget);
   });
 
-  testWidgets('registrar pelo caminho Jornada → meta → atividade e voltar à '
-      'aba Em casa: a TM16 mostra o dia novo (revisão da F3)', (tester) async {
+  testWidgets('registrar pelo caminho Em casa → Nossas metas → meta → '
+      'atividade e voltar: a TM16 mostra o dia novo (revisão da F3)', (
+    tester,
+  ) async {
     await abrirComMemoria(
       tester,
       persona: Persona.antonio,
       em: Rotas.pacienteCasa,
     );
     expect(find.text('Hoje: 1 de 2 atividades registradas'), findsOneWidget);
-    // A Jornada saiu da barra e empilha sobre as abas.
-    unawaited(
-      GoRouter.of(tester.element(find.byKey(const Key('TM16'))))
-          .push(Rotas.pacienteJornada),
-    );
-    await tester.pumpAndSettle();
-    expect(find.byKey(const Key('TM06')), findsOneWidget);
+    // A Jornada saiu da barra: as metas ficam no próprio Em casa.
+    expect(find.byKey(const Key('nossas-metas')), findsOneWidget);
     await tocar(tester, find.byKey(Key('meta-${_meta(7)}')));
     await tocar(tester, find.byKey(const Key('atividade-da-meta-$_abotoar')));
     await tocar(tester, _opcao('Sim'));
@@ -266,17 +263,9 @@ void main() {
     expect(find.byKey(const Key('registro-de-hoje')), findsOneWidget);
     await tocar(tester, find.byType(BackButton));
     await tocar(tester, find.byType(BackButton));
-    expect(find.byKey(const Key('TM06')), findsOneWidget);
-    // A Jornada empilhada ainda não tem seta própria: voltar do Android, e a
-    // aba Em casa relê ao ser tocada de novo.
-    await tester.binding.handlePopRoute();
-    await tester.pumpAndSettle();
-    await tocar(tester, find.byKey(const Key('aba-casa')));
     expect(find.byKey(const Key('TM16')), findsOneWidget);
     expect(find.text('Hoje: 2 de 2 atividades registradas'), findsOneWidget);
-    // P2: as metas entram no próprio Em casa e este caminho pela Jornada
-    // empilhada é reescrito lá.
-  }, skip: true);
+  });
 
   testWidgets('atividade → meta → a mesma atividade por cima: ao voltar, a '
       'de baixo relê e não oferece registrar de novo (revisão da F3)', (

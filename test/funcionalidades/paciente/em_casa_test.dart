@@ -126,7 +126,7 @@ void main() {
         persona: Persona.antonio,
         em: Rotas.pacienteInicio,
       );
-      await tocar(tester, find.byKey(const Key('atalho-em-casa')));
+      await tocar(tester, find.byKey(const Key('abrir-programa-em-casa')));
       expect(find.text('Hoje: 1 de 2 atividades registradas'), findsOneWidget);
       await tocar(tester, find.byKey(Key('atividade-$_abotoar')));
       await tocar(tester, _opcao('Sim'));
@@ -146,7 +146,7 @@ void main() {
       expect(
         find.descendant(
           of: find.byKey(const Key('atalho-em-casa')),
-          matching: find.text('Hoje: 2 de 2 registradas'),
+          matching: find.text('2 de 2 atividades registradas'),
         ),
         findsOneWidget,
       );
@@ -333,13 +333,13 @@ void main() {
       expect(
         find.descendant(
           of: atalho,
-          matching: find.text('Hoje: 1 de 2 registradas'),
+          matching: find.text('1 de 2 atividades registradas'),
         ),
         findsOneWidget,
       );
       expect(find.text('Como foi o seu dia?'), findsOneWidget);
       expect(find.byKey(const Key('orientacao-vigente')), findsNothing);
-      await tocar(tester, atalho);
+      await tocar(tester, find.byKey(const Key('abrir-programa-em-casa')));
       expect(find.byKey(const Key('TM16')), findsOneWidget);
 
       await tocar(tester, find.byKey(const Key('aba-diario')));
@@ -361,11 +361,11 @@ void main() {
         persona: Persona.ana,
         em: Rotas.pacienteInicio,
       );
-      expect(find.text('Como você está hoje?'), findsOneWidget);
+      expect(find.text('Como foi o seu dia?'), findsOneWidget);
       expect(
         find.descendant(
           of: find.byKey(const Key('atalho-em-casa')),
-          matching: find.text('Hoje: 0 de 2 registradas'),
+          matching: find.text('0 de 2 atividades registradas'),
         ),
         findsOneWidget,
       );

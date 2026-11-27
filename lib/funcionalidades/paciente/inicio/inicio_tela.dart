@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 
 import '../../../dados/enums/resposta_presenca.dart';
@@ -16,9 +17,9 @@ import '../../../nucleo/tempo/data_civil.dart';
 import '../../../nucleo/tempo/relogio.dart';
 import '../../../nucleo/textos/encontros.dart';
 import '../../../nucleo/widgets/aviso_de_conexao.dart';
+import '../../../nucleo/widgets/botao_grande.dart';
 import '../../../nucleo/widgets/cartao.dart';
 import '../componentes_paciente.dart';
-import '../diario/campos_do_diario.dart';
 import '../registros/componentes_registros.dart';
 import 'inicio_controlador.dart';
 
@@ -86,39 +87,29 @@ class _ConteudoInicio extends StatelessWidget {
         child: CorpoDaTela(
           children: [
             const AvisoDeConexao(),
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    formatarDiaPorExtenso(relogio.agora()),
-                    style: textos.bodySmall?.copyWith(
-                      color: CoresTerae.textoSecundario,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ],
+            Text(
+              formatarDiaPorExtenso(relogio.agora()),
+              style: textos.bodySmall?.copyWith(color: CoresTerae.neutro600),
             ),
-            CabecalhoDaTela(
-              titulo: 'Olá, $primeiroNome',
-              subtitulo: perfil.falaDeOutraPessoa
-                  ? 'Que bom te ver por aqui. Vamos cuidar de '
-                        '${paciente.primeiroNome} hoje?'
-                  : 'Que bom te ver por aqui. Vamos cuidar de você hoje?',
+            const SizedBox(height: 4),
+            Semantics(
+              header: true,
+              child: Text(
+                '${saudacaoDoMomento(relogio.agora())}, $primeiroNome.',
+                style: textos.headlineSmall,
+              ),
             ),
             if (mostrarPerfil) ...[
               const SizedBox(height: MedidasTerae.espacoPequeno),
               Align(
                 alignment: Alignment.centerLeft,
                 child: Etiqueta(
-                  icone: Icons.person_outline,
+                  icone: LucideIcons.userRound,
                   texto: 'Perfil de ${paciente.nome}',
                 ),
               ),
             ],
-            const SizedBox(height: MedidasTerae.espaco),
-            const _AtalhoDoDiario(),
-            const SizedBox(height: MedidasTerae.espaco),
+            const SizedBox(height: MedidasTerae.espacoCartao),
             if (controlador.carregando)
               const Carregando()
             else if (controlador.falhou)
@@ -129,32 +120,82 @@ class _ConteudoInicio extends StatelessWidget {
                 aoTentarDeNovo: controlador.carregar,
               )
             else ...[
-              // F1 — o resumo das atividades de casa, para quem tem TO.
-              if (controlador.emCasa case (:final registradas, :final total)
-                  when total > 0) ...[
-                _AtalhoEmCasa(registradas: registradas, total: total),
-                const SizedBox(height: MedidasTerae.espaco),
-              ],
-              // D21 — receita e remédios só no acompanhamento clínico.
-              if (paciente.temAcompanhamentoClinico)
-                if (controlador.receita case final receita?)
-                  _LembreteDeRenovacao(
-                    receita: receita,
-                    hoje: DataCivil.hoje(relogio),
-                  ),
+              // A ordem do 18d: o que é do dia (a sessão e o programa),
+              // depois o diário, os avisos e os cartões fixos.
               _ProximaConsulta(
                 controlador: controlador,
                 relogio: relogio,
                 perfil: perfil,
               ),
-              if (paciente.temAcompanhamentoClinico) ...[
-                const SizedBox(height: MedidasTerae.espaco),
-                _OrientacaoVigente(
-                  receita: controlador.receita,
-                  itens: controlador.itens,
-                ),
+              const SizedBox(height: MedidasTerae.espacoCartao),
+              // F1 — o programa em casa de hoje, para quem tem TO.
+              if (controlador.emCasa case (:final registradas, :final total)
+                  when total > 0) ...[
+                _AtalhoEmCasa(registradas: registradas, total: total),
+                const SizedBox(height: MedidasTerae.espacoCartao),
               ],
             ],
+            _AtalhoDoDiario(perfil: perfil),
+            const SizedBox(height: MedidasTerae.espacoCartao),
+            if (!controlador.carregando &&
+                !controlador.falhou &&
+                // D21 — receita e remédios só no acompanhamento clínico.
+                paciente.temAcompanhamentoClinico) ...[
+              if (controlador.receita case final receita?)
+                _LembreteDeRenovacao(
+                  receita: receita,
+                  hoje: DataCivil.hoje(relogio),
+                ),
+              _OrientacaoVigente(
+                receita: controlador.receita,
+                itens: controlador.itens,
+              ),
+              const SizedBox(height: MedidasTerae.espacoCartao),
+            ],
+            Cartao(
+              key: const Key('cartao-jornada'),
+              aoTocar: () async {
+                await context.push<void>(Rotas.pacienteJornada);
+                await controlador.carregar(emSilencio: true);
+              },
+              child: Row(
+                children: [
+                  const Icon(
+                    LucideIcons.flag,
+                    size: 22,
+                    color: CoresTerae.primaria700,
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          perfil.falaDeOutraPessoa
+                              ? 'A jornada de ${paciente.primeiroNome}'
+                              : 'A sua jornada',
+                          style: textos.titleSmall,
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'O que vem pela frente e os marcos até aqui',
+                          style: textos.bodySmall?.copyWith(
+                            color: CoresTerae.textoSecundario,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Icon(
+                    LucideIcons.chevronRight,
+                    size: 20,
+                    color: CoresTerae.neutro600,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: MedidasTerae.espacoCartao),
+            const CartaoDeAjudaAgora(),
           ],
         ),
       ),
@@ -162,47 +203,38 @@ class _ConteudoInicio extends StatelessWidget {
   }
 }
 
-/// Atalho grande ao diário: um toque do Início (§12: no máximo dois).
-class _AtalhoDoDiario extends StatelessWidget {
-  const _AtalhoDoDiario();
+/// "Bom dia", "Boa tarde" ou "Boa noite", pela hora de [agora] (o portal
+/// cumprimenta assim no Início).
+String saudacaoDoMomento(DateTime agora) => switch (agora.hour) {
+  < 12 => 'Bom dia',
+  < 18 => 'Boa tarde',
+  _ => 'Boa noite',
+};
+
+/// "Precisa de ajuda agora?" — o cartão fixo do fim do Início do portal.
+class CartaoDeAjudaAgora extends StatelessWidget {
+  const CartaoDeAjudaAgora({super.key});
 
   @override
   Widget build(BuildContext context) {
-    const branco = TextStyle(color: CoresTerae.branco);
-    final palavras = palavrasDoDiario(context);
     return Cartao(
-      key: const Key('atalho-diario'),
-      corFundo: CoresTerae.primaria600,
-      corBorda: CoresTerae.primaria600,
-      padding: const EdgeInsets.all(MedidasTerae.espaco + 4),
-      aoTocar: () => context.go(Rotas.pacienteDiario),
-      child: Row(
+      key: const Key('cartao-ajuda-agora'),
+      titulo: 'Precisa de ajuda agora?',
+      icone: LucideIcons.lifeBuoy,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const ExcludeSemantics(
-            child: Icon(Icons.favorite, color: CoresTerae.branco, size: 32),
+          const Text(
+            'A qualquer hora, o atalho “Ajuda”, no topo, mostra os números do '
+            'SAMU e do CVV.',
+            style: TextStyle(fontSize: 15, color: CoresTerae.neutro700),
           ),
-          const SizedBox(width: MedidasTerae.espaco),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  palavras.titulo,
-                  style: branco.copyWith(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  palavras.subtituloDoAtalho,
-                  style: branco.copyWith(fontSize: 16),
-                ),
-              ],
-            ),
-          ),
-          const ExcludeSemantics(
-            child: Icon(Icons.chevron_right, color: CoresTerae.branco),
+          const SizedBox(height: 4),
+          TextButton(
+            key: const Key('ver-numeros-de-emergencia'),
+            style: TextButton.styleFrom(padding: EdgeInsets.zero),
+            onPressed: () => context.push(Rotas.ajuda),
+            child: const Text('Ver os números de emergência'),
           ),
         ],
       ),
@@ -210,7 +242,49 @@ class _AtalhoDoDiario extends StatelessWidget {
   }
 }
 
-/// F1 — atalho à aba Em casa com o resumo de hoje (um toque do Início).
+/// O cartão do diário do 18d: "Como foi o seu dia?" e "Escrever no diário"
+/// (um toque do Início, §12).
+class _AtalhoDoDiario extends StatelessWidget {
+  const _AtalhoDoDiario({required this.perfil});
+
+  final Perfil perfil;
+
+  @override
+  Widget build(BuildContext context) {
+    final deOutro = perfil.falaDeOutraPessoa;
+    final quemLe = perfil.paciente.temTerapiaOcupacional
+        ? 'A terapeuta'
+        : 'A equipe';
+    return Cartao(
+      key: const Key('cartao-diario'),
+      sobre: 'Diário',
+      titulo: deOutro
+          ? 'Como foi o dia de ${perfil.paciente.primeiroNome}?'
+          : 'Como foi o seu dia?',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            'Conte em menos de um minuto. $quemLe lê o que '
+            '${deOutro ? 'vocês registram' : 'você registra'}.',
+            style: const TextStyle(fontSize: 15, color: CoresTerae.neutro700),
+          ),
+          const SizedBox(height: 12),
+          BotaoGrande(
+            key: const Key('atalho-diario'),
+            rotulo: 'Escrever no diário',
+            icone: LucideIcons.notebookPen,
+            variante: VarianteBotao.secundario,
+            aoTocar: () => context.go(Rotas.pacienteDiario),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// "Programa em casa · hoje" (18d): quantas atividades já têm o registro de
+/// hoje, a barra de progresso e o caminho à aba Em casa.
 class _AtalhoEmCasa extends StatelessWidget {
   const _AtalhoEmCasa({required this.registradas, required this.total});
 
@@ -219,36 +293,54 @@ class _AtalhoEmCasa extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final textos = Theme.of(context).textTheme;
     return Cartao(
       key: const Key('atalho-em-casa'),
-      aoTocar: () => context.go(Rotas.pacienteCasa),
-      child: Row(
+      sobre: 'Programa em casa · hoje',
+      titulo:
+          '$registradas de $total '
+          '${total == 1 ? 'atividade registrada' : 'atividades registradas'}',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const ExcludeSemantics(
-            child: Icon(
-              Icons.extension_outlined,
-              size: 32,
-              color: CoresTerae.primaria600,
-            ),
+          BarraDeProgresso(feitas: registradas, total: total),
+          const SizedBox(height: 12),
+          BotaoGrande(
+            key: const Key('abrir-programa-em-casa'),
+            rotulo: 'Abrir o programa em casa',
+            variante: VarianteBotao.secundario,
+            aoTocar: () => context.go(Rotas.pacienteCasa),
           ),
-          const SizedBox(width: MedidasTerae.espaco),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Atividades de casa', style: textos.titleMedium),
-                const SizedBox(height: 4),
-                Text(
-                  'Hoje: $registradas de $total '
-                  '${total == 1 ? 'registrada' : 'registradas'}',
-                  style: textos.bodyMedium,
-                ),
-              ],
-            ),
-          ),
-          const ExcludeSemantics(child: Icon(Icons.chevron_right)),
         ],
+      ),
+    );
+  }
+}
+
+/// A barra de progresso do portal (`BarraDeProgresso`): trilho slate e o
+/// preenchimento turquesa; lida como "X de Y".
+class BarraDeProgresso extends StatelessWidget {
+  const BarraDeProgresso({
+    super.key,
+    required this.feitas,
+    required this.total,
+  });
+
+  final int feitas;
+  final int total;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      label: '$feitas de $total',
+      excludeSemantics: true,
+      child: ClipRRect(
+        borderRadius: const BorderRadius.all(Radius.circular(999)),
+        child: LinearProgressIndicator(
+          value: total == 0 ? 0 : feitas / total,
+          minHeight: 8,
+          color: CoresTerae.clinico500,
+          backgroundColor: CoresTerae.neutro100,
+        ),
       ),
     );
   }
@@ -330,16 +422,10 @@ class _ProximaConsulta extends StatelessWidget {
       key: const Key('proxima-consulta'),
       // A agenda é uma aba; o Início relê tudo quando volta a ser a atual.
       aoTocar: () => context.go(Rotas.pacienteSessoes),
+      sobre: _titulo(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
-            children: [
-              Expanded(child: RotuloDeSecao(_titulo(), icone: Icons.event)),
-              const ExcludeSemantics(child: Icon(Icons.chevron_right)),
-            ],
-          ),
-          const SizedBox(height: MedidasTerae.espacoPequeno),
           if (consulta == null)
             Text(
               'Nenhuma ${palavraDoPaciente(perfil.paciente)} marcada. '
