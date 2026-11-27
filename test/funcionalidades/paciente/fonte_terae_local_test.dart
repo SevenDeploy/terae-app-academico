@@ -29,13 +29,17 @@ Future<void> _abrir(
     abrirComMemoria(tester, persona: persona, em: em, capacidades: capacidades);
 
 void main() {
-  testWidgets('Início: sem o atalho do diário e sem o cartão da Jornada', (
+  testWidgets('Início: com o cartão do diário e sem o cartão da Jornada', (
     tester,
   ) async {
     await _abrir(tester, Rotas.pacienteInicio);
     expect(find.byKey(const Key('TM02')), findsOneWidget);
     expect(find.byKey(const Key('cartao-jornada')), findsNothing);
-    expect(find.byKey(const Key('cartao-diario')), findsNothing);
+    expect(
+      find.byKey(const Key('cartao-diario')),
+      findsOneWidget,
+      reason: 'o diário vem de /api/portal/diario',
+    );
     expect(find.byKey(const Key('abrir-programa-em-casa')), findsOneWidget);
 
     await _abrir(
@@ -51,10 +55,29 @@ void main() {
     expect(find.byKey(const Key('cartao-diario')), findsOneWidget);
   });
 
-  testWidgets('Diário: a aba existe e diz que está indisponível', (
+  testWidgets('Diário: o Terae local tem a aba de verdade', (tester) async {
+    await _abrir(tester, Rotas.pacienteDiario);
+    expect(find.byKey(const Key('diario-indisponivel')), findsNothing);
+    expect(find.byKey(const Key('TM03')), findsOneWidget);
+  });
+
+  testWidgets('Diário: fonte sem diário mostra a aba indisponível', (
     tester,
   ) async {
-    await _abrir(tester, Rotas.pacienteDiario);
+    await _abrir(
+      tester,
+      Rotas.pacienteDiario,
+      capacidades: const CapacidadesDaFonte(
+        diario: false,
+        jornada: false,
+        faixaDosDias: false,
+        desfazerEmCasa: false,
+        cuidadores: false,
+        primeiroAcesso: false,
+        ocupacaoDaAtividade: false,
+        demonstracao: false,
+      ),
+    );
     expect(find.byKey(const Key('diario-indisponivel')), findsOneWidget);
     expect(find.text('Diário ainda indisponível aqui'), findsOneWidget);
     expect(find.byType(FilledButton), findsNothing, reason: 'sem botão morto');
