@@ -14,6 +14,25 @@ void main() {
     sessao.addListener(() => avisos++);
   });
 
+  test('fim de sessão (401) volta à entrada sem chamar o "Sair" que apaga '
+      'o aparelho (revisão da P4, B1)', () async {
+    var sairam = 0;
+    var acabaram = 0;
+    final sessao = Sessao(
+      aoSair: () async => sairam++,
+      aoSessaoAcabar: () async => acabaram++,
+    )..entrar(vinculosAna());
+    sessao.encerrarPorFimDeSessao();
+    await Future<void>.delayed(Duration.zero);
+    expect(sessao.autenticada, isFalse);
+    expect((sairam, acabaram), (0, 1));
+    sessao
+      ..entrar(vinculosAna())
+      ..sair();
+    await Future<void>.delayed(Duration.zero);
+    expect((sairam, acabaram), (1, 1));
+  });
+
   test('começa sem sessão', () {
     expect(sessao.autenticada, isFalse);
     expect(sessao.conta, isNull);

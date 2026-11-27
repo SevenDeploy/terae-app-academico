@@ -79,13 +79,18 @@ class Perfil {
 /// (SharedPreferences) e [aoSair] encerra a sessão no provedor e apaga os
 /// dados locais (D20).
 class Sessao extends ChangeNotifier {
-  Sessao({this.aoMudarPerfil, this.aoSair});
+  Sessao({this.aoMudarPerfil, this.aoSair, this.aoSessaoAcabar});
 
   /// Chamado com a [Perfil.chave] do perfil ativo, ou `null` sem perfil.
   final void Function(String? chaveDoPerfil)? aoMudarPerfil;
 
   /// Chamado depois de [sair] (D20), sem esperar.
   final Future<void> Function()? aoSair;
+
+  /// Chamado depois de [encerrarPorFimDeSessao], sem esperar. Não apaga o
+  /// que a pessoa guardou no aparelho (o diário na fila): só o "Sair" que ela
+  /// escolheu apaga (revisão da P4, B1).
+  final Future<void> Function()? aoSessaoAcabar;
 
   ContaUsuario? _conta;
   List<Perfil> _perfis = const [];
@@ -170,13 +175,29 @@ class Sessao extends ChangeNotifier {
   /// "Sair": encerra a sessão; o roteador leva à TM00, e [aoSair] apaga os
   /// dados locais em seguida (D20).
   void sair() {
-    if (_conta == null) return;
+    if (!_limpar()) return;
+    final aoSair = this.aoSair;
+    if (aoSair != null) unawaited(aoSair().catchError((Object _) {}));
+  }
+
+  /// A sessão acabou no servidor (401, Terae local): volta à entrada como o
+  /// [sair], mas chama [aoSessaoAcabar] em vez de [aoSair]. O que a pessoa
+  /// guardou no aparelho fica, e sai quando ela entrar de novo.
+  void encerrarPorFimDeSessao() {
+    if (!_limpar()) return;
+    final aoSessaoAcabar = this.aoSessaoAcabar;
+    if (aoSessaoAcabar != null) {
+      unawaited(aoSessaoAcabar().catchError((Object _) {}));
+    }
+  }
+
+  bool _limpar() {
+    if (_conta == null) return false;
     _conta = null;
     _perfis = const [];
     _perfilAtivo = null;
     _avisar();
-    final aoSair = this.aoSair;
-    if (aoSair != null) unawaited(aoSair().catchError((Object _) {}));
+    return true;
   }
 
   void _avisar() {

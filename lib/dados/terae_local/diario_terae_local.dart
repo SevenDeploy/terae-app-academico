@@ -73,6 +73,9 @@ class GuardaDaFilaEmMemoria implements GuardaDaFilaDoDiario {
   Future<void> gravar(String? texto) async => this.texto = texto;
 }
 
+/// O `codigo` da API para a mesma chave com outro corpo (PMC-516).
+const String codigoDaChaveEmUso = 'chave_de_idempotencia_em_uso';
+
 /// Quantas páginas, no máximo, [DiarioTeraeLocal.registro] percorre para
 /// achar um registro que ainda não passou pela lista deste aparelho.
 const int _paginasParaAchar = 10;
@@ -97,28 +100,67 @@ class DiarioTeraeLocal implements RepositorioDiario {
   // fila
   // -------------------------------------------------------------------------
 
-  Future<List<RegistroDiario>> _lerFila() async {
+  /// A fila inteira, de todas as contas que guardaram neste aparelho.
+  Future<List<_ItemDaFila>> _lerTudo() async {
     final texto = await fila.ler();
     if (texto == null || texto.isEmpty) return const [];
     final bruto = jsonDecode(texto);
     if (bruto is! List) return const [];
     return [
       for (final item in bruto)
-        if (item is Map<String, Object?>) RegistroDiario.fromMap(item),
+        if (item is Map<String, Object?>) _ItemDaFila.ler(item),
     ];
   }
 
-  Future<void> _gravarFila(List<RegistroDiario> registros) => fila.gravar(
-    registros.isEmpty
-        ? null
-        : jsonEncode([for (final r in registros) r.toMap()]),
+  Future<void> _gravarTudo(List<_ItemDaFila> itens) => fila.gravar(
+    itens.isEmpty ? null : jsonEncode([for (final i in itens) i.escrever()]),
   );
 
-  /// D20 — "Sair" esquece a fila e o que foi visto neste aparelho.
+  /// A conta que está no portal agora (`null` antes do `/eu`).
+  String? get _contaAtual => _contexto.eu?.idUsuario;
+
+  /// Da conta atual: o item sem dono (formato antigo) vale para qualquer uma.
+  bool _daConta(_ItemDaFila item, String? conta) =>
+      item.dono == null || conta == null || item.dono == conta;
+
+  /// A fila desta conta, do mais antigo ao mais novo guardado.
+  Future<List<RegistroDiario>> _lerFila() async {
+    final conta = _contaAtual;
+    return [
+      for (final i in await _lerTudo())
+        if (_daConta(i, conta)) i.registro,
+    ];
+  }
+
+  /// D20 — "Sair" esquece a fila desta conta e o que foi visto neste
+  /// aparelho. Sem saber a conta, esquece a fila inteira. Fim de sessão por
+  /// 401 NÃO passa por aqui (revisão da P4, B1).
   Future<void> esquecer() async {
+    final conta = _contaAtual;
     _vistos.clear();
     _saidos.clear();
-    await _gravarFila(const []);
+    if (conta == null) {
+      await _gravarTudo(const []);
+      return;
+    }
+    await _gravarTudo([
+      for (final i in await _lerTudo())
+        if (i.dono != null && i.dono != conta) i,
+    ]);
+  }
+
+  Future<void> _guardar(RegistroDiario registro, String? dono) async {
+    final tudo = await _lerTudo();
+    if (tudo.any((i) => i.registro.id == registro.id)) return;
+    await _gravarTudo([...tudo, _ItemDaFila(registro, dono)]);
+  }
+
+  Future<void> _tirar(Set<String> ids) async {
+    if (ids.isEmpty) return;
+    await _gravarTudo([
+      for (final i in await _lerTudo())
+        if (!ids.contains(i.registro.id)) i,
+    ]);
   }
 
   // -------------------------------------------------------------------------
@@ -128,21 +170,24 @@ class DiarioTeraeLocal implements RepositorioDiario {
   @override
   Future<ResultadoEnvio> enviar(RegistroDiario registro) async {
     if (_saidos[registro.id] case final pronto?) return pronto;
-    final fila = await _lerFila();
-    final naFila = fila.any((r) => r.id == registro.id);
+    // A conta antes da chamada: um 401 esquece o `/eu` (B1).
+    final dono = _contaAtual;
+    final naFila = (await _lerFila()).any((r) => r.id == registro.id);
     try {
-      final resultado = await _enviarAoServidor(registro, daFila: naFila);
-      if (naFila) {
-        await _gravarFila([
-          for (final r in fila)
-            if (r.id != registro.id) r,
-        ]);
-      }
-      return resultado;
+      final resultado = await _enviarAoServidor(registro);
+      if (naFila) await _tirar({registro.id});
+      return resultado ?? _jaRecebido(registro);
     } on RecusaDeRegra catch (recusa) {
-      if (recusa.motivo != MotivoRecusa.semConexao) rethrow;
+      // Sem rede ou com a sessão acabada (401), nada se perde: o registro
+      // fica guardado e sai quando der (B1).
+      if (recusa.motivo != MotivoRecusa.semConexao &&
+          recusa.motivo != MotivoRecusa.sessaoTerminou) {
+        rethrow;
+      }
       final guardado = registro.copyWith(situacaoEnvio: SituacaoEnvio.naFila);
-      if (!naFila) await _gravarFila([...fila, guardado]);
+      // Com a sessão acabada, o contexto já levou de volta à entrada; a tela
+      // diz "guardado neste aparelho" até lá.
+      await _guardar(guardado, dono);
       return ResultadoEnvio(registro: guardado);
     }
   }
@@ -151,25 +196,32 @@ class DiarioTeraeLocal implements RepositorioDiario {
   Future<List<ResultadoEnvio>> reenviarFila() async {
     final fila = await _lerFila();
     final saidos = <ResultadoEnvio>[];
-    final restam = <RegistroDiario>[];
-    var semRede = false;
+    final sairam = <String>{};
     for (final r in fila) {
-      if (semRede) {
-        restam.add(r);
-        continue;
-      }
       try {
-        saidos.add(await _enviarAoServidor(r, daFila: true));
+        final resultado = await _enviarAoServidor(r);
+        sairam.add(r.id);
+        if (resultado != null) saidos.add(resultado);
       } on RecusaDeRegra catch (recusa) {
-        if (recusa.motivo == MotivoRecusa.semConexao) semRede = true;
-        // Outra recusa (paciente fora do diário, sessão acabada) também
-        // fica guardada: nada se perde em silêncio.
-        restam.add(r);
+        // Sem rede ou sessão acabada: para aqui, o resto espera.
+        if (recusa.motivo == MotivoRecusa.semConexao ||
+            recusa.motivo == MotivoRecusa.sessaoTerminou) {
+          break;
+        }
+        // Outra recusa (paciente fora do diário) fica guardada e visível:
+        // nada se perde em silêncio.
       }
     }
-    if (restam.length != fila.length) await _gravarFila(restam);
+    await _tirar(sairam);
     return List.unmodifiable(saidos);
   }
+
+  /// A chave já foi usada com outro corpo (`chave_de_idempotencia_em_uso`):
+  /// o servidor já recebeu um envio com este id. Sai da fila, e a lista do
+  /// servidor mostra o que chegou (B2).
+  ResultadoEnvio _jaRecebido(RegistroDiario registro) => ResultadoEnvio(
+    registro: registro.copyWith(situacaoEnvio: SituacaoEnvio.enviado),
+  );
 
   @override
   Future<PaginaDoDiario> pagina(String pacienteId, {DateTime? antes}) =>
@@ -335,26 +387,35 @@ class DiarioTeraeLocal implements RepositorioDiario {
   // detalhes
   // -------------------------------------------------------------------------
 
-  Future<ResultadoEnvio> _enviarAoServidor(
-    RegistroDiario registro, {
-    required bool daFila,
-  }) async {
+  /// Manda o registro com a `Idempotency-Key` = id do aparelho. O corpo é o
+  /// mesmo em toda tentativa (B2): o `guardadoEm` vai sempre, com a hora em
+  /// que foi escrito; a API só o mostra quando passa de 5 min da chegada
+  /// (`escritoEmParaMostrar`). `null` quando a chave já foi usada com outro
+  /// corpo: o servidor já recebeu um envio com este id.
+  Future<ResultadoEnvio?> _enviarAoServidor(RegistroDiario registro) async {
     final c = _contexto;
     final recibo = await c.comPaciente(
       registro.pacienteId,
-      () async => (await c.cliente.post(
-        'diario',
-        corpo: {
-          ..._corpo(registro.pacienteId, registro.entrada),
-          // PMC-558: só o envio que esperou na fila leva a hora em que foi
-          // guardado.
-          if (daFila) 'guardadoEm': escreverInstante(registro.registradoEm),
-        },
-        chaveDeIdempotencia: registro.id,
-      )).objeto,
+      () async {
+        try {
+          return (await c.cliente.post(
+            'diario',
+            corpo: {
+              ..._corpo(registro.pacienteId, registro.entrada),
+              // PMC-558: a hora em que foi escrito, igual em toda tentativa.
+              'guardadoEm': escreverInstante(registro.registradoEm),
+            },
+            chaveDeIdempotencia: registro.id,
+          )).objeto;
+        } on ConflitoNoPortal catch (e) {
+          if (e.codigo == codigoDaChaveEmUso) return null;
+          rethrow;
+        }
+      },
       seNaoExiste: MotivoRecusa.acessoNegado,
       seConflito: MotivoRecusa.registroNaoMudaMais,
     );
+    if (recibo == null) return null;
     final id = _ler(() => lerCampo<String>(recibo, 'id'));
     final (versao, recebidoEm, ajuda) = _lerRecibo(recibo);
     final enviado = RegistroDiario(
@@ -561,4 +622,31 @@ T _ler<T>(T Function() leitura) {
   } on FormatException catch (e) {
     throw RespostaInesperadaDoPortal(detalhe: e.message);
   }
+}
+
+/// Um registro guardado na fila e a conta que o guardou ([dono], o
+/// `idUsuario` do portal; `null` no formato antigo, sem dono).
+class _ItemDaFila {
+  const _ItemDaFila(this.registro, this.dono);
+
+  factory _ItemDaFila.ler(Map<String, Object?> mapa) {
+    final registro = mapa['registro'];
+    if (registro is Map<String, Object?>) {
+      final dono = mapa['dono'];
+      return _ItemDaFila(
+        RegistroDiario.fromMap(registro),
+        dono is String ? dono : null,
+      );
+    }
+    // Formato antigo: o registro direto, sem dono.
+    return _ItemDaFila(RegistroDiario.fromMap(mapa), null);
+  }
+
+  final RegistroDiario registro;
+  final String? dono;
+
+  Map<String, Object?> escrever() => {
+    'registro': registro.toMap(),
+    'dono': ?dono,
+  };
 }

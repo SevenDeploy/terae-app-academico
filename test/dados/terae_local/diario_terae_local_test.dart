@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:terae_app/dados/enums/adesao.dart';
 import 'package:terae_app/dados/enums/intensidade.dart';
@@ -36,6 +38,8 @@ RegistroDiario _novo(
   intensidadeSintoma: intensidade,
   situacaoEnvio: SituacaoEnvio.naFila,
 );
+
+String _jsonDe(RegistroDiario r) => jsonEncode(r.toMap());
 
 void main() {
   late ServidorFalso servidor;
@@ -88,7 +92,10 @@ void main() {
       'idPaciente': idAlice,
       'adesao': 'parcial',
       'sintomas': 'Chorou',
-    }, reason: 'sem guardadoEm: não esperou na fila');
+      // B2: o mesmo corpo em toda tentativa, com a hora em que foi escrito
+      // (a API só a mostra se passar de 5 min da chegada).
+      'guardadoEm': '2026-11-26T17:00:00.000Z',
+    });
 
     final deNovo = await diario.enviar(_novo(_idLocal1));
     expect(deNovo.registro.id, r.registro.id);
@@ -285,5 +292,107 @@ void main() {
       diario.pagina(idAlice),
       _recusa(MotivoRecusa.sessaoTerminou),
     );
+  });
+
+  group('revisão da P4', () {
+    Future<DiarioTeraeLocal> semRede() async {
+      final desligado = await ServidorFalso.iniciar();
+      final url = desligado.url;
+      await desligado.parar();
+      final semRede = ClienteDoPortal(
+        url: url,
+        dispositivo: GuardaEmMemoria(),
+        relogio: relogio,
+        tempoLimite: const Duration(seconds: 2),
+      );
+      addTearDown(semRede.fechar);
+      return DiarioTeraeLocal(ContextoDoPortal(cliente: semRede), fila: fila);
+    }
+
+    test('B1: a sessão acabada (401) não apaga a fila; ao entrar de novo, os '
+        'dois guardados saem', () async {
+      final offline = await semRede();
+      await offline.enviar(_novo(_idLocal1));
+      await offline.enviar(_novo(_idLocal2));
+      expect(await diario.pendentes(idAlice), hasLength(2));
+
+      portal.completa = false;
+      expect(await diario.reenviarFila(), isEmpty);
+      // O que se escreve com a sessão acabada também fica guardado.
+      final noFim = await diario.enviar(_novo(_idLocal3));
+      expect(noFim.registro.situacaoEnvio, SituacaoEnvio.naFila);
+      expect(await diario.pendentes(idAlice), hasLength(3));
+
+      final autenticacao = AutenticacaoTeraeLocal(contexto);
+      await autenticacao.iniciarEntrada(
+        email: 'mariana@exemplo.test',
+        senha: portal.senha,
+      );
+      await autenticacao.confirmarCodigo(
+        portal.codigo,
+        confiarNesteAparelho: false,
+      );
+      expect(await diario.reenviarFila(), hasLength(3));
+      expect(await diario.pendentes(idAlice), isEmpty);
+      expect(portal.diario, hasLength(3));
+    });
+
+    test('B2: o POST grava mas a resposta estoura o tempo; o reenvio leva o '
+        'mesmo corpo, não duplica e a fila esvazia', () async {
+      final apressado = ClienteDoPortal(
+        url: servidor.url,
+        dispositivo: GuardaEmMemoria(),
+        relogio: relogio,
+        tempoLimite: const Duration(milliseconds: 300),
+      );
+      addTearDown(apressado.fechar);
+      final contextoApressado = ContextoDoPortal(cliente: apressado);
+      final autenticacao = AutenticacaoTeraeLocal(contextoApressado);
+      await autenticacao.iniciarEntrada(
+        email: 'mariana@exemplo.test',
+        senha: portal.senha,
+      );
+      await autenticacao.confirmarCodigo(
+        portal.codigo,
+        confiarNesteAparelho: false,
+      );
+      final apressadoDiario = DiarioTeraeLocal(contextoApressado, fila: fila);
+
+      portal.demorarProximoEnvio = const Duration(seconds: 1);
+      final primeiro = await apressadoDiario.enviar(_novo(_idLocal1));
+      expect(primeiro.registro.situacaoEnvio, SituacaoEnvio.naFila);
+      expect(portal.diario, hasLength(1), reason: 'o servidor gravou');
+
+      expect(await diario.reenviarFila(), hasLength(1));
+      expect(await diario.pendentes(idAlice), isEmpty);
+      expect(portal.diario, hasLength(1), reason: 'não duplicou');
+      final corpos = [
+        for (final p in servidor.pedidos)
+          if (p.metodo == 'POST' && p.caminho.endsWith('/diario')) p.corpo,
+      ];
+      expect(corpos, hasLength(2));
+      expect(corpos.toSet(), hasLength(1), reason: 'o mesmo corpo');
+    });
+
+    test('B2: a chave já usada com outro corpo tira o registro da fila em vez '
+        'de prendê-lo', () async {
+      final offline = await semRede();
+      await offline.enviar(_novo(_idLocal1));
+      // Outro corpo com a mesma chave já chegou ao servidor.
+      portal.impressaoPorChave[_idLocal1] = '{"outro":"corpo"}';
+      portal.recibosPorChave[_idLocal1] = const {};
+      final saidos = await diario.reenviarFila();
+      expect(saidos, isEmpty);
+      expect(await diario.pendentes(idAlice), isEmpty);
+    });
+
+    test('"Sair" de uma conta não apaga o que outra conta guardou', () async {
+      await fila.gravar(
+        '[{"registro":${_jsonDe(_novo(_idLocal1))},"dono":"outra-conta"}]',
+      );
+      await diario.esquecer();
+      expect(fila.texto, contains('outra-conta'));
+      expect(await diario.pendentes(idAlice), isEmpty);
+    });
   });
 }

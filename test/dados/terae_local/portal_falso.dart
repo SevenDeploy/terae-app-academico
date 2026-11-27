@@ -85,8 +85,15 @@ class PortalFalso {
   final List<Map<String, Object?>> diario = [];
   final Map<String, List<Map<String, Object?>>> versoes = {};
 
-  /// Recibos por `Idempotency-Key` (reenviar a mesma chave não duplica).
+  /// Recibos por `Idempotency-Key` (reenviar a mesma chave não duplica) e a
+  /// impressão do corpo de cada chave: a mesma chave com outro corpo é 409
+  /// `chave_de_idempotencia_em_uso`, como a API (PMC-516).
   final Map<String, Map<String, Object?>> recibosPorChave = {};
+  final Map<String, String> impressaoPorChave = {};
+
+  /// O próximo `POST diario` grava, mas a resposta demora isto (o cliente
+  /// estoura o tempo e acha que não chegou).
+  Duration? demorarProximoEnvio;
 
   /// Corpos recebidos no `POST diario`.
   final List<Map<String, Object?>> enviosDoDiario = [];
@@ -298,8 +305,19 @@ class PortalFalso {
     if (chave == 'POST diario') {
       final corpo = p.json! as Map<String, Object?>;
       final idem = p.cabecalho('idempotency-key');
-      final jaVisto = idem == null ? null : recibosPorChave[idem];
-      if (jaVisto != null) return RespostaFalsa(201, json: jaVisto);
+      final impressao = idem == null ? null : impressaoPorChave[idem];
+      if (impressao != null) {
+        if (impressao != p.corpo) {
+          return const RespostaFalsa(
+            409,
+            json: {
+              'codigo': 'chave_de_idempotencia_em_uso',
+              'detail': 'A chave já foi usada com outro corpo.',
+            },
+          );
+        }
+        return RespostaFalsa(201, json: recibosPorChave[idem]);
+      }
       enviosDoDiario.add(corpo);
       final n = ++_seqDoDiario;
       final id = 'd0000000-0000-4000-8000-${n.toString().padLeft(12, '0')}';
@@ -326,8 +344,13 @@ class PortalFalso {
         'recebidoEm': em,
         'ajudaImediata': critico,
       };
-      if (idem != null) recibosPorChave[idem] = recibo;
-      return RespostaFalsa(201, json: recibo);
+      if (idem != null) {
+        recibosPorChave[idem] = recibo;
+        impressaoPorChave[idem] = p.corpo;
+      }
+      final demora = demorarProximoEnvio;
+      demorarProximoEnvio = null;
+      return RespostaFalsa(201, json: recibo, demora: demora ?? Duration.zero);
     }
     final corrigir = RegExp(r'^PUT diario/([^/]+)$').firstMatch(chave);
     final retirar = RegExp(r'^POST diario/([^/]+)/retirada$').firstMatch(chave);

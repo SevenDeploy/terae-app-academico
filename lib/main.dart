@@ -35,9 +35,13 @@ Future<void> main() async {
     // Decisão do dono de 26/11/2026: o Terae web LOCAL, nunca a produção.
     // O Firebase nem inicializa.
     final local = await montarTeraeLocal(configuracao: terae, relogio: relogio);
-    final sessao = Sessao(aoSair: local.aoSair);
-    // 401 fora da entrada: a sessão acabou no servidor; volta à TM01.
-    local.contexto.aoSessaoAcabar = sessao.sair;
+    final sessao = Sessao(
+      aoSair: local.aoSair,
+      aoSessaoAcabar: local.aoSessaoAcabar,
+    );
+    // 401 fora da entrada: a sessão acabou no servidor; volta à TM01 sem
+    // apagar o diário guardado no aparelho (só o "Sair" apaga).
+    local.contexto.aoSessaoAcabar = sessao.encerrarPorFimDeSessao;
     runApp(
       TeraeApp(
         repositorios: local.repositorios,

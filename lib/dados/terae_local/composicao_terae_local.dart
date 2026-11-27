@@ -24,13 +24,19 @@ class TeraeLocalMontado {
     required this.repositorios,
     required this.contexto,
     required this.aoSair,
+    required this.aoSessaoAcabar,
   });
 
   final Repositorios repositorios;
   final ContextoDoPortal contexto;
 
-  /// D20 — "Sair": revoga a sessão no servidor e cancela os lembretes.
+  /// D20 — "Sair": revoga a sessão no servidor, cancela os lembretes e
+  /// apaga a fila do diário desta conta.
   final Future<void> Function() aoSair;
+
+  /// 401 — a sessão já acabou no servidor: cancela os lembretes, mas a fila
+  /// do diário fica para sair quando a pessoa entrar de novo (B1).
+  final Future<void> Function() aoSessaoAcabar;
 }
 
 /// Monta a fonte `local` (decisão do dono de 26/11/2026): os repositórios
@@ -91,9 +97,14 @@ Future<TeraeLocalMontado> montarTeraeLocal({
     repositorios: repositorios,
     contexto: contexto,
     aoSair: () async {
+      // A fila sai antes da sessão: ela é desta conta (o `/eu` some no
+      // sair do servidor).
+      await diario.esquecer();
       await autenticacao.sair();
       await lembretesDaFonte.cancelarTudo();
-      await diario.esquecer();
+    },
+    aoSessaoAcabar: () async {
+      await lembretesDaFonte.cancelarTudo();
     },
   );
 }

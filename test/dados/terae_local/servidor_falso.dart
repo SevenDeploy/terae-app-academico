@@ -46,9 +46,13 @@ class RespostaFalsa {
     this.json,
     this.setCookies = const [],
     this.cabecalhos = const {},
+    this.demora = Duration.zero,
   });
 
   final int status;
+
+  /// Espera antes de responder (a resposta que estoura o tempo do cliente).
+  final Duration demora;
   final Object? json;
   final List<String> setCookies;
   final Map<String, String> cabecalhos;
@@ -87,6 +91,7 @@ class ServidorFalso {
     );
     pedidos.add(pedido);
     final r = roteiro(pedido);
+    if (r.demora > Duration.zero) await Future<void>.delayed(r.demora);
     final resp = req.response..statusCode = r.status;
     for (final c in r.setCookies) {
       resp.headers.add(HttpHeaders.setCookieHeader, c);
