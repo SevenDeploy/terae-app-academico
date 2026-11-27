@@ -379,7 +379,12 @@ class FaixaModoCuidador extends StatelessWidget {
                         style: TextStyle(fontWeight: FontWeight.w700),
                       ),
                       TextSpan(
-                        text: 'Você vê a agenda e os avisos de $primeiroNome.',
+                        // Como no portal: com o programa em casa na fonte, o
+                        // cuidador "vê o programa em casa e a agenda".
+                        text: capacidadesDaFonte(context).programaDoCuidador
+                            ? 'Você vê o programa em casa e a agenda de '
+                                  '$primeiroNome.'
+                            : 'Você vê a agenda e os avisos de $primeiroNome.',
                       ),
                     ],
                   ),

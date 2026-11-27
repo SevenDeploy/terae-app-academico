@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -286,6 +288,38 @@ class AvisoDeFalha extends StatelessWidget {
       ],
     );
   }
+}
+
+/// Rola a tela até [child] assim que ele entra na árvore: o aviso de recusa
+/// que nasce abaixo da dobra (como "Outra pessoa da família já registrou") não
+/// pode passar despercebido. Só age uma vez por vez que o filho aparece.
+class RolaAteAparecer extends StatefulWidget {
+  const RolaAteAparecer({super.key, required this.child});
+
+  final Widget child;
+
+  @override
+  State<RolaAteAparecer> createState() => _RolaAteAparecerState();
+}
+
+class _RolaAteAparecerState extends State<RolaAteAparecer> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      unawaited(
+        Scrollable.ensureVisible(
+          context,
+          duration: const Duration(milliseconds: 200),
+          alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtEnd,
+        ),
+      );
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
 }
 
 /// Caixa de aviso colorida (renovação, limite, recusa), com ícone e texto.

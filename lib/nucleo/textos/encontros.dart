@@ -38,3 +38,13 @@ String palavraDoPaciente(Paciente paciente) =>
     paciente.temTerapiaOcupacional && !paciente.temAcompanhamentoClinico
     ? 'sessão'
     : 'consulta';
+
+/// A agenda que a clínica ainda não liberou no portal (`agendaLiberada` falso
+/// no `/eu`) não está vazia: o portal diz isto, em vez de "nenhuma sessão".
+const String agendaNaoLiberada =
+    'A clínica ainda não liberou a agenda para esta conta.';
+
+/// O texto de "nenhuma sessão" do [paciente]: [agendaNaoLiberada] quando a
+/// clínica não liberou a agenda, senão [vazio].
+String semEncontros(Paciente paciente, String vazio) =>
+    paciente.agendaLiberada == false ? agendaNaoLiberada : vazio;

@@ -107,6 +107,11 @@ void main() {
       );
       expect(find.byKey(const Key('TM02')), findsOneWidget);
       expect(find.byKey(const Key('faixa-modo-cuidador')), findsOneWidget);
+      // Com o programa na fonte, a faixa diz o que o cuidador vê, como o portal.
+      expect(
+        find.textContaining('programa em casa e a agenda de'),
+        findsOneWidget,
+      );
       expect(find.byKey(const Key('diario-fora-do-acesso')), findsOneWidget);
       expect(find.byKey(const Key('cartao-diario')), findsNothing);
       expect(find.byKey(const Key('atalho-diario')), findsNothing);

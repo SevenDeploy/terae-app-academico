@@ -278,6 +278,7 @@ Paciente pacienteDoPortal(PacienteDaConta p) => Paciente(
   linhasDeCuidado: linhasDoTeraeLocal,
   nomeDaClinica: p.nomeDaClinica,
   telefoneDaClinica: p.telefoneDaClinica,
+  agendaLiberada: p.agendaLiberada,
 );
 
 /// O `/eu` vira a conta e os vínculos de onde a `Sessao` deriva os perfis:

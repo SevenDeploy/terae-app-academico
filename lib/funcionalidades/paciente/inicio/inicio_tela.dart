@@ -499,8 +499,11 @@ class _ProximaConsulta extends StatelessWidget {
         children: [
           if (consulta == null)
             Text(
-              'Nenhuma ${palavraDoPaciente(perfil.paciente)} marcada. '
-              'Combine com a clínica.',
+              semEncontros(
+                perfil.paciente,
+                'Nenhuma ${palavraDoPaciente(perfil.paciente)} marcada. '
+                'Combine com a clínica.',
+              ),
               style: textos.bodyMedium,
             )
           else ...[

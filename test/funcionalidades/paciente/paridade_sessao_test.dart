@@ -18,7 +18,7 @@ import '../../apoio/dubles.dart';
 import 'apoio_paciente.dart';
 
 /// Ana como o Terae local a entrega: com a clínica e, se dado, o telefone.
-Sessao _sessaoLocal({String? telefone}) {
+Sessao _sessaoLocal({String? telefone, bool? agendaLiberada}) {
   final ana = Paciente(
     id: 'p-ana',
     contaId: 'c-ana',
@@ -27,6 +27,7 @@ Sessao _sessaoLocal({String? telefone}) {
     ativo: true,
     nomeDaClinica: 'Clínica Raízes',
     telefoneDaClinica: telefone,
+    agendaLiberada: agendaLiberada,
   );
   final base = vinculosAna();
   return Sessao()..entrar(
@@ -118,6 +119,52 @@ void main() {
           tester.getTopLeft(find.byKey(Key('sessao-$id'))).dy,
       ];
       expect([...topo]..sort(), topo);
+    });
+  });
+
+  group('Agenda que a clínica ainda não liberou', () {
+    testWidgets('a Agenda diz que não foi liberada, não "nenhuma sessão"', (
+      tester,
+    ) async {
+      await abrirAppDoPaciente(
+        tester,
+        em: Rotas.pacienteSessoes,
+        sessao: _sessaoLocal(agendaLiberada: false),
+        paciente: PacienteComDados(consultas: const []),
+      );
+      expect(
+        find.text('A clínica ainda não liberou a agenda para esta conta.'),
+        findsOneWidget,
+      );
+      expect(find.textContaining('Nenhuma sessão'), findsNothing);
+      expect(find.textContaining('Nenhuma consulta'), findsNothing);
+    });
+
+    testWidgets('o Início diz o mesmo no cartão da próxima sessão', (
+      tester,
+    ) async {
+      await abrirAppDoPaciente(
+        tester,
+        sessao: _sessaoLocal(agendaLiberada: false),
+        paciente: PacienteComDados(consultas: const []),
+      );
+      expect(
+        find.text('A clínica ainda não liberou a agenda para esta conta.'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('liberada (ou sem a informação): continua "nenhuma ..."', (
+      tester,
+    ) async {
+      await abrirAppDoPaciente(
+        tester,
+        em: Rotas.pacienteSessoes,
+        sessao: _sessaoLocal(agendaLiberada: true),
+        paciente: PacienteComDados(consultas: const []),
+      );
+      expect(find.textContaining('marcada'), findsOneWidget);
+      expect(find.textContaining('não liberou'), findsNothing);
     });
   });
 

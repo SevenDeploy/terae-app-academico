@@ -101,7 +101,12 @@ class _Agenda extends StatelessWidget {
         if (marcadas.isEmpty)
           Cartao(
             child: Text(
-              'Nenhuma ${paciente == null ? 'consulta' : palavraDoPaciente(paciente)} marcada.',
+              paciente == null
+                  ? 'Nenhuma consulta marcada.'
+                  : semEncontros(
+                      paciente,
+                      'Nenhuma ${palavraDoPaciente(paciente)} marcada.',
+                    ),
               style: textos.bodyLarge,
             ),
           ),

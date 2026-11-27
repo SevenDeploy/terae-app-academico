@@ -24,6 +24,7 @@ class Paciente {
     Set<LinhaDeCuidado> linhasDeCuidado = linhasPadrao,
     this.nomeDaClinica,
     this.telefoneDaClinica,
+    this.agendaLiberada,
   }) : linhasDeCuidado = _conferirLinhas(linhasDeCuidado);
 
   factory Paciente.fromMap(Mapa mapa) => Paciente(
@@ -39,6 +40,7 @@ class Paciente {
         : lerEnums(mapa, 'linhasDeCuidado', LinhaDeCuidado.values).toSet(),
     nomeDaClinica: lerOpcional<String>(mapa, 'nomeDaClinica'),
     telefoneDaClinica: lerOpcional<String>(mapa, 'telefoneDaClinica'),
+    agendaLiberada: lerOpcional<bool>(mapa, 'agendaLiberada'),
   );
 
   /// D21 — paciente sem linha gravada (dados das Atividades 3 e 4, cópias
@@ -85,6 +87,11 @@ class Paciente {
   /// clínica". Nulo no Firebase, onde vale o número fictício da demonstração.
   final String? telefoneDaClinica;
 
+  /// Se a clínica liberou a agenda no portal para esta conta (`agendaLiberada`
+  /// do `/eu`). `null` no Firebase, onde a agenda sempre vale. Com `false`, a
+  /// agenda não está "vazia": a clínica ainda não a liberou.
+  final bool? agendaLiberada;
+
   /// Tem receita e remédios (TM02, TM06, TM11).
   bool get temAcompanhamentoClinico =>
       linhasDeCuidado.contains(LinhaDeCuidado.acompanhamentoClinico);
@@ -108,6 +115,7 @@ class Paciente {
     linhasDeCuidado: linhasDeCuidado,
     nomeDaClinica: nomeDaClinica,
     telefoneDaClinica: telefoneDaClinica,
+    agendaLiberada: agendaLiberada,
   );
 
   /// RNFM05 — cópia para o aparelho do cuidador: sem CPF, sem data de
@@ -120,6 +128,7 @@ class Paciente {
     linhasDeCuidado: linhasDeCuidado,
     nomeDaClinica: nomeDaClinica,
     telefoneDaClinica: telefoneDaClinica,
+    agendaLiberada: agendaLiberada,
   );
 
   Mapa toMap() => {
@@ -137,6 +146,7 @@ class Paciente {
     // Só quando existem: o mapa do Firebase e do SQLite não muda.
     if (nomeDaClinica != null) 'nomeDaClinica': nomeDaClinica,
     if (telefoneDaClinica != null) 'telefoneDaClinica': telefoneDaClinica,
+    if (agendaLiberada != null) 'agendaLiberada': agendaLiberada,
   };
 
   @override
@@ -151,6 +161,7 @@ class Paciente {
       other.ativo == ativo &&
       other.nomeDaClinica == nomeDaClinica &&
       other.telefoneDaClinica == telefoneDaClinica &&
+      other.agendaLiberada == agendaLiberada &&
       setEquals(other.linhasDeCuidado, linhasDeCuidado);
 
   @override
@@ -165,6 +176,7 @@ class Paciente {
     Object.hashAllUnordered(linhasDeCuidado),
     nomeDaClinica,
     telefoneDaClinica,
+    agendaLiberada,
   );
 
   @override

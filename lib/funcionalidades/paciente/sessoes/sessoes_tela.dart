@@ -103,8 +103,11 @@ class _ConteudoDasSessoes extends StatelessWidget {
               Cartao(
                 key: const Key('sem-proximas'),
                 child: Text(
-                  'Nenhuma ${palavraDoPaciente(paciente)} marcada. Fale com a '
-                  'clínica para combinar.',
+                  semEncontros(
+                    paciente,
+                    'Nenhuma ${palavraDoPaciente(paciente)} marcada. Fale com '
+                    'a clínica para combinar.',
+                  ),
                   style: textos.bodyMedium,
                 ),
               )

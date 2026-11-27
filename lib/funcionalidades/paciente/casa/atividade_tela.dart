@@ -154,24 +154,27 @@ class _ConteudoDaAtividade extends StatelessWidget {
           ],
           if (c.erro case final erro?) ...[
             const SizedBox(height: MedidasTerae.espaco),
-            Semantics(
-              liveRegion: true,
-              child: Cartaozinho(
-                key: const Key('erro-atividade'),
-                cores: const ParDeCores(
-                  CoresTerae.negativo700,
-                  CoresTerae.negativo50,
-                ),
-                icone: Icons.error_outline,
-                children: [
-                  Text(
-                    erro,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      color: CoresTerae.negativo700,
-                    ),
+            RolaAteAparecer(
+              key: ValueKey(erro),
+              child: Semantics(
+                liveRegion: true,
+                child: Cartaozinho(
+                  key: const Key('erro-atividade'),
+                  cores: const ParDeCores(
+                    CoresTerae.negativo700,
+                    CoresTerae.negativo50,
                   ),
-                ],
+                  icone: Icons.error_outline,
+                  children: [
+                    Text(
+                      erro,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        color: CoresTerae.negativo700,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ],
