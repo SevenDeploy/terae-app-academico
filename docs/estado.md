@@ -1,4 +1,4 @@
-# Estado do terae_app — 06/11/2026 (Atividade 4 e evolução de TO)
+# Estado do terae_app — 27/11/2026 (Atividade 4, evolução de TO e Terae local)
 
 Projeto acadêmico (Dispositivos Móveis, UNEMAT 2026). Não é o app do Terae produção: o produto é um SaaS web, e o
 canal do paciente no produto é um PWA na Play Store.
@@ -76,6 +76,36 @@ A semente com `--reiniciar` apaga esses documentos, e depois dela todo registro 
    registro vive enquanto a tela estiver aberta.
 4. Para a P4: o mapeador da fonte Terae local manda `guardadoEm` = `registradoEm` só no registro que saiu da fila, e
    a `Idempotency-Key` = `id`.
+
+## Fonte "Terae local" — P4 (27/11/2026, branch `portal-terae-local`)
+
+**Decisão do dono (26/11/2026):** o app pode falar com o Terae web **local** (nesta máquina), pela API do portal da
+família, para a apresentação. **Nunca com a produção**, que terá o app em React Native. O padrão continua o Firebase
+acadêmico (A5).
+
+| # | Decisão |
+|---|---|
+| TL1 | Seleção na partida: `--dart-define=TERAE_FONTE=local` monta `montarTeraeLocal` (`lib/dados/terae_local/composicao_terae_local.dart`) e o Firebase nem inicializa. A trava (`exigirUrlLocal`) roda antes de tudo e só aceita `10.0.2.2`, `127.0.0.1`, `localhost` e `*.localhost`; o cliente confere de novo |
+| TL2 | Entrada em duas etapas só no modo local (`AutenticacaoComCodigo`): senha → "Digite o código do e-mail" (6 caixas, e-mail mascarado, reenviar após 60 s, "Confiar neste aparelho por 30 dias" desmarcado), com os textos do `Entrar.tsx`. Sessão só em memória (`sessaoGuardada` = `null`); "Sair" chama `DELETE /portal/sessoes` e esquece o aparelho confiável (D20). No Firebase a TM01 fica igual |
+| TL3 | O paciente atual vive na sessão do servidor (`PUT /portal/sessoes/paciente`): o `ContextoDoPortal` roda uma chamada por vez e escolhe o paciente antes quando ele muda; um 409 "Escolha o paciente primeiro" escolhe de novo e repete. 401 fora da entrada vira `sessaoTerminou` e a `Sessao.sair` (volta à TM01) |
+| TL4 | Sem cópia local nem fila no modo local: o portal é online como o web. Sem rede, a escrita recusa `semConexao`. Presença: "Sim, vamos" → `/confirmacao`, "Não vamos" → `/ausencia` (vale também depois de confirmar); voltar a confirmar depois do aviso é 409 → `sessaoEncerrada`. Programa: um registro por orientação e dia, corrige o próprio; o de outra conta é 409 → `registroDeOutraConta` |
+| TL5 | O que a API do portal não tem volta vazio de forma explícita e a tela esconde pela `CapacidadesDaFonte` (`Repositorios.capacidades`, provida pelo `TeraeApp`): diário (aba "indisponível" até a P3), Jornada com metas e marcos, faixa dos 14 dias e "Esta semana", "Desfazer", ocupação da atividade, cuidadores (chave `CUIDADOR_PELO_PORTAL`), primeiro acesso por código do app e painel de demonstração. Medicação e alertas somem sozinhos: todo paciente do Terae local é só TO (D21) |
+| TL6 | O portal só mostra o primeiro nome e a especialidade de quem atende: o `ProfissionalSaude` sai com id sintético (`portal:Nome|especialidade`) e sem registro no conselho. O `respondidaEm` da presença é o instante do recibo deste aparelho (ou o da leitura): o portal não o devolve |
+
+**Diário:** fica de fora desta fase de propósito. A sessão da P3 refaz o modelo do diário igual ao do portal na
+branch `portal-diario`; aqui há só o stub `DiarioIndisponivelNoTeraeLocal` e a tela `DiarioIndisponivelTela`. A
+coordenação liga `/api/portal/diario` depois de juntar as branches.
+
+**Ponta a ponta (27/11, emulador `Terae_Pixel`, Terae local de pé):** a Mariana entrou com a senha e o código lido do
+Mailpit; o Início mostrou a próxima sessão (terça 01/12, 14:00) e o programa de hoje (0 de 3); Em casa trouxe as três
+orientações publicadas pela TO no web; a Agenda trouxe as sessões; "Sim, vamos" gravou `agendamento.confirmado_em`
+com `canal_confirmacao = portal` no banco `terae_app_local`; o registro "Em parte" e a correção com reflexão
+gravaram `registro_programa_domiciliar`; "Sair" revogou a sessão (`sessao_autenticada.revogada_em`). Capturas em
+[`docs/evidencias-terae-local/`](evidencias-terae-local/), nenhuma da tela de senha. A fumaça sem emulador fica em
+`ferramentas/fumaca_repositorios_terae_local_test.dart` (fora do portão).
+
+**Testes:** servidor HTTP falso em loopback (`test/dados/terae_local/portal_falso.dart`) para os repositórios, a
+composição por fonte e a trava; telas da etapa do código e das seções escondidas com `CapacidadesDaFonte.teraeLocal`.
 
 ## Atividade 5 — finalização do MVP e testes (26/11/2026, branch `atividade-5`)
 

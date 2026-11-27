@@ -167,3 +167,83 @@ abstract interface class RepositorioAutenticacao {
     required NovoAcesso acesso,
   });
 }
+
+// ---------------------------------------------------------------------------
+// Entrada com código por e-mail (fonte Terae local, 26/11/2026)
+// ---------------------------------------------------------------------------
+
+/// O passo seguinte depois da senha certa, na entrada com segundo fator.
+sealed class PassoDaEntrada {
+  const PassoDaEntrada();
+}
+
+/// A sessão abriu (o aparelho confiável dispensou o código).
+final class EntradaConcluida extends PassoDaEntrada {
+  const EntradaConcluida(this.vinculos);
+
+  final VinculosDaConta vinculos;
+}
+
+/// A senha conferiu e o código foi pedido por e-mail (etapa 2 do portal).
+final class CodigoDeAcessoPedido extends PassoDaEntrada {
+  CodigoDeAcessoPedido({
+    required this.emailMascarado,
+    required this.codigoEnviado,
+    required DateTime reenviarAPartirDe,
+  }) : reenviarAPartirDe = reenviarAPartirDe.toUtc();
+
+  /// `ma***@exemplo.com.br`.
+  final String emailMascarado;
+
+  /// `false` quando o servidor segurou o envio (teto de e-mails).
+  final bool codigoEnviado;
+
+  /// A partir de quando "Enviar um código novo" vale (60 s depois do pedido).
+  final DateTime reenviarAPartirDe;
+}
+
+/// O código de acesso não conferiu (ou venceu).
+class CodigoNaoConfere implements Exception {
+  const CodigoNaoConfere({this.tentativasRestantes});
+
+  /// Quantas tentativas restam deste código, quando o servidor disse.
+  final int? tentativasRestantes;
+
+  @override
+  String toString() => 'CodigoNaoConfere($tentativasRestantes)';
+}
+
+/// A sessão provisória acabou: a pessoa volta para a senha, com [recado].
+class VoltarParaASenha implements Exception {
+  const VoltarParaASenha(this.recado);
+
+  final String recado;
+
+  @override
+  String toString() => 'VoltarParaASenha($recado)';
+}
+
+/// Autenticação em duas etapas, como o portal da família do Terae: a senha,
+/// depois o código de 6 dígitos que chega por e-mail, com "Confiar neste
+/// aparelho por 30 dias". Só a fonte Terae local a implementa; o Firebase
+/// acadêmico entra só com a senha (TM01, D14).
+abstract interface class AutenticacaoComCodigo
+    implements RepositorioAutenticacao {
+  /// A senha. Recusa como [RepositorioAutenticacao.entrar]
+  /// (`credenciaisInvalidas`, `muitasTentativas`, `semConexao`, `contaSemAcesso`).
+  Future<PassoDaEntrada> iniciarEntrada({
+    required String email,
+    required String senha,
+  });
+
+  /// O código do e-mail. Errado: [CodigoNaoConfere]; sem mais tentativas ou
+  /// sessão provisória vencida: [VoltarParaASenha].
+  Future<VinculosDaConta> confirmarCodigo(
+    String codigo, {
+    required bool confiarNesteAparelho,
+  });
+
+  /// Pede outro código (60 s depois do último). Sessão provisória vencida:
+  /// [VoltarParaASenha].
+  Future<CodigoDeAcessoPedido> reenviarCodigo();
+}

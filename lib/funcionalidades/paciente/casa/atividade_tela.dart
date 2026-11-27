@@ -19,6 +19,7 @@ import '../../../nucleo/widgets/aviso_de_conexao.dart';
 import '../../../nucleo/widgets/botao_grande.dart';
 import '../../../nucleo/widgets/cartao.dart';
 import '../../../nucleo/widgets/seletor_opcoes.dart';
+import '../../capacidades.dart';
 import '../componentes_paciente.dart';
 import '../metas/componentes_metas.dart';
 import 'atividade_controlador.dart';
@@ -174,25 +175,28 @@ class _ConteudoDaAtividade extends StatelessWidget {
               ),
             ),
           ],
-          espacoDaCasa,
-          const RotuloDeSecao('Últimos 14 dias', icone: Icons.calendar_month),
-          const SizedBox(height: MedidasTerae.espaco),
-          Cartao(
-            key: const Key('faixa-da-atividade'),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  'Esta semana: ${c.vezesEstaSemana} de '
-                  '${atividade.vezesPorSemana} '
-                  '${atividade.vezesPorSemana == 1 ? 'vez' : 'vezes'}',
-                  style: Theme.of(context).textTheme.titleSmall,
-                ),
-                const SizedBox(height: MedidasTerae.espaco),
-                FaixaDeDias(dias: c.faixa, hoje: c.hoje),
-              ],
+          // Terae local: o portal só tem o registro de hoje.
+          if (capacidadesDaFonte(context).faixaDosDias) ...[
+            espacoDaCasa,
+            const RotuloDeSecao('Últimos 14 dias', icone: Icons.calendar_month),
+            const SizedBox(height: MedidasTerae.espaco),
+            Cartao(
+              key: const Key('faixa-da-atividade'),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    'Esta semana: ${c.vezesEstaSemana} de '
+                    '${atividade.vezesPorSemana} '
+                    '${atividade.vezesPorSemana == 1 ? 'vez' : 'vezes'}',
+                    style: Theme.of(context).textTheme.titleSmall,
+                  ),
+                  const SizedBox(height: MedidasTerae.espaco),
+                  FaixaDeDias(dias: c.faixa, hoje: c.hoje),
+                ],
+              ),
             ),
-          ),
+          ],
           if (c.historico.isNotEmpty) ...[
             espacoDaCasa,
             RotuloDeSecao(
@@ -238,7 +242,8 @@ class _OQueFazer extends StatelessWidget {
           spacing: MedidasTerae.espacoPequeno,
           runSpacing: MedidasTerae.espacoPequeno,
           children: [
-            Etiqueta(texto: a.ocupacao.rotulo),
+            if (capacidadesDaFonte(context).ocupacaoDaAtividade)
+              Etiqueta(texto: a.ocupacao.rotulo),
             Etiqueta(
               icone: Icons.repeat,
               texto: descreverFrequencia(a.vezesPorSemana),
@@ -430,14 +435,15 @@ class _RegistroDeHoje extends StatelessWidget {
                 icon: const Icon(Icons.edit_outlined),
                 label: const Text('Corrigir'),
               ),
-              OutlinedButton.icon(
-                key: const Key('desfazer-atividade'),
-                onPressed: c.salvando
-                    ? null
-                    : () => _confirmarDesfazer(context),
-                icon: const Icon(Icons.undo),
-                label: const Text('Desfazer'),
-              ),
+              if (capacidadesDaFonte(context).desfazerEmCasa)
+                OutlinedButton.icon(
+                  key: const Key('desfazer-atividade'),
+                  onPressed: c.salvando
+                      ? null
+                      : () => _confirmarDesfazer(context),
+                  icon: const Icon(Icons.undo),
+                  label: const Text('Desfazer'),
+                ),
             ],
           ),
         ],

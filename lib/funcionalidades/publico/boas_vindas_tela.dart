@@ -13,6 +13,7 @@ import '../../nucleo/widgets/faixa_emergencia.dart';
 import '../../nucleo/widgets/selo_academico.dart';
 import '../autenticacao/moldura_de_entrada.dart';
 import '../autenticacao/primeiro_acesso.dart';
+import '../capacidades.dart';
 import 'folha_inferior.dart';
 import 'painel_demonstracao.dart';
 
@@ -33,6 +34,7 @@ class BoasVindasTela extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final capacidades = capacidadesDaFonte(context);
     return Scaffold(
       key: const Key('TM00'),
       backgroundColor: CoresTerae.marinho900,
@@ -51,7 +53,7 @@ class BoasVindasTela extends StatelessWidget {
               Row(
                 children: [
                   const Expanded(child: MarcaDoPortal(grande: true)),
-                  if (modoDepuracao)
+                  if (modoDepuracao && capacidades.demonstracao)
                     IconButton(
                       key: const Key('abrir-painel-demonstracao'),
                       tooltip: 'Painel de demonstração',
@@ -101,14 +103,16 @@ class BoasVindasTela extends StatelessWidget {
                 icone: LucideIcons.logIn,
                 aoTocar: () => unawaited(context.push(Rotas.entrar)),
               ),
-              const SizedBox(height: 12),
-              BotaoGrande(
-                key: const Key('ir-primeiro-acesso'),
-                rotulo: 'Primeiro acesso',
-                icone: LucideIcons.keyRound,
-                variante: VarianteBotao.secundario,
-                aoTocar: () => unawaited(abrirPrimeiroAcesso(context)),
-              ),
+              if (capacidades.primeiroAcesso) ...[
+                const SizedBox(height: 12),
+                BotaoGrande(
+                  key: const Key('ir-primeiro-acesso'),
+                  rotulo: 'Primeiro acesso',
+                  icone: LucideIcons.keyRound,
+                  variante: VarianteBotao.secundario,
+                  aoTocar: () => unawaited(abrirPrimeiroAcesso(context)),
+                ),
+              ],
               const SizedBox(height: MedidasTerae.espaco),
               Center(
                 child: TextButton(

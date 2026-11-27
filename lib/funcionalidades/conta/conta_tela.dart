@@ -10,6 +10,7 @@ import '../../nucleo/tema/tema.dart';
 import '../../nucleo/widgets/aviso_de_conexao.dart';
 import '../../nucleo/widgets/botao_grande.dart';
 import '../../nucleo/widgets/cartao.dart';
+import '../capacidades.dart';
 import '../moldura/moldura_do_portal.dart';
 
 /// TM21 — Conta (a aba "Conta" do portal, `MinhaConta.tsx`, quadro 18k):
@@ -95,14 +96,17 @@ class ContaTela extends StatelessWidget {
               descricao: 'Véspera da sessão e horário das atividades',
               aoTocar: () => context.push(Rotas.pacienteLembretes),
             ),
-            const SizedBox(height: 12),
-            _ItemDaConta(
-              chave: 'conta-cuidadores',
-              icone: LucideIcons.heartHandshake,
-              titulo: 'Cuidadores que você autorizou',
-              descricao: 'Convidar ou retirar o acesso de um cuidador',
-              aoTocar: () => context.push(Rotas.pacienteCuidadores),
-            ),
+            // Terae local: chave CUIDADOR_PELO_PORTAL desligada.
+            if (capacidadesDaFonte(context).cuidadores) ...[
+              const SizedBox(height: 12),
+              _ItemDaConta(
+                chave: 'conta-cuidadores',
+                icone: LucideIcons.heartHandshake,
+                titulo: 'Cuidadores que você autorizou',
+                descricao: 'Convidar ou retirar o acesso de um cuidador',
+                aoTocar: () => context.push(Rotas.pacienteCuidadores),
+              ),
+            ],
           ],
           const SizedBox(height: MedidasTerae.espacoGrande),
           BotaoGrande(

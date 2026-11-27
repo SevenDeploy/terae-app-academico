@@ -15,7 +15,7 @@ import 'funcionalidades/paciente/casa/em_casa_tela.dart';
 import 'funcionalidades/paciente/cuidadores/cuidadores_tela.dart';
 import 'funcionalidades/paciente/diario/ajuda_imediata_tela.dart';
 import 'funcionalidades/paciente/diario/diario_enviado_tela.dart';
-import 'funcionalidades/paciente/diario/diario_tela.dart';
+import 'funcionalidades/paciente/diario_indisponivel_tela.dart';
 import 'funcionalidades/paciente/inicio/inicio_tela.dart';
 import 'funcionalidades/paciente/jornada/jornada_tela.dart';
 import 'funcionalidades/paciente/lembretes/lembretes_tela.dart';
@@ -138,7 +138,7 @@ GoRouter criarRoteador({
               GoRoute(
                 path: Rotas.pacienteDiario,
                 pageBuilder: (context, state) =>
-                    _pagina(state, const DiarioTela()),
+                    _pagina(state, const DiarioDaFonte()),
                 routes: [
                   GoRoute(
                     path: Rotas.segmentoEnviado,

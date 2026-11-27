@@ -88,7 +88,21 @@ enum MotivoRecusa {
   ),
 
   /// TM18 — o agendamento não existe ou não é deste paciente.
-  agendamentoInexistente('Não encontramos esta sessão.');
+  agendamentoInexistente('Não encontramos esta sessão.'),
+
+  /// Fonte Terae local — a sessão do portal acabou no servidor (401).
+  sessaoTerminou('Por segurança, entre de novo com a sua senha.'),
+
+  /// Fonte Terae local — o portal da família não tem este recurso.
+  indisponivelNestaFonte(
+    'Esta parte ainda não está disponível ligada ao Terae local.',
+  ),
+
+  /// Fonte Terae local — outra conta da família já registrou a atividade
+  /// hoje; no portal vale o primeiro registro do dia (409).
+  registroDeOutraConta(
+    'Outra pessoa da família já registrou esta atividade hoje.',
+  );
 
   const MotivoRecusa(this.mensagem);
 

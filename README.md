@@ -3,9 +3,10 @@
 > **Projeto acadêmico — UNEMAT 2026, disciplina Desenvolvimento de Sistemas para Dispositivos Móveis.**
 >
 > Este app Flutter mostra, de outro jeito, o app do paciente do Terae. **Ele não é o app do Terae em produção**: o Terae
-> é um SaaS web, e o canal do paciente no produto é um PWA. Este app usa só dados fictícios e só se conecta ao Firebase
-> acadêmico `terae-app-academico`. Ele não é publicado em loja. Sem o Firebase configurado, e sempre na web, ele roda
-> com os dados de demonstração na memória.
+> é um SaaS web, e o canal do paciente no produto é um PWA. Este app usa só dados fictícios e se conecta ao Firebase
+> acadêmico `terae-app-academico` (padrão) ou, para a apresentação, a um Terae web **local** rodando nesta máquina
+> (`--dart-define=TERAE_FONTE=local`). **Nunca à produção.** Ele não é publicado em loja. Sem o Firebase
+> configurado, e sempre na web, ele roda com os dados de demonstração na memória.
 
 **Equipe:** Izabely Kamila Martins Barbosa, Lucas da Silva Gonçalves, Willian dos Santos Lira e Walyson dos Santos
 Medeiros.
@@ -67,6 +68,21 @@ Os arquivos `lib/firebase_options.dart` e `android/app/google-services.json` tê
 projeto Firebase acadêmico. A proteção dos dados está nas `firestore.rules`.
 
 > **Windows:** compile numa pasta **fora do OneDrive** e com caminho **sem acento**. O Gradle falha nos dois casos.
+
+### Terae web local (fonte `local`, só para a apresentação)
+
+Decisão do dono de 26/11/2026: o app pode falar com a API do portal da família de um Terae que roda **nesta
+máquina** — nunca com a produção. Suba o Terae local pelo roteiro de
+[`ferramentas/terae-local/LEIA-ME.md`](ferramentas/terae-local/LEIA-ME.md) e rode:
+
+```powershell
+flutter run -d emulator-5554 --dart-define=TERAE_FONTE=local
+```
+
+`TERAE_LOCAL_URL` (padrão `http://10.0.2.2:3000`) só aceita `10.0.2.2`, `127.0.0.1`, `localhost` e `*.localhost`;
+qualquer outro endereço aborta na partida. Nesse modo o Firebase nem inicializa; a entrada pede a senha e o código de 6
+dígitos do e-mail (Mailpit), e a tela esconde o que o portal não tem (diário até a P3, metas, marcos, faixa dos 14
+dias, medicação, cuidadores).
 
 ### Firebase próprio (opcional)
 
