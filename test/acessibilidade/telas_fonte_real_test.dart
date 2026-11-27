@@ -28,11 +28,11 @@ void main() {
     });
   }
 
-  // D22: com 5 abas, "Cuidadores" quebrava em duas linhas a 360 dp mesmo
-  // com a fonte normal, e o teste de estouro não pega quebra de linha. Ana
-  // tem a barra mais cheia (as duas linhas de cuidado: quatro abas).
+  // A barra do portal tem 5 abas de rótulo curto; o teste de estouro não pega
+  // quebra de linha. Ana tem a barra mais cheia (as duas linhas de cuidado).
+  // Antes (D22), "Cuidadores" quebrava em duas linhas a 360 dp.
   for (final escala in [1.0, 2.0]) {
-    testWidgets('rótulo de aba em uma linha só a 360 dp com a Lexend em '
+    testWidgets('rótulo de aba em uma linha só a 360 dp com a Inter em '
         '${(escala * 100).round()}%', (tester) async {
       aparelho(tester, escala: escala);
       await abrirComMemoria(
@@ -41,7 +41,7 @@ void main() {
         em: Rotas.pacienteInicio,
       );
       // Os ícones também são RichText; ficam só os rótulos.
-      const nomes = {'Início', 'Diário', 'Em casa', 'Jornada'};
+      const nomes = {'Início', 'Diário', 'Em casa', 'Agenda', 'Conta'};
       final rotulos = find.descendant(
         of: find.byType(NavigationBar),
         matching: find.byWidgetPredicate(

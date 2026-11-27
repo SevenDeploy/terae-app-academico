@@ -5,10 +5,11 @@ import 'dados/repositorios/diario_repositorio.dart';
 import 'funcionalidades/autenticacao/cadastro_cuidador_tela.dart';
 import 'funcionalidades/autenticacao/cadastro_paciente_tela.dart';
 import 'funcionalidades/autenticacao/entrar_tela.dart';
+import 'funcionalidades/conta/conta_tela.dart';
 import 'funcionalidades/cuidador/agenda_avisos_tela.dart';
 import 'funcionalidades/cuidador/inicio_cuidador_tela.dart';
 import 'funcionalidades/cuidador/medicacao_tela.dart';
-import 'funcionalidades/paciente/abas_paciente.dart';
+import 'funcionalidades/moldura/moldura_do_portal.dart';
 import 'funcionalidades/paciente/casa/atividade_tela.dart';
 import 'funcionalidades/paciente/casa/em_casa_tela.dart';
 import 'funcionalidades/paciente/cuidadores/cuidadores_tela.dart';
@@ -18,6 +19,7 @@ import 'funcionalidades/paciente/diario/diario_tela.dart';
 import 'funcionalidades/paciente/inicio/inicio_tela.dart';
 import 'funcionalidades/paciente/jornada/jornada_tela.dart';
 import 'funcionalidades/paciente/lembretes/lembretes_tela.dart';
+import 'funcionalidades/paciente/lembretes/reagenda_lembretes.dart';
 import 'funcionalidades/paciente/metas/meta_tela.dart';
 import 'funcionalidades/paciente/registros/correcao_tela.dart';
 import 'funcionalidades/paciente/registros/registro_tela.dart';
@@ -44,8 +46,10 @@ String inicioDoPapel(Papel papel) => switch (papel) {
 ///   chega ao diário;
 /// - D22: rota de linha de cuidado que o paciente não tem (a aba "Em casa"
 ///   sem terapia ocupacional) leva ao início, como as de outro papel;
-/// - caminho desconhecido segue a mesma regra (cai no início ou na TM00).
+/// - caminho desconhecido segue a mesma regra (cai no início ou na TM00);
+/// - a ajuda imediata do topo ([Rotas.livres]) abre sempre, como no portal.
 String? guardaDePerfil(Sessao sessao, String caminho) {
+  if (Rotas.livres.contains(caminho)) return null;
   if (!sessao.autenticada) {
     return Rotas.publicas.contains(caminho) ? null : Rotas.boasVindas;
   }
@@ -67,9 +71,10 @@ String? guardaDePerfil(Sessao sessao, String caminho) {
       : inicioDoPapel(ativo.papel);
 }
 
-/// GoRouter do app: guarda única, abas do paciente num
-/// `StatefulShellRoute.indexedStack` (ramos fixos na ordem de
-/// [AbaDoPaciente]; a barra mostra só os da linha de cuidado, D22),
+/// GoRouter do app: guarda única; as abas do paciente e as do cuidador na
+/// [MolduraDoPortal], cada papel num `StatefulShellRoute.indexedStack` (ramos
+/// fixos na ordem de [ramosDoPaciente] e [ramosDoCuidador]; a barra mostra
+/// só os da linha de cuidado, D22),
 /// TM04/TM05 no navegador raiz (tela cheia,
 /// acima das abas), TM11/TM12 sobre a TM08 e, na Atividade 4, TM13 → TM14 →
 /// TM15 empilhadas sobre as abas. Reavalia a guarda a cada mudança da
@@ -109,8 +114,15 @@ GoRouter criarRoteador({
             _pagina(state, const CadastroCuidadorTela()),
       ),
       StatefulShellRoute.indexedStack(
-        pageBuilder: (context, state, navigationShell) =>
-            _pagina(state, AbasPaciente(navigationShell: navigationShell)),
+        pageBuilder: (context, state, navigationShell) => _pagina(
+          state,
+          MolduraDoPortal(
+            navigationShell: navigationShell,
+            ramos: ramosDoPaciente,
+            envolver: (moldura, {required noInicio}) =>
+                ReagendaLembretes(noInicio: noInicio, child: moldura),
+          ),
+        ),
         branches: [
           StatefulShellBranch(
             routes: [
@@ -166,13 +178,33 @@ GoRouter criarRoteador({
           StatefulShellBranch(
             routes: [
               GoRoute(
-                path: Rotas.pacienteJornada,
+                path: Rotas.pacienteSessoes,
                 pageBuilder: (context, state) =>
-                    _pagina(state, const JornadaTela()),
+                    _pagina(state, const SessoesTela()),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: Rotas.pacienteConta,
+                pageBuilder: (context, state) =>
+                    _pagina(state, const ContaTela()),
               ),
             ],
           ),
         ],
+      ),
+      GoRoute(
+        path: Rotas.ajuda,
+        pageBuilder: (context, state) =>
+            _pagina(state, const AjudaImediataTela(envio: null)),
+      ),
+      // A Jornada (marcos e metas) saiu da barra: empilha sobre as abas,
+      // aberta pelo Em casa.
+      GoRoute(
+        path: Rotas.pacienteJornada,
+        pageBuilder: (context, state) => _pagina(state, const JornadaTela()),
       ),
       // D22: a TM07 saiu da barra de abas e abre pelo menu do Início,
       // empilhada; voltar leva ao Início, mesmo por link direto.
@@ -200,12 +232,6 @@ GoRouter criarRoteador({
         pageBuilder: (context, state) =>
             _pagina(state, MetaTela(metaId: _id(state))),
       ),
-      // F2: a TM18 empilha sobre as abas e desempilha ao voltar (o Início
-      // relê a resposta de presença); por link direto, a seta leva ao Início.
-      GoRoute(
-        path: Rotas.pacienteSessoes,
-        pageBuilder: (context, state) => _pagina(state, const SessoesTela()),
-      ),
       GoRoute(
         path: Rotas.pacienteLembretes,
         pageBuilder: (context, state) => _pagina(state, const LembretesTela()),
@@ -224,10 +250,43 @@ GoRouter criarRoteador({
         pageBuilder: (context, state) =>
             _pagina(state, CorrecaoTela(registroId: _id(state))),
       ),
-      GoRoute(
-        path: Rotas.cuidadorInicio,
-        pageBuilder: (context, state) =>
-            _pagina(state, const InicioCuidadorTela()),
+      StatefulShellRoute.indexedStack(
+        pageBuilder: (context, state, navigationShell) => _pagina(
+          state,
+          MolduraDoPortal(
+            navigationShell: navigationShell,
+            ramos: ramosDoCuidador,
+          ),
+        ),
+        branches: [
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: Rotas.cuidadorInicio,
+                pageBuilder: (context, state) =>
+                    _pagina(state, const InicioCuidadorTela()),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: Rotas.cuidadorAgenda,
+                pageBuilder: (context, state) =>
+                    _pagina(state, const AgendaAvisosTela()),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: Rotas.cuidadorConta,
+                pageBuilder: (context, state) =>
+                    _pagina(state, const ContaTela()),
+              ),
+            ],
+          ),
+        ],
       ),
       GoRoute(
         path: Rotas.cuidadorMedicacao,
@@ -236,16 +295,6 @@ GoRouter criarRoteador({
           const _VoltaPara(
             destino: Rotas.cuidadorInicio,
             child: MedicacaoTela(),
-          ),
-        ),
-      ),
-      GoRoute(
-        path: Rotas.cuidadorAgenda,
-        pageBuilder: (context, state) => _pagina(
-          state,
-          const _VoltaPara(
-            destino: Rotas.cuidadorInicio,
-            child: AgendaAvisosTela(),
           ),
         ),
       ),

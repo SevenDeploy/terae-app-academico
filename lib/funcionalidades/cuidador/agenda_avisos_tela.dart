@@ -40,17 +40,25 @@ class _AgendaAvisos extends StatelessWidget {
     return Scaffold(
       key: const Key('TM12'),
       backgroundColor: CoresTerae.superficie,
-      appBar: AppBar(
-        leading: const BackButton(),
-        title: const Text('Agenda e avisos'),
-        backgroundColor: CoresTerae.superficie,
-      ),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: MedidasTerae.paddingTela,
-          child: ConteudoCarregado(
-            controlador: controlador,
-            construtor: (_) => _Agenda(controlador),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Semantics(
+                header: true,
+                child: Text(
+                  'Agenda e avisos',
+                  style: Theme.of(context).textTheme.headlineSmall,
+                ),
+              ),
+              const SizedBox(height: MedidasTerae.espacoCartao),
+              ConteudoCarregado(
+                controlador: controlador,
+                construtor: (_) => _Agenda(controlador),
+              ),
+            ],
           ),
         ),
       ),

@@ -43,6 +43,14 @@ void _naTela(String tela) {
 
 final Finder _barraDeAbas = find.byType(NavigationBar);
 
+/// As chaves das abas na barra, na ordem.
+Iterable<String> _abasNaBarra(WidgetTester tester) => [
+  for (final destino in tester.widgetList<NavigationDestination>(
+    find.byType(NavigationDestination),
+  ))
+    (destino.key! as ValueKey<String>).value,
+];
+
 Future<void> _voltarDoAndroid(WidgetTester tester) async {
   await tester.binding.handlePopRoute();
   await tester.pumpAndSettle();
@@ -55,11 +63,27 @@ void main() {
       for (final rota in Rotas.todas) {
         expect(
           guardaDePerfil(sessao, rota),
-          Rotas.publicas.contains(rota) ? isNull : Rotas.boasVindas,
+          Rotas.publicas.contains(rota) || Rotas.livres.contains(rota)
+              ? isNull
+              : Rotas.boasVindas,
           reason: rota,
         );
       }
       expect(guardaDePerfil(sessao, '/inexistente'), Rotas.boasVindas);
+    });
+
+    test('a ajuda imediata (/ajuda) abre sem sessão, sem perfil e com '
+        'qualquer perfil', () {
+      final sessoes = [
+        Sessao(),
+        Sessao()..entrar(vinculosPatricia()),
+        Sessao()..entrar(vinculosAna()),
+        Sessao()..entrar(vinculosAntonio()),
+        Sessao()..entrar(vinculosRegina()),
+      ];
+      for (final sessao in sessoes) {
+        expect(guardaDePerfil(sessao, Rotas.ajuda), isNull);
+      }
     });
 
     test('cada papel só alcança as próprias rotas', () {
@@ -67,14 +91,19 @@ void main() {
       final paciente = Sessao()..entrar(vinculosAna(linhas: asDuasLinhas));
       final cuidador = Sessao()..entrar(vinculosRegina());
       for (final rota in Rotas.todas) {
+        final livre = Rotas.livres.contains(rota);
         expect(
           guardaDePerfil(paciente, rota),
-          Rotas.doPaciente.contains(rota) ? isNull : Rotas.pacienteInicio,
+          Rotas.doPaciente.contains(rota) || livre
+              ? isNull
+              : Rotas.pacienteInicio,
           reason: 'paciente em $rota',
         );
         expect(
           guardaDePerfil(cuidador, rota),
-          Rotas.doCuidador.contains(rota) ? isNull : Rotas.cuidadorInicio,
+          Rotas.doCuidador.contains(rota) || livre
+              ? isNull
+              : Rotas.cuidadorInicio,
           reason: 'cuidador em $rota',
         );
       }
@@ -85,7 +114,9 @@ void main() {
       for (final rota in Rotas.todas) {
         expect(
           guardaDePerfil(sessao, rota),
-          rota == Rotas.entrarPerfil ? isNull : Rotas.entrarPerfil,
+          rota == Rotas.entrarPerfil || Rotas.livres.contains(rota)
+              ? isNull
+              : Rotas.entrarPerfil,
           reason: rota,
         );
       }
@@ -133,8 +164,8 @@ void main() {
       expect(_barraDeAbas, findsOneWidget);
     });
 
-    testWidgets('as três abas (sem TO), TM07, TM04 e TM05 abrem; o resto '
-        'volta ao Início', (tester) async {
+    testWidgets('as quatro abas (sem TO), TM06, TM07, TM04 e TM05 abrem; o '
+        'resto volta ao Início', (tester) async {
       final sessao = Sessao()..entrar(vinculosAna());
       final roteador = await _abrir(tester, sessao);
       _naTela('TM02');
@@ -142,9 +173,17 @@ void main() {
       await tester.tap(find.byKey(const Key('aba-diario')));
       await tester.pumpAndSettle();
       _naTela('TM03');
-      await tester.tap(find.byKey(const Key('aba-jornada')));
+      await tester.tap(find.byKey(const Key('aba-agenda')));
       await tester.pumpAndSettle();
+      _naTela('TM18');
+      await tester.tap(find.byKey(const Key('aba-conta')));
+      await tester.pumpAndSettle();
+      _naTela('TM21');
+
+      // A Jornada saiu da barra: abre empilhada, sem as abas.
+      await _ir(tester, roteador, Rotas.pacienteJornada);
       _naTela('TM06');
+      expect(_barraDeAbas, findsNothing, reason: 'TM06 sem as abas');
 
       // D22: a TM07 saiu da barra; abre empilhada, sem as abas.
       await _ir(tester, roteador, Rotas.pacienteCuidadores);
@@ -173,9 +212,9 @@ void main() {
     testWidgets('a barra marca a aba ativa como selecionada', (tester) async {
       final semantica = tester.ensureSemantics();
       final sessao = Sessao()..entrar(vinculosAna());
-      await _abrir(tester, sessao, em: Rotas.pacienteJornada);
+      await _abrir(tester, sessao, em: Rotas.pacienteSessoes);
       expect(
-        tester.getSemantics(find.byKey(const Key('aba-jornada'))),
+        tester.getSemantics(find.byKey(const Key('aba-agenda'))),
         isSemantics(isSelected: true, isButton: true, hasTapAction: true),
       );
       expect(
@@ -189,8 +228,8 @@ void main() {
       tester,
     ) async {
       final sessao = Sessao()..entrar(vinculosAna());
-      final roteador = await _abrir(tester, sessao, em: Rotas.pacienteJornada);
-      _naTela('TM06');
+      final roteador = await _abrir(tester, sessao, em: Rotas.pacienteConta);
+      _naTela('TM21');
       await _voltarDoAndroid(tester);
       expect(_local(roteador), Rotas.pacienteInicio);
       _naTela('TM02');
@@ -273,35 +312,35 @@ void main() {
       );
     });
 
-    Iterable<String> abasNaBarra(WidgetTester tester) => [
-      for (final destino in tester.widgetList<NavigationDestination>(
-        find.byType(NavigationDestination),
-      ))
-        (destino.key! as ValueKey<String>).value,
-    ];
-
     testWidgets('sem TO: três abas e link direto para Em casa volta ao '
         'Início', (tester) async {
       final sessao = Sessao()..entrar(vinculosAna());
       final roteador = await _abrir(tester, sessao, em: Rotas.pacienteCasa);
       expect(_local(roteador), Rotas.pacienteInicio);
       _naTela('TM02');
-      expect(abasNaBarra(tester), ['aba-inicio', 'aba-diario', 'aba-jornada']);
+      expect(_abasNaBarra(tester), [
+        'aba-inicio',
+        'aba-diario',
+        'aba-agenda',
+        'aba-conta',
+      ]);
     });
 
-    testWidgets('só TO (Antônio): Em casa entre o Diário e a Jornada, e '
+    testWidgets('só TO (Antônio): Em casa entre o Diário e a Agenda, e '
         'cada aba abre a própria tela', (tester) async {
       final sessao = Sessao()..entrar(vinculosAntonio());
       final roteador = await _abrir(tester, sessao);
-      expect(abasNaBarra(tester), [
+      expect(_abasNaBarra(tester), [
         'aba-inicio',
         'aba-diario',
         'aba-casa',
-        'aba-jornada',
+        'aba-agenda',
+        'aba-conta',
       ]);
       for (final (aba, tela, rota) in [
         ('aba-casa', 'TM16', Rotas.pacienteCasa),
-        ('aba-jornada', 'TM06', Rotas.pacienteJornada),
+        ('aba-agenda', 'TM18', Rotas.pacienteSessoes),
+        ('aba-conta', 'TM21', Rotas.pacienteConta),
         ('aba-diario', 'TM03', Rotas.pacienteDiario),
         ('aba-inicio', 'TM02', Rotas.pacienteInicio),
       ]) {
@@ -359,7 +398,10 @@ void main() {
       final roteador = await _abrir(tester, sessao, em: Rotas.pacienteDiario);
       expect(_local(roteador), Rotas.cuidadorInicio);
       _naTela('TM08');
-      expect(_barraDeAbas, findsNothing, reason: 'cuidador não tem abas');
+      // O cuidador tem a moldura do portal, sem o Diário (como no portal).
+      expect(_abasNaBarra(tester), ['aba-inicio', 'aba-agenda', 'aba-conta']);
+      expect(find.byKey(const Key('aba-diario')), findsNothing);
+      expect(find.byKey(const Key('faixa-modo-cuidador')), findsOneWidget);
 
       for (final rota in [
         ...Rotas.doPaciente,
@@ -373,22 +415,28 @@ void main() {
       }
     });
 
-    testWidgets('TM11 e TM12 empilham sobre a TM08 e voltam a ela', (
-      tester,
-    ) async {
+    testWidgets('TM11 empilha sobre a TM08 e volta a ela; TM12 e TM21 são '
+        'abas; voltar do Android leva ao Início', (tester) async {
       final sessao = Sessao()..entrar(vinculosRegina());
       final roteador = await _abrir(tester, sessao);
       _naTela('TM08');
 
-      for (final rota in [Rotas.cuidadorMedicacao, Rotas.cuidadorAgenda]) {
-        unawaited(roteador.push(rota));
-        await tester.pumpAndSettle();
-        _naTela(rota == Rotas.cuidadorMedicacao ? 'TM11' : 'TM12');
-        await tester.tap(find.byType(BackButton));
-        await tester.pumpAndSettle();
-        expect(_local(roteador), Rotas.cuidadorInicio, reason: rota);
-        _naTela('TM08');
-      }
+      unawaited(roteador.push(Rotas.cuidadorMedicacao));
+      await tester.pumpAndSettle();
+      _naTela('TM11');
+      await tester.tap(find.byType(BackButton));
+      await tester.pumpAndSettle();
+      expect(_local(roteador), Rotas.cuidadorInicio);
+      _naTela('TM08');
+
+      await tester.tap(find.byKey(const Key('aba-agenda')));
+      await tester.pumpAndSettle();
+      expect(_local(roteador), Rotas.cuidadorAgenda);
+      _naTela('TM12');
+      await tester.tap(find.byKey(const Key('aba-conta')));
+      await tester.pumpAndSettle();
+      expect(_local(roteador), Rotas.cuidadorConta);
+      _naTela('TM21');
 
       await _ir(tester, roteador, Rotas.cuidadorAgenda);
       _naTela('TM12');
@@ -404,6 +452,58 @@ void main() {
       await tester.pumpAndSettle();
       expect(_local(roteador), Rotas.boasVindas);
       _naTela('TM00');
+    });
+  });
+
+  group('topo da moldura', () {
+    testWidgets('"Ajuda" abre a TM05 sem registro, e voltar traz de volta', (
+      tester,
+    ) async {
+      final sessao = Sessao()..entrar(vinculosAna());
+      final roteador = await _abrir(tester, sessao, em: Rotas.pacienteDiario);
+      await tester.tap(find.byKey(const Key('topo-ajuda')));
+      await tester.pumpAndSettle();
+      // Empilhada (push): o caminho de base continua o do diário.
+      _naTela('TM05');
+      await _voltarDoAndroid(tester);
+      expect(_local(roteador), Rotas.pacienteDiario);
+      _naTela('TM03');
+    });
+
+    testWidgets('sem sessão, /ajuda abre a TM05', (tester) async {
+      final roteador = await _abrir(tester, Sessao(), em: Rotas.ajuda);
+      expect(_local(roteador), Rotas.ajuda);
+      _naTela('TM05');
+    });
+
+    testWidgets('com um perfil só, o nome no topo não abre a folha', (
+      tester,
+    ) async {
+      final sessao = Sessao()..entrar(vinculosAna());
+      await _abrir(tester, sessao);
+      expect(find.byKey(const Key('seletor-de-paciente')), findsNothing);
+    });
+
+    testWidgets('a folha "De quem você quer ver?" troca o paciente', (
+      tester,
+    ) async {
+      final sessao = Sessao()..entrar(vinculosMistos());
+      final roteador = await _abrir(tester, sessao);
+      sessao.escolherPerfil(
+        sessao.perfis.firstWhere((p) => p.papel == Papel.pacienteFamilia),
+      );
+      await tester.pumpAndSettle();
+      _naTela('TM02');
+
+      await tester.tap(find.byKey(const Key('seletor-de-paciente')));
+      await tester.pumpAndSettle();
+      expect(find.text('De quem você quer ver?'), findsOneWidget);
+      final outro = sessao.perfis.firstWhere((p) => p.papel == Papel.cuidador);
+      await tester.tap(find.byKey(Key('perfil-${outro.chave}')));
+      await tester.pumpAndSettle();
+      expect(sessao.perfilAtivo, outro);
+      expect(_local(roteador), Rotas.cuidadorInicio);
+      _naTela('TM08');
     });
   });
 

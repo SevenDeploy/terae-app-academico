@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../../dados/enums/resposta_presenca.dart';
@@ -10,7 +9,6 @@ import '../../../dados/enums/situacao_envio.dart';
 import '../../../dados/modelos/agendamento.dart';
 import '../../../dados/repositorios/paciente_repositorio.dart';
 import '../../../dados/repositorios/presenca_repositorio.dart';
-import '../../../nucleo/rotas/rotas.dart';
 import '../../../nucleo/sessao/sessao.dart';
 import '../../../nucleo/tema/cores.dart';
 import '../../../nucleo/tema/tema.dart';
@@ -38,7 +36,7 @@ abstract final class ContatoDaClinica {
 /// vamos" ou "Não vamos conseguir", que só avisa a clínica e nunca cancela),
 /// "Falar com a clínica" (ligar ou WhatsApp) e as anteriores.
 ///
-/// Empilhada sobre as abas; voltar desempilha (o Início relê a resposta).
+/// A aba "Agenda" da moldura (como `/portal/agenda`).
 /// A `Key('TM18')` no Scaffold raiz faz parte do contrato.
 class SessoesTela extends StatelessWidget {
   const SessoesTela({super.key});
@@ -48,23 +46,6 @@ class SessoesTela extends StatelessWidget {
     final perfil = context.select<Sessao, Perfil?>((s) => s.perfilAtivo);
     return Scaffold(
       key: const Key('TM18'),
-      appBar: AppBar(
-        leading: BackButton(
-          onPressed: () {
-            final navegador = Navigator.of(context);
-            if (navegador.canPop()) {
-              navegador.pop();
-            } else {
-              context.go(Rotas.pacienteInicio);
-            }
-          },
-        ),
-        title: Text(
-          perfil == null
-              ? 'Agenda'
-              : _maiuscula(encontrosDoPaciente(perfil.paciente)),
-        ),
-      ),
       body: perfil == null
           ? const SizedBox.shrink()
           : ChangeNotifierProvider(

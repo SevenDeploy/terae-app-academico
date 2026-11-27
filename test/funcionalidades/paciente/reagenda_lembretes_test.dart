@@ -50,7 +50,7 @@ void main() {
     final m = await _antonioComAtividades(tester);
     (m.relogio as RelogioFixo).avancar(const Duration(days: 8));
     expect(_temLembretePelaFrente(m), isFalse);
-    await tocar(tester, find.text('Jornada').last);
+    await tocar(tester, find.text('Agenda').last);
     await tocar(tester, find.text('Início').last);
     expect(_temLembretePelaFrente(m), isTrue);
   });

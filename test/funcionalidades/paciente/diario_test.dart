@@ -371,8 +371,8 @@ void main() {
         'Rascunho',
       );
 
-      await toques.tocar(find.byKey(const Key('aba-jornada')));
-      expect(localDe(tester), Rotas.pacienteJornada);
+      await toques.tocar(find.byKey(const Key('aba-agenda')));
+      expect(localDe(tester), Rotas.pacienteSessoes);
       await toques.tocar(find.byKey(const Key('aba-diario')));
       expect(localDe(tester), Rotas.pacienteDiario);
 

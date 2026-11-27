@@ -24,8 +24,8 @@ import 'inicio_controlador.dart';
 
 /// TM02 — Início. RFM02. Aba 1: saudação, atalho grande ao diário (um toque
 /// do Início, §12), próxima consulta e orientação/receita vigente só leitura
-/// (esta só no acompanhamento clínico, D21); menu com "Sair" e, com vários
-/// perfis, "Trocar perfil" (§21). A saudação fala do paciente quando quem usa
+/// (esta só no acompanhamento clínico, D21). "Sair", lembretes e cuidadores
+/// ficam na aba Conta; trocar de paciente, no topo da moldura. A saudação fala do paciente quando quem usa
 /// é o responsável (D24).
 ///
 /// A `Key('TM02')` no Scaffold raiz faz parte do contrato (testes de
@@ -80,7 +80,7 @@ class _ConteudoInicio extends StatelessWidget {
     // registros de casa do servidor, e o cartão dizia "Você vai? Responda".
     return RecarregaAoVoltar(
       rota: Rotas.pacienteInicio,
-      aoVoltar: controlador.atualizarEmCasa,
+      aoVoltar: () => controlador.carregar(emSilencio: true),
       child: RecarregaAoSincronizar(
         aoMudar: () => controlador.carregar(emSilencio: true),
         child: CorpoDaTela(
@@ -97,7 +97,6 @@ class _ConteudoInicio extends StatelessWidget {
                     ),
                   ),
                 ),
-                _MenuDoInicio(variosPerfis: variosPerfis),
               ],
             ),
             CabecalhoDaTela(
@@ -159,70 +158,6 @@ class _ConteudoInicio extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-}
-
-enum _AcaoMenu { lembretes, cuidadores, trocarPerfil, sair }
-
-/// Menu da TM02: "Cuidadores" (a TM07, desde a D22), "Trocar perfil" (só com
-/// vários perfis) e "Sair".
-class _MenuDoInicio extends StatelessWidget {
-  const _MenuDoInicio({required this.variosPerfis});
-
-  final bool variosPerfis;
-
-  @override
-  Widget build(BuildContext context) {
-    return PopupMenuButton<_AcaoMenu>(
-      key: const Key('menu-inicio'),
-      tooltip: 'Abrir menu',
-      icon: const Icon(Icons.account_circle_outlined, size: 28),
-      onSelected: (acao) {
-        final sessao = context.read<Sessao>();
-        switch (acao) {
-          case _AcaoMenu.lembretes:
-            context.push(Rotas.pacienteLembretes);
-          case _AcaoMenu.cuidadores:
-            context.push(Rotas.pacienteCuidadores);
-          case _AcaoMenu.trocarPerfil:
-            sessao.trocarPerfil();
-          case _AcaoMenu.sair:
-            sessao.sair();
-        }
-      },
-      itemBuilder: (context) => [
-        const PopupMenuItem(
-          key: Key('menu-lembretes'),
-          value: _AcaoMenu.lembretes,
-          child: ListTile(
-            leading: Icon(Icons.notifications_outlined),
-            title: Text('Lembretes'),
-          ),
-        ),
-        const PopupMenuItem(
-          key: Key('menu-cuidadores'),
-          value: _AcaoMenu.cuidadores,
-          child: ListTile(
-            leading: Icon(Icons.group_outlined),
-            title: Text('Cuidadores'),
-          ),
-        ),
-        if (variosPerfis)
-          const PopupMenuItem(
-            key: Key('menu-trocar-perfil'),
-            value: _AcaoMenu.trocarPerfil,
-            child: ListTile(
-              leading: Icon(Icons.swap_horiz),
-              title: Text('Trocar perfil'),
-            ),
-          ),
-        const PopupMenuItem(
-          key: Key('menu-sair'),
-          value: _AcaoMenu.sair,
-          child: ListTile(leading: Icon(Icons.logout), title: Text('Sair')),
-        ),
-      ],
     );
   }
 }
@@ -393,11 +328,8 @@ class _ProximaConsulta extends StatelessWidget {
     final deOutro = perfil.falaDeOutraPessoa;
     return Cartao(
       key: const Key('proxima-consulta'),
-      aoTocar: () async {
-        // F2: a agenda com a confirmação de presença; volta relendo.
-        await context.push<void>(Rotas.pacienteSessoes);
-        await controlador.carregar(emSilencio: true);
-      },
+      // A agenda é uma aba; o Início relê tudo quando volta a ser a atual.
+      aoTocar: () => context.go(Rotas.pacienteSessoes),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

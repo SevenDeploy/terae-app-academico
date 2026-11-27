@@ -79,10 +79,12 @@ void main() {
     final visao = VisaoCuidadorFake();
     await _abrir(tester, visao: visao);
     expect(find.byKey(const Key('TM08')), findsOneWidget);
-    expect(find.byType(NavigationBar), findsNothing, reason: 'sem abas');
+    // A moldura do portal: Início, Agenda e Conta, sem o Diário.
+    expect(find.byType(NavigationBar), findsOneWidget);
+    expect(find.byKey(const Key('aba-diario')), findsNothing);
     expect(find.text('Olá, Regina!'), findsOneWidget);
     expect(find.text('Você acompanha Ana Lúcia Martins'), findsOneWidget);
-    expect(find.byKey(const Key('aviso-acesso-limitado')), findsOneWidget);
+    expect(find.byKey(const Key('faixa-modo-cuidador')), findsOneWidget);
     expect(find.textContaining('acesso limitado'), findsOneWidget);
 
     const remedio = Key('proximo-remedio');
@@ -136,30 +138,34 @@ void main() {
     expect(find.byKey(const Key('TM08')), findsOneWidget);
   });
 
-  testWidgets('com um perfil só, o menu tem Sair e não Trocar perfil', (
-    tester,
-  ) async {
+  testWidgets('com um perfil só, o topo não abre a folha e a aba Conta tem '
+      'Sair, sem lembretes nem cuidadores', (tester) async {
     final sessao = await _abrir(tester);
-    await _tocar(tester, find.byKey(const Key('menu-cuidador')));
-    expect(find.text('Trocar perfil'), findsNothing);
-    await _tocar(tester, find.text('Sair'));
+    expect(find.byKey(const Key('seletor-de-paciente')), findsNothing);
+    await _tocar(tester, find.byKey(const Key('aba-conta')));
+    expect(find.byKey(const Key('TM21')), findsOneWidget);
+    expect(find.byKey(const Key('conta-lembretes')), findsNothing);
+    expect(find.byKey(const Key('conta-cuidadores')), findsNothing);
+    await _tocar(tester, find.byKey(const Key('conta-sair')));
     expect(sessao.autenticada, isFalse);
     expect(find.byKey(const Key('TM00')), findsOneWidget);
   });
 
-  testWidgets('com vários perfis, Trocar perfil reabre a seleção', (
-    tester,
-  ) async {
+  testWidgets('com vários perfis, a folha do topo troca para o perfil de '
+      'família', (tester) async {
     final sessao = Sessao()..entrar(vinculosMistos());
     sessao.escolherPerfil(
       sessao.perfis.firstWhere((p) => p.papel == Papel.cuidador),
     );
     await _abrir(tester, sessao: sessao);
     expect(find.text('Olá, Conta!'), findsOneWidget);
-    await _tocar(tester, find.byKey(const Key('menu-cuidador')));
-    await _tocar(tester, find.text('Trocar perfil'));
-    expect(sessao.perfilAtivo, isNull);
-    expect(find.byKey(const Key('TM01')), findsOneWidget);
+    await _tocar(tester, find.byKey(const Key('seletor-de-paciente')));
+    final familia = sessao.perfis.firstWhere(
+      (p) => p.papel == Papel.pacienteFamilia,
+    );
+    await _tocar(tester, find.byKey(Key('perfil-${familia.chave}')));
+    expect(sessao.perfilAtivo, familia);
+    expect(find.byKey(const Key('TM02')), findsOneWidget);
   });
 
   testWidgets('acesso negado vira mensagem simples com Tentar de novo', (
@@ -183,9 +189,8 @@ void main() {
     conferirQueNaoMostraDadoProibido(tester);
   });
 
-  testWidgets('sem estouro com fonte 2× em 360×800, com o menu aberto', (
-    tester,
-  ) async {
+  testWidgets('sem estouro com fonte 2× em 360×800, com a folha de perfis '
+      'aberta', (tester) async {
     telaPequena(tester);
     final sessao = Sessao()..entrar(vinculosMistos());
     sessao.escolherPerfil(
@@ -193,7 +198,7 @@ void main() {
     );
     await _abrir(tester, sessao: sessao);
     semEstouro(tester);
-    await _tocar(tester, find.byKey(const Key('menu-cuidador')));
+    await _tocar(tester, find.byKey(const Key('seletor-de-paciente')));
     semEstouro(tester);
   });
 

@@ -34,8 +34,6 @@ class InicioCuidadorTela extends StatelessWidget {
   }
 }
 
-enum _AcaoDoMenu { trocarPerfil, sair }
-
 class _InicioCuidador extends StatelessWidget {
   const _InicioCuidador();
 
@@ -49,16 +47,9 @@ class _InicioCuidador extends StatelessWidget {
     return Scaffold(
       key: const Key('TM08'),
       backgroundColor: CoresTerae.superficie,
-      appBar: AppBar(
-        title: const Text('Início'),
-        automaticallyImplyLeading: false,
-        backgroundColor: CoresTerae.superficie,
-        actions: [_Menu(temVariosPerfis: sessao.temVariosPerfis)],
-      ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const AvisoAcessoLimitado(),
           Expanded(
             child: SingleChildScrollView(
               padding: MedidasTerae.paddingTela,
@@ -113,8 +104,7 @@ class _InicioCuidador extends StatelessWidget {
                         ? '${_maiusculaInicial(paciente == null ? 'consultas' : encontrosDoPaciente(paciente))}, '
                               'receita e avisos à equipe'
                         : 'Sessões e avisos à equipe',
-                    aoTocar: () =>
-                        unawaited(context.push(Rotas.cuidadorAgenda)),
+                    aoTocar: () => context.go(Rotas.cuidadorAgenda),
                   ),
                   const SizedBox(height: MedidasTerae.espacoGrande),
                   BlocoClinicoBloqueado(
@@ -126,45 +116,6 @@ class _InicioCuidador extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-/// Menu da TM08: "Trocar perfil" (só com mais de um perfil) e "Sair". Os dois
-/// só mexem na sessão; o roteador leva à seleção ou à TM00 (§21).
-class _Menu extends StatelessWidget {
-  const _Menu({required this.temVariosPerfis});
-
-  final bool temVariosPerfis;
-
-  @override
-  Widget build(BuildContext context) {
-    return PopupMenuButton<_AcaoDoMenu>(
-      key: const Key('menu-cuidador'),
-      tooltip: 'Menu',
-      icon: const Icon(Icons.more_vert),
-      onSelected: (acao) {
-        final sessao = context.read<Sessao>();
-        switch (acao) {
-          case _AcaoDoMenu.trocarPerfil:
-            sessao.trocarPerfil();
-          case _AcaoDoMenu.sair:
-            sessao.sair();
-        }
-      },
-      itemBuilder: (_) => [
-        if (temVariosPerfis)
-          const PopupMenuItem(
-            key: Key('menu-trocar-perfil'),
-            value: _AcaoDoMenu.trocarPerfil,
-            child: Text('Trocar perfil'),
-          ),
-        const PopupMenuItem(
-          key: Key('menu-sair'),
-          value: _AcaoDoMenu.sair,
-          child: Text('Sair'),
-        ),
-      ],
     );
   }
 }

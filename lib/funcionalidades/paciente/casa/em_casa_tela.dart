@@ -194,7 +194,7 @@ class _ProgramaEncerrado extends StatelessWidget {
         const SizedBox(height: MedidasTerae.espacoPequeno),
         OutlinedButton.icon(
           key: const Key('ver-a-jornada'),
-          onPressed: () => context.go(Rotas.pacienteJornada),
+          onPressed: () => context.push(Rotas.pacienteJornada),
           icon: const Icon(Icons.map_outlined),
           label: const Text('Ver a Jornada'),
         ),

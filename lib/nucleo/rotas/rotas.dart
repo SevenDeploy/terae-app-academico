@@ -98,13 +98,27 @@ abstract final class Rotas {
   /// aberta pelo menu do Início (era a aba 4).
   static const String pacienteCuidadores = '/paciente/cuidadores';
 
+  /// TM21 Conta (aba "Conta", paridade com o portal) — paciente: dados,
+  /// quem você acompanha, lembretes, cuidadores e Sair.
+  static const String pacienteConta = '/paciente/conta';
+
+  /// TM21 Conta — cuidador.
+  static const String cuidadorConta = '/cuidador/conta';
+
+  /// TM05 Ajuda imediata sem registro (o atalho "Ajuda" do topo, como o
+  /// `/portal/ajuda`): abre com ou sem sessão, para qualquer perfil.
+  static const String ajuda = '/ajuda';
+
+  /// Abrem sempre, com ou sem sessão, sem redirecionar.
+  static const Set<String> livres = {ajuda};
+
   /// TM08 Início do cuidador — cuidador.
   static const String cuidadorInicio = '/cuidador/inicio';
 
   /// TM11 Medicação — cuidador; empilhada sobre a TM08.
   static const String cuidadorMedicacao = '/cuidador/medicacao';
 
-  /// TM12 Agenda e avisos — cuidador; empilhada sobre a TM08.
+  /// TM12 Agenda e avisos — cuidador; a aba "Agenda" da moldura.
   static const String cuidadorAgenda = '/cuidador/agenda';
 
   /// Abrem sem sessão; com sessão, levam ao início do perfil ativo.
@@ -128,6 +142,7 @@ abstract final class Rotas {
     pacienteLembretes,
     pacienteJornada,
     pacienteCuidadores,
+    pacienteConta,
     pacienteRegistros,
     pacienteRegistro,
     pacienteCorrigirRegistro,
@@ -150,11 +165,13 @@ abstract final class Rotas {
     cuidadorInicio,
     cuidadorMedicacao,
     cuidadorAgenda,
+    cuidadorConta,
   };
 
   static const Set<String> todas = {
     ...publicas,
     entrarPerfil,
+    ...livres,
     ...doPaciente,
     ...doCuidador,
   };
@@ -182,5 +199,6 @@ abstract final class Rotas {
     'TM18': pacienteSessoes,
     'TM19': pacienteLembretes,
     'TM20': pacienteMeta,
+    'TM21': pacienteConta,
   };
 }

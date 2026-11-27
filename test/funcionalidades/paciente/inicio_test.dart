@@ -6,8 +6,24 @@ import 'package:terae_app/nucleo/sessao/sessao.dart';
 import '../../apoio/dubles.dart';
 import 'apoio_paciente.dart';
 
-Future<void> _abrirMenu(WidgetTester tester) async {
-  await tester.tap(find.byKey(const Key('menu-inicio')));
+/// Abre a aba Conta (TM21), onde ficou o antigo menu do Início.
+Future<void> _abrirConta(WidgetTester tester) async {
+  await tester.tap(find.byKey(const Key('aba-conta')));
+  await tester.pumpAndSettle();
+}
+
+/// Rola a TM21 (lista preguiçosa) até [chave] aparecer.
+Future<void> _rolarAte(WidgetTester tester, String chave) async {
+  await tester.scrollUntilVisible(
+    find.byKey(Key(chave)),
+    120,
+    scrollable: find
+        .descendant(
+          of: find.byKey(const Key('TM21')),
+          matching: find.byType(Scrollable),
+        )
+        .first,
+  );
   await tester.pumpAndSettle();
 }
 
@@ -102,12 +118,13 @@ void main() {
     });
   });
 
-  group('menu da TM02 (§21)', () {
-    testWidgets('"Cuidadores" abre a TM07 empilhada; voltar leva ao Início '
-        '(D22)', (tester) async {
+  group('aba Conta (TM21; §21)', () {
+    testWidgets('"Cuidadores que você autorizou" abre a TM07 empilhada; '
+        'voltar leva ao Início (D22)', (tester) async {
       await abrirAppDoPaciente(tester);
-      await _abrirMenu(tester);
-      await tester.tap(find.byKey(const Key('menu-cuidadores')));
+      await _abrirConta(tester);
+      await _rolarAte(tester, 'conta-cuidadores');
+      await tester.tap(find.byKey(const Key('conta-cuidadores')));
       await tester.pumpAndSettle();
       // `push` empilha sem trocar o local da configuração do go_router: a
       // prova é a TM07 na tela.
@@ -120,20 +137,25 @@ void main() {
       expect(find.byKey(const Key('TM02')), findsOneWidget);
     });
 
-    testWidgets('conta de um perfil: "Cuidadores" e "Sair", que leva à '
-        'TM00', (tester) async {
+    testWidgets('conta de um perfil: seus dados, lembretes, cuidadores e '
+        '"Sair", que leva à TM00', (tester) async {
       final app = await abrirAppDoPaciente(tester);
-      await _abrirMenu(tester);
-      expect(find.byKey(const Key('menu-cuidadores')), findsOneWidget);
-      expect(find.byKey(const Key('menu-trocar-perfil')), findsNothing);
-      await tester.tap(find.byKey(const Key('menu-sair')));
+      expect(find.byKey(const Key('seletor-de-paciente')), findsNothing);
+      await _abrirConta(tester);
+      expect(find.byKey(const Key('TM21')), findsOneWidget);
+      expect(find.byKey(const Key('conta-seus-dados')), findsOneWidget);
+      expect(find.text('Seus dados'), findsOneWidget);
+      await _rolarAte(tester, 'conta-lembretes');
+      await _rolarAte(tester, 'conta-cuidadores');
+      await _rolarAte(tester, 'conta-sair');
+      await tester.tap(find.byKey(const Key('conta-sair')));
       await tester.pumpAndSettle();
       expect(app.sessao.autenticada, isFalse);
       expect(localDe(tester), Rotas.boasVindas);
       expect(find.byKey(const Key('TM00')), findsOneWidget);
     });
 
-    testWidgets('vários perfis: "Trocar perfil" reabre a seleção', (
+    testWidgets('vários perfis: "Quem você acompanha" troca o paciente', (
       tester,
     ) async {
       final sessao = Sessao()..entrar(vinculosPatricia());
@@ -154,11 +176,14 @@ void main() {
       expect(find.byKey(const Key('proxima-consulta')), findsOneWidget);
       expect(find.byKey(const Key('atalho-diario')), findsOneWidget);
 
-      await _abrirMenu(tester);
-      await tester.tap(find.byKey(const Key('menu-trocar-perfil')));
+      // O topo mostra o paciente e, com vários perfis, abre a folha.
+      expect(find.byKey(const Key('seletor-de-paciente')), findsOneWidget);
+      await _abrirConta(tester);
+      final laura = sessao.perfis.firstWhere((p) => p.paciente.id == 'p-laura');
+      await tester.tap(find.byKey(Key('conta-perfil-${laura.chave}')));
       await tester.pumpAndSettle();
-      expect(sessao.perfilAtivo, isNull);
-      expect(localDe(tester), Rotas.entrarPerfil);
+      expect(sessao.perfilAtivo, laura);
+      expect(find.text('Laura Andrade Neves'), findsWidgets);
     });
   });
 }

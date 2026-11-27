@@ -291,7 +291,11 @@ void main() {
     for (final tela in telas) {
       expect(existentes, contains('funcionalidades/$tela'));
     }
-    expect(existentes, contains('funcionalidades/paciente/abas_paciente.dart'));
+    expect(
+      existentes,
+      contains('funcionalidades/moldura/moldura_do_portal.dart'),
+    );
+    expect(existentes, contains('funcionalidades/conta/conta_tela.dart'));
   });
 
   test('16 modelos e 17 enums em dados/ (os do §22 + evolução de TO: linha '

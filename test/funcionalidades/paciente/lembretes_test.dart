@@ -11,15 +11,15 @@ import '../../acessibilidade/telas_reais.dart';
 import 'apoio_paciente.dart';
 
 void main() {
-  testWidgets('Antônio abre pelo menu, liga a véspera às 20:00 e as '
+  testWidgets('Antônio abre pela aba Conta, liga a véspera às 20:00 e as '
       'atividades; salva e vê os próximos', (tester) async {
     final m = await abrirComMemoria(
       tester,
       persona: Persona.antonio,
       em: Rotas.pacienteInicio,
     );
-    await tocar(tester, find.byKey(const Key('menu-inicio')));
-    await tocar(tester, find.byKey(const Key('menu-lembretes')));
+    await tocar(tester, find.byKey(const Key('aba-conta')));
+    await tocar(tester, find.byKey(const Key('conta-lembretes')));
     expect(find.byKey(const Key('TM19')), findsOneWidget);
     expect(find.text('Nenhum lembrete agendado.'), findsOneWidget);
 

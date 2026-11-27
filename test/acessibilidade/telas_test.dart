@@ -149,14 +149,15 @@ void main() {
       await abrirComMemoria(
         tester,
         persona: Persona.ana,
-        em: Rotas.pacienteJornada,
+        em: Rotas.pacienteSessoes,
       );
-      // Ana tem as duas linhas de cuidado (D21): as quatro abas.
+      // Ana tem as duas linhas de cuidado (D21): as cinco abas do portal.
       const abas = {
         'aba-inicio': false,
         'aba-diario': false,
         'aba-casa': false,
-        'aba-jornada': true,
+        'aba-agenda': true,
+        'aba-conta': false,
       };
       for (final MapEntry(key: chave, value: atual) in abas.entries) {
         expect(

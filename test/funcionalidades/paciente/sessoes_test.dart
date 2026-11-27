@@ -60,7 +60,8 @@ void main() {
         findsOneWidget,
       );
 
-      await tester.tap(find.byType(BackButton));
+      // A TM18 é a aba Agenda: voltar ao Início é tocar na aba.
+      await tester.tap(find.byKey(const Key('aba-inicio')));
       await tester.pumpAndSettle();
       expect(
         find.descendant(
@@ -106,7 +107,8 @@ void main() {
         persona: Persona.ana,
         em: Rotas.pacienteSessoes,
       );
-      expect(find.text('Consultas e sessões'), findsOneWidget);
+      // O título saiu da AppBar (a TM18 é a aba Agenda) e é o cabeçalho.
+      expect(find.text('Sua agenda'), findsOneWidget);
       expect(find.byKey(Key('resposta-${_ag(3)}')), findsOneWidget);
       expect(
         find.text('Sessão de terapia ocupacional com Tiago Moreira'),
@@ -159,7 +161,7 @@ void main() {
     });
 
     testWidgets('Jornada do Antônio: a TO é "Sessão", e tocar nela abre a '
-        'TM18; voltar traz à Jornada (achados 2 e 7)', (tester) async {
+        'TM18, a aba Agenda (achados 2 e 7)', (tester) async {
       await abrirComMemoria(
         tester,
         persona: Persona.antonio,
@@ -184,8 +186,7 @@ void main() {
 
       await tocar(tester, item);
       expect(find.byKey(const Key('TM18')), findsOneWidget);
-      await tocar(tester, find.byType(BackButton));
-      expect(find.byKey(const Key('TM06')), findsOneWidget);
+      expect(find.byType(NavigationBar), findsOneWidget);
     });
 
     testWidgets('TM07 de quem só faz TO não fala de remédio (pendência 3 da '
