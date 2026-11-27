@@ -32,6 +32,10 @@ class EntrarControlador extends ControladorDeEntrada {
   bool _reenviado = false;
   String? _erroDoCodigo;
 
+  /// A fonte tem o segundo fator por código no e-mail (Terae local): a
+  /// entrada é em duas etapas, como a do portal.
+  bool get temCodigoPorEmail => autenticacao is AutenticacaoComCodigo;
+
   /// A etapa do código, quando a senha conferiu e o código foi pedido.
   CodigoDeAcessoPedido? get etapaDoCodigo => _codigo;
 

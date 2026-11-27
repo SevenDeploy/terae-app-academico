@@ -106,6 +106,50 @@ void main() {
     expect(find.byKey(const Key('ir-primeiro-acesso')), findsNothing);
   });
 
+  testWidgets('no modo local a entrada tem duas etapas como a do portal: '
+      '"Etapa 1 de 2", "Continuar" e a frase do código', (tester) async {
+    await tester.pumpWidget(
+      montarApp(
+        sessao: SessaoEspia(),
+        em: Rotas.entrar,
+        autenticacao: _AutenticacaoComCodigoFake(),
+        relogio: relogio,
+        capacidades: CapacidadesDaFonte.teraeLocal,
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Etapa 1 de 2'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('entrar')),
+        matching: find.text('Continuar'),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.text('Depois da senha, enviamos um código para o seu e-mail.'),
+      findsOneWidget,
+    );
+    // O app não tem "Esqueci a senha" (não existe no Firebase nem no portal
+    // local do app): nada de link morto.
+    expect(find.textContaining('Esqueci'), findsNothing);
+  });
+
+  testWidgets('no Firebase a entrada é uma etapa só: "Entrar", sem '
+      'indicador nem a frase do código', (tester) async {
+    await tester.pumpWidget(montarApp(sessao: SessaoEspia(), em: Rotas.entrar));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Etapa 1 de'), findsNothing);
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('entrar')),
+        matching: find.text('Entrar'),
+      ),
+      findsOneWidget,
+    );
+    expect(find.byKey(const Key('frase-do-codigo')), findsNothing);
+  });
+
   testWidgets('a senha certa leva à etapa 2 do portal: e-mail mascarado, '
       '6 caixas, confiar desmarcado e reenviar em 60 s', (tester) async {
     final sessao = SessaoEspia();

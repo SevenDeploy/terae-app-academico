@@ -80,8 +80,12 @@ class _EntrarState extends State<_Entrar> {
       return EtapaDoCodigo(etapa: etapa);
     }
     final mensagem = controlador.mensagem;
+    // Fonte Terae local: a entrada tem duas etapas, como a do portal ("Etapa
+    // 1 de 2" e "Continuar"); no Firebase é uma só.
+    final emDuasEtapas = controlador.temCodigoPorEmail;
     return MolduraDeEntrada(
       chaveDaTela: const Key('TM01'),
+      etapa: emDuasEtapas ? const EtapaDaEntrada(atual: 1, total: 2) : null,
       titulo: 'Entrar no portal',
       descricao: 'Use o e-mail em que a clínica mandou o convite.',
       children: [
@@ -117,11 +121,24 @@ class _EntrarState extends State<_Entrar> {
         ],
         BotaoGrande(
           key: const Key('entrar'),
-          rotulo: controlador.ocupado ? 'Entrando…' : 'Entrar',
-          icone: LucideIcons.logIn,
+          rotulo: controlador.ocupado
+              ? 'Entrando…'
+              : emDuasEtapas
+              ? 'Continuar'
+              : 'Entrar',
+          icone: emDuasEtapas ? LucideIcons.arrowRight : LucideIcons.logIn,
           aoTocar: controlador.ocupado ? null : () => unawaited(_entrar()),
         ),
         const SizedBox(height: 12),
+        if (emDuasEtapas) ...[
+          const Text(
+            'Depois da senha, enviamos um código para o seu e-mail.',
+            key: Key('frase-do-codigo'),
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 14, color: CoresTerae.neutro600),
+          ),
+          const SizedBox(height: 8),
+        ],
         const Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
