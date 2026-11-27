@@ -37,7 +37,12 @@ class ConfiguracaoInvalida implements Exception {
 /// Os hosts que contam como "esta máquina": o loopback, o `localhost` (e os
 /// subdomínios `*.localhost`, que a RFC 6761 reserva ao loopback) e o
 /// `10.0.2.2`, o apelido do computador dentro do emulador Android.
-const Set<String> hostsLocaisAceitos = {'10.0.2.2', '127.0.0.1', 'localhost'};
+const Set<String> hostsLocaisAceitos = {
+  '10.0.2.2',
+  '127.0.0.1',
+  '::1',
+  'localhost',
+};
 
 /// Endereço padrão: a API do Terae local vista de dentro do emulador Android.
 const String urlLocalPadrao = 'http://10.0.2.2:3000';
@@ -89,7 +94,10 @@ class ConfiguracaoTeraeLocal {
 /// Confere que [texto] é a raiz de um Terae **local** e a devolve.
 ///
 /// Aceita só `http`/`https`, sem usuário, caminho, consulta nem fragmento, e
-/// só os hosts de [hostsLocaisAceitos] ou terminados em `.localhost`.
+/// só os hosts literais de [hostsLocaisAceitos]. `*.localhost` não: no
+/// Android o resolvedor manda `x.localhost` ao DNS da rede, que pode apontar
+/// para outra máquina (revisão da P4, M2); o `Host: portal.localhost` vai
+/// no cabeçalho, não na URL.
 /// Qualquer outro lança [ConfiguracaoInvalida]: é a trava contra apontar o app
 /// para a produção (`https://terae.com.br`) ou para outra máquina da rede.
 Uri exigirUrlLocal(String texto) {
@@ -117,18 +125,13 @@ Uri exigirUrlLocal(String texto) {
   if (!ehHostLocal(uri.host)) {
     throw ConfiguracaoInvalida(
       'TERAE_LOCAL_URL="$texto" não é local: o app só fala com o Terae '
-      'desta máquina (10.0.2.2, 127.0.0.1, localhost ou *.localhost), '
+      'desta máquina (10.0.2.2, 127.0.0.1, [::1] ou localhost), '
       'nunca com a produção nem com outro computador.',
     );
   }
   return uri.replace(path: '');
 }
 
-/// O host é desta máquina (ver [hostsLocaisAceitos]).
-bool ehHostLocal(String host) {
-  final h = host.toLowerCase();
-  if (hostsLocaisAceitos.contains(h)) return true;
-  // `.localhost` com algo antes, e só letras, dígitos, hífen e ponto entre
-  // eles: `portal.localhost` sim; `.localhost` e `a..localhost` não.
-  return RegExp(r'^[a-z0-9-]+(\.[a-z0-9-]+)*\.localhost$').hasMatch(h);
-}
+/// O host é desta máquina: só os literais de [hostsLocaisAceitos].
+bool ehHostLocal(String host) =>
+    hostsLocaisAceitos.contains(host.toLowerCase());

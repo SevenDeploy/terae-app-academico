@@ -79,7 +79,7 @@ máquina** — nunca com a produção. Suba o Terae local pelo roteiro de
 flutter run -d emulator-5554 --dart-define=TERAE_FONTE=local
 ```
 
-`TERAE_LOCAL_URL` (padrão `http://10.0.2.2:3000`) só aceita `10.0.2.2`, `127.0.0.1`, `localhost` e `*.localhost`;
+`TERAE_LOCAL_URL` (padrão `http://10.0.2.2:3000`) só aceita os literais `10.0.2.2`, `127.0.0.1`, `::1` e `localhost` (nunca `*.localhost`);
 qualquer outro endereço aborta na partida. Nesse modo o Firebase nem inicializa; a entrada pede a senha e o código de 6
 dígitos do e-mail (Mailpit), e a tela esconde o que o portal não tem (diário até a P3, metas, marcos, faixa dos 14
 dias, medicação, cuidadores).

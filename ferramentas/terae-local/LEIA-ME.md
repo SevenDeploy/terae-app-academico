@@ -157,7 +157,9 @@ flutter run -d emulator-5554 --dart-define=TERAE_FONTE=local --dart-define=TERAE
 ```
 
 `10.0.2.2` é o loopback do Windows visto de dentro do emulador; a API escuta em `0.0.0.0:3000`, então não há
-firewall no caminho. Num aparelho físico, use o IP da máquina na rede e libere a porta 3000 no firewall.
+firewall no caminho. A trava só aceita os literais `10.0.2.2`, `127.0.0.1`, `::1` e `localhost` (nunca `*.localhost`
+nem IP da rede): num aparelho físico pelo cabo, rode `adb reverse tcp:3000 tcp:3000` e use
+`TERAE_LOCAL_URL=http://127.0.0.1:3000`. O `Host: portal.localhost` o app põe sozinho no cabeçalho.
 
 ## Estado deixado pela preparação (26/11/2026)
 

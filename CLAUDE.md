@@ -4,7 +4,8 @@ O Terae produção é um SaaS web; o canal do paciente no produto é um PWA na P
 ver o app do paciente, para a disciplina. **Nunca a produção** (terae.com.br, VPS, dados reais), nunca publicar em loja, nunca usar
 `br.com.terae.*` como identificador. O Terae web **local** (nesta máquina) é permitido pela fonte `local`
 (`--dart-define=TERAE_FONTE=local`; decisão do dono de 26/11/2026, para a apresentação): a trava em
-`lib/dados/terae_local/configuracao_terae_local.dart` só aceita loopback, `*.localhost` e `10.0.2.2`.
+`lib/dados/terae_local/configuracao_terae_local.dart` só aceita os literais `127.0.0.1`, `::1`, `localhost` e `10.0.2.2`
+(nunca `*.localhost`, que no Android vai ao DNS da rede; o `Host: portal.localhost` vai no cabeçalho).
 
 ## Fonte da verdade
 Docx da Atividade 3 v3.0 (`Terae - Atividade 3 - Implementacao Inicial e Modelo de Dados.docx`, na pasta da disciplina):

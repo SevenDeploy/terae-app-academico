@@ -11,9 +11,8 @@ void main() {
       'http://10.0.2.2:3000',
       'http://127.0.0.1:3000',
       'http://localhost:3000',
-      'http://portal.localhost:3000',
+      'http://[::1]:3000',
       'https://LOCALHOST:8443/',
-      'http://app.dev.localhost',
     ];
     for (final url in aceitos) {
       test('aceita $url', () {
@@ -32,7 +31,11 @@ void main() {
       'http://localhost@terae.com.br',
       'http://terae.com.br@localhost:3000',
       'http://.localhost',
-      'http://[::1]:3000',
+      // M2 (revisão da P4): `*.localhost` depende do resolvedor; no Android
+      // vai ao DNS da rede. O Host `portal.localhost` vai no cabeçalho.
+      'http://portal.localhost:3000',
+      'http://app.dev.localhost',
+      'http://[::2]:3000',
       'ftp://localhost',
       'http://localhost:3000/api',
       'http://localhost:3000?x=1',
