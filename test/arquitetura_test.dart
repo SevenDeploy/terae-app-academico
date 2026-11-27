@@ -303,6 +303,6 @@ void main() {
       'registrou na F1; confirmação e resposta de presença na F2; meta e '
       'situação da meta na F3)', () {
     expect(_em('dados/modelos/'), hasLength(16));
-    expect(_em('dados/enums/'), hasLength(17));
+    expect(_em('dados/enums/'), hasLength(18));
   });
 }

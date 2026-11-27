@@ -514,6 +514,15 @@ class EstadoMemoria {
         r.id,
       );
     }
+    // P3: o que está na fila nunca chegou ao servidor — nem correção, nem
+    // revisão, nem retirada, nem alerta.
+    for (final r in fila.values) {
+      _exigir(
+        r.versao == 1 && !r.revisado && !r.retirado && !r.alertouAEquipe,
+        'registro na fila com o que só o servidor dá',
+        r.id,
+      );
+    }
     final comAlerta = <String>{};
     for (final a in alertas.values) {
       _exigir(
@@ -525,6 +534,18 @@ class EstadoMemoria {
         comAlerta.add(a.registroId),
         'dois alertas no mesmo registro',
         a.id,
+      );
+      _exigir(
+        registros[a.registroId]!.alertouAEquipe,
+        'alerta de registro sem alertouAEquipe',
+        a.id,
+      );
+    }
+    for (final r in registros.values) {
+      _exigir(
+        !r.alertouAEquipe || comAlerta.contains(r.id),
+        'alertouAEquipe sem o alerta',
+        r.id,
       );
     }
   }
@@ -653,12 +674,12 @@ class EstadoMemoria {
   );
 
   /// §7.1 — registro do mesmo paciente que o servidor recebeu imediatamente
-  /// antes de [registro] (pelo `registradoEm`). Excluído não conta (D17).
+  /// antes de [registro] (pelo `registradoEm`). Retirado não conta (P3).
   RegistroDiario? registroAnterior(RegistroDiario registro) {
     RegistroDiario? anterior;
     for (final r in registros.values) {
       if (r.pacienteId != registro.pacienteId || r.id == registro.id) continue;
-      if (r.excluido) continue;
+      if (r.retirado) continue;
       if (!r.registradoEm.isBefore(registro.registradoEm)) continue;
       if (anterior == null || r.registradoEm.isAfter(anterior.registradoEm)) {
         anterior = r;

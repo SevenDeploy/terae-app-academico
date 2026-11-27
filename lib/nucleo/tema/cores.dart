@@ -113,9 +113,9 @@ abstract final class CoresTerae {
   static ParDeCores daIntensidade(Intensidade intensidade) =>
       switch (intensidade) {
         Intensidade.leve => const ParDeCores(sevLeve, sevLeveFundo),
-        Intensidade.moderada => const ParDeCores(sevModerada, sevModeradaFundo),
+        Intensidade.moderado => const ParDeCores(sevModerada, sevModeradaFundo),
         Intensidade.grave => const ParDeCores(sevGrave, sevGraveFundo),
-        Intensidade.critica => const ParDeCores(sevCritica, sevCriticaFundo),
+        Intensidade.critico => const ParDeCores(sevCritica, sevCriticaFundo),
       };
 
   /// Cores da adesão no diário.

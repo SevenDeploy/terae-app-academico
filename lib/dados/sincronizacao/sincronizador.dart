@@ -37,7 +37,7 @@ String idDoAlertaDe(String registroId) {
 /// O fluxo online/offline do diário (Atividade 4, D16, D18) e das outras
 /// entidades gravadas no aparelho ([FilaDeEntidade], evolução de TO).
 ///
-/// - Envia a fila do SQLite (registros novos, corrigidos e excluídos), do
+/// - Envia a fila do SQLite (os registros novos guardados sem internet), do
 ///   mais antigo ao mais novo, um lote do Firestore por registro: o registro
 ///   `enviado` e, se a regra do §7.1 disparar, o alerta e o aviso do
 ///   cuidador — tudo confirmado junto ou nada.
@@ -113,22 +113,29 @@ class Sincronizador {
     );
   }
 
-  /// Envia um registro da fila agora. Lança `RecusaDeRegra(semConexao)` sem
-  /// rede ou se o servidor não confirmar no prazo — o registro continua na
-  /// fila. Devolve o resultado confirmado, com o alerta se houver.
+  /// Envia um registro agora: o novo da fila, a correção ou a retirada
+  /// (P3). Lança `RecusaDeRegra(semConexao)` sem rede ou se o servidor não
+  /// confirmar no prazo — nada muda no aparelho. Devolve o resultado
+  /// confirmado, com o alerta se houver; o registro volta com `enviadoEm`
+  /// (o primeiro recebimento) e `alertouAEquipe`.
   Future<ResultadoEnvio> enviar(RegistroDiario registro) async {
     if (!_monitor.online) {
       throw const RecusaDeRegra(MotivoRecusa.semConexao);
     }
     final existente = await _dao.alertaDoRegistro(registro.id);
     final anterior = await _dao.anteriorA(registro);
-    final regra = registro.excluido || existente != null
+    final regra =
+        registro.retirado || registro.alertouAEquipe || existente != null
         ? null
         : regraDoAlerta(
-            nova: registro.intensidade,
-            anterior: anterior?.intensidade,
+            nova: registro.intensidadeSintoma,
+            anterior: anterior?.intensidadeSintoma,
           );
-    final enviado = registro.copyWith(situacaoEnvio: SituacaoEnvio.enviado);
+    final enviado = registro.copyWith(
+      situacaoEnvio: SituacaoEnvio.enviado,
+      enviadoEm: registro.enviadoEm ?? _relogio.agora(),
+      alertouAEquipe: regra != null ? true : null,
+    );
     final pid = registro.pacienteId;
     final lote = _fonte.db.batch()
       ..set(

@@ -343,19 +343,22 @@ void main() {
       expect(find.byKey(const Key('TM16')), findsOneWidget);
 
       await tocar(tester, find.byKey(const Key('aba-diario')));
+      expect(find.text('Seu diário'), findsOneWidget);
+      await tocar(tester, find.byKey(const Key('primeiro-registro')));
+      // P3 (D40): as perguntas do portal, a primeira pela linha de cuidado.
       for (final texto in [
         'Como foi o seu dia?',
-        'E a rotina combinada, deu para seguir?',
-        'Segui',
-        'O quanto o dia foi difícil?',
-        'Crise ou desregulação',
+        'Você conseguiu fazer as atividades em casa?',
+        'Fiz tudo',
+        'O quanto isso atrapalhou o dia?',
+        'Quer deixar mais alguma observação?',
       ]) {
-        expect(find.text(texto), findsWidgets, reason: texto);
+        expect(find.textContaining(texto), findsWidgets, reason: texto);
       }
     });
 
-    testWidgets('Ana (psiquiatria e TO): diário das Atividades 3 e 4 e o '
-        'atalho de casa', (tester) async {
+    testWidgets('Ana (psiquiatria e TO): o cartão do diário e o atalho de '
+        'casa', (tester) async {
       await abrirComMemoria(
         tester,
         persona: Persona.ana,
@@ -372,29 +375,40 @@ void main() {
       expect(find.byKey(const Key('orientacao-vigente')), findsOneWidget);
     });
 
-    testWidgets('Miguel, pela mãe: diário de TO na voz dela até o resumo do '
-        'envio', (tester) async {
+    testWidgets('Miguel, pela mãe: diário de TO na voz dela até o recibo', (
+      tester,
+    ) async {
       await _comoPatricia(
         tester,
         nome: 'Miguel Andrade Neves',
         aba: 'aba-diario',
       );
+      expect(find.text('Diário de Miguel'), findsOneWidget);
+      await tocar(tester, find.byKey(const Key('novo-registro')));
       expect(find.text('Como foi o dia de Miguel?'), findsOneWidget);
       expect(
-        find.text(
-          'Para enviar, escolha a rotina, a intensidade e o que mais pesou.',
-        ),
+        find.text('Vocês conseguiram fazer as atividades em casa?'),
+        findsOneWidget,
+      );
+      await tocar(tester, find.byKey(const Key('enviar-diario')));
+      expect(
+        find.text('Conte se vocês conseguiram fazer as atividades em casa.'),
         findsOneWidget,
       );
       await preencherDiario(
         tester,
-        adesao: 'Seguimos',
-        intensidade: 'Leve',
-        sintoma: 'Sono ruim',
+        adesao: 'Fizemos parte',
+        intensidade: 'Pouco — quase não atrapalhou',
+        sintomas: 'Dormiu mal.',
       );
       await tocar(tester, find.byKey(const Key('enviar-diario')));
+      expect(find.text('A terapeuta de Miguel vai ler com atenção.'), findsOne);
       final resumo = find.byKey(const Key('resumo-envio'));
-      for (final texto in ['Rotina', 'Seguimos', 'O que mais pesou']) {
+      for (final texto in [
+        'Atividades em casa',
+        'Fizemos parte',
+        'Dormiu mal.',
+      ]) {
         expect(
           find.descendant(of: resumo, matching: find.text(texto)),
           findsOneWidget,

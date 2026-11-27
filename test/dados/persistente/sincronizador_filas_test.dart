@@ -99,8 +99,8 @@ void main() {
       pacienteId: _paciente,
       registradoEm: agoraDaPersistencia,
       adesao: Adesao.total,
-      intensidade: Intensidade.leve,
-      sintomaPredominante: 'Cansaço',
+      intensidadeSintoma: Intensidade.leve,
+      sintomas: 'Cansaço',
       situacaoEnvio: SituacaoEnvio.naFila,
     ),
   );

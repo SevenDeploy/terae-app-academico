@@ -11,12 +11,14 @@ import '../../../nucleo/tema/cores.dart';
 import '../../../nucleo/tema/tema.dart';
 import '../../../nucleo/widgets/botao_grande.dart';
 import '../../../nucleo/widgets/faixa_emergencia.dart';
+import 'campos_do_diario.dart';
 import 'resultado_provisorio.dart';
 
 /// TM05 — Ajuda imediata. RFM04, §7.1. Tela cheia, fora das abas, no fundo de
 /// severidade crítica: CVV 188 e SAMU 192 em destaque, com um toque.
 ///
-/// "Seu profissional foi avisado" só aparece com `envio.equipeAvisada`
+/// "A equipe da clínica foi avisada" (18g do portal, P3) só aparece com
+/// `envio.equipeAvisada`
 /// (envio confirmado e alerta criado pelo servidor, §19, §23). Na fila, ainda
 /// sem resposta ou em link direto: "Envio pendente", com os contatos de
 /// emergência mantidos em destaque. A tela abre antes da resposta e se
@@ -125,7 +127,8 @@ class AjudaImediataTela extends StatelessWidget {
   }
 }
 
-/// "Seu profissional foi avisado" (só com a confirmação) ou "Envio pendente".
+/// "A equipe da clínica foi avisada" (só com a confirmação) ou "Envio
+/// pendente".
 class _SituacaoDoAviso extends StatefulWidget {
   const _SituacaoDoAviso({
     required this.avisada,
@@ -172,11 +175,15 @@ class _SituacaoDoAvisoState extends State<_SituacaoDoAviso> {
     final IconData icone;
     final ParDeCores cores;
     if (widget.avisada) {
-      titulo = 'Seu profissional foi avisado.';
+      // 18g do portal: "A equipe da clínica foi avisada." (P3).
+      titulo = 'A equipe da clínica foi avisada.';
       final nome = _profissional?.nome;
+      final sobre = palavrasDoDiario(context).sobreNaFrase;
       detalhe = nome == null
-          ? 'O aviso chegou à sua equipe.'
-          : 'O aviso chegou para $nome.';
+          ? 'O que você contou$sobre chegou agora para a equipe que '
+                'acompanha o cuidado.'
+          : 'O que você contou$sobre chegou agora para a equipe e vai ser '
+                'lido por $nome.';
       icone = Icons.check_circle;
       cores = const ParDeCores(CoresTerae.clinico700, CoresTerae.clinico50);
     } else {

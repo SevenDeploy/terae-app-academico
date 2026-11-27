@@ -9,7 +9,10 @@
 /// - `registros_casa` (versão 2, evolução de TO): os registros das atividades
 ///   de casa, com a fila de envio deles;
 /// - `confirmacoes_presenca` (versão 3, evolução de TO): as respostas de
-///   presença, uma por agendamento, com a fila de envio.
+///   presença, uma por agendamento, com a fila de envio;
+/// - versão 4 (P3, diário igual ao do portal): `registros_diario` é refeita
+///   com as quatro perguntas do portal, a versão, a revisão, a retirada com
+///   motivo e as versões anteriores, copiando cada linha antiga.
 ///
 /// Sem cifra nesta versão (D15: limitação declarada; os dados são fictícios).
 ///
@@ -70,6 +73,7 @@ class BancoLocal {
     _versao1,
     _versao2,
     _versao3,
+    _versao4,
   ];
 
   static Future<void> _migrar(
@@ -178,6 +182,76 @@ class BancoLocal {
       );
     await lote.commit(noResult: true);
   }
+
+  /// Versão 4 (P3, diário igual ao do portal): o registro passa a ter só a
+  /// adesão obrigatória (o sintoma escolhido, a intensidade e a observação
+  /// viram as três perguntas opcionais), a versão e as anteriores, quando o
+  /// servidor recebeu, se avisou a equipe, a revisão e a retirada com motivo.
+  ///
+  /// O SQLite não tira o `NOT NULL` de uma coluna, então a tabela é refeita:
+  /// a nova recebe a cópia de cada linha da antiga, e só então a antiga sai.
+  /// Nada do que a família registrou se perde:
+  /// - o sintoma escolhido vira o texto de `sintomas`;
+  /// - `moderada`/`critica` viram `moderado`/`critico` (os nomes da API);
+  /// - o registro enviado ganha `enviado_em` = `registrado_em`;
+  /// - o que tem alerta ganha `alertou_a_equipe`;
+  /// - o excluído (D17 antiga) vira retirado, com o motivo "Outro".
+  static Future<void> _versao4(Database db) async {
+    final lote = db.batch()
+      ..execute('''
+        CREATE TABLE registros_diario_v4 (
+          id TEXT PRIMARY KEY,
+          paciente_id TEXT NOT NULL,
+          registrado_em TEXT NOT NULL,
+          adesao TEXT NOT NULL,
+          sintomas TEXT,
+          intensidade_sintoma TEXT,
+          observacoes TEXT,
+          situacao_envio TEXT NOT NULL,
+          versao INTEGER NOT NULL,
+          enviado_em TEXT,
+          atualizado_em TEXT,
+          alertou_a_equipe INTEGER NOT NULL,
+          revisado_em TEXT,
+          retirado_em TEXT,
+          motivo_retirada TEXT,
+          detalhe_retirada TEXT,
+          versoes_anteriores TEXT NOT NULL
+        )''')
+      ..execute('''
+        INSERT INTO registros_diario_v4 SELECT
+          r.id, r.paciente_id, r.registrado_em, r.adesao, r.sintoma,
+          CASE r.intensidade
+            WHEN 'moderada' THEN 'moderado'
+            WHEN 'critica' THEN 'critico'
+            ELSE r.intensidade END,
+          r.observacao, r.situacao_envio, 1,
+          CASE WHEN r.situacao_envio = 'enviado' THEN r.registrado_em END,
+          r.atualizado_em,
+          EXISTS (SELECT 1 FROM alertas a WHERE a.registro_id = r.id),
+          NULL,
+          r.excluido_em,
+          CASE WHEN r.excluido_em IS NOT NULL THEN 'outro' END,
+          CASE WHEN r.excluido_em IS NOT NULL
+            THEN '$detalheDaRetiradaAntiga' END,
+          '[]'
+        FROM registros_diario r''')
+      ..execute('DROP TABLE registros_diario')
+      ..execute('ALTER TABLE registros_diario_v4 RENAME TO registros_diario')
+      ..execute(
+        'CREATE INDEX idx_registros_paciente '
+        'ON registros_diario (paciente_id, registrado_em)',
+      )
+      ..execute(
+        'CREATE INDEX idx_registros_fila ON registros_diario (situacao_envio)',
+      );
+    await lote.commit(noResult: true);
+  }
+
+  /// O detalhe do motivo do registro excluído antes da versão 4 (o mesmo de
+  /// `RegistroDiario.retiradaDoAppAntigo`).
+  static const String detalheDaRetiradaAntiga =
+      'Excluído no app antes da mudança do diário.';
 
   /// D20 — "Sair" apaga tudo o que a conta deixou no aparelho.
   Future<void> apagarTudo() async {

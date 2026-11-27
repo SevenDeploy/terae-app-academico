@@ -1,49 +1,42 @@
-/// Regras do CRUD do diário (D17, Atividade 4) como funções puras, para a
-/// memória, a persistência local e as telas TM13/TM14 decidirem igual.
+/// Regras do diário da família (P3; quadros 18e e 18f; D17 revista) como
+/// funções puras, para a memória, a persistência local e as telas decidirem
+/// igual.
 library;
 
-import '../../nucleo/tempo/data_civil.dart';
-import '../enums/intensidade.dart';
 import '../modelos/registro_diario.dart';
 
-/// D17 — o [registro] ainda pode ser corrigido ou excluído em [agora]: não
-/// foi excluído e foi feito no mesmo dia civil da clínica (−04:00). Depois
-/// disso ele é só de leitura: a equipe já pode tê-lo lido.
-bool podeAlterar(RegistroDiario registro, DateTime agora) =>
-    !registro.excluido &&
-    DataCivil.doInstante(registro.registradoEm) == DataCivil.doInstante(agora);
+/// Quantos registros a lista do diário traz por vez ("Ver registros mais
+/// antigos"; `REGISTROS_DO_DIARIO_POR_PAGINA` do portal).
+const int registrosPorPagina = 30;
 
-/// Texto de busca da TM13: minúsculo e sem acento, para "ansiedade" achar
-/// "Ansiedade" e "cansaco" achar "Cansaço".
-String normalizarBusca(String texto) {
-  const de = 'áàâãäéèêëíìîïóòôõöúùûüçñ';
-  const para = 'aaaaaeeeeiiiiooooouuuucn';
-  final minusculo = texto.toLowerCase().trim();
-  final saida = StringBuffer();
-  for (final letra in minusculo.split('')) {
-    final i = de.indexOf(letra);
-    saida.write(i < 0 ? letra : para[i]);
-  }
-  return saida.toString();
+/// Quanto tempo o registro precisa ter esperado no aparelho para a lista
+/// dizer "Escrito em X, enviado em Y" (PMC-558 do portal: mais de 5 minutos).
+const Duration esperaQueAparece = Duration(minutes: 5);
+
+/// D17 revista — o [registro] ainda pode ser corrigido ou retirado: já chegou
+/// ao servidor, a terapeuta não revisou, não foi retirado e não avisou a
+/// equipe (o `podeAlterar` do portal). Não depende mais do dia.
+bool podeAlterar(RegistroDiario registro) =>
+    registro.enviado &&
+    !registro.revisado &&
+    !registro.retirado &&
+    !registro.alertouAEquipe;
+
+/// O instante em que a lista mostra o registro: quando o servidor recebeu
+/// (ou, na fila, quando foi escrito).
+DateTime momentoNaLista(RegistroDiario registro) =>
+    registro.enviadoEm ?? registro.registradoEm;
+
+/// A lista ordena do mais novo ao mais antigo; empate pelo id, para a
+/// página seguinte começar sempre no mesmo lugar.
+int maisNovoPrimeiro(RegistroDiario a, RegistroDiario b) {
+  final porMomento = momentoNaLista(b).compareTo(momentoNaLista(a));
+  return porMomento != 0 ? porMomento : b.id.compareTo(a.id);
 }
 
-/// O texto em que a busca da TM13 procura: sintoma e observação.
-String textoDeBusca(RegistroDiario registro) => normalizarBusca(
-  '${registro.sintomaPredominante} ${registro.observacao ?? ''}',
-);
-
-/// O [registro] passa no filtro da TM13: [texto] (vazio = qualquer) no
-/// sintoma ou na observação, e intensidade em [intensidades] (vazio =
-/// qualquer). Excluído nunca passa.
-bool passaNoFiltro(
-  RegistroDiario registro, {
-  String texto = '',
-  Set<Intensidade> intensidades = const {},
-}) {
-  if (registro.excluido) return false;
-  if (intensidades.isNotEmpty && !intensidades.contains(registro.intensidade)) {
-    return false;
-  }
-  final procura = normalizarBusca(texto);
-  return procura.isEmpty || textoDeBusca(registro).contains(procura);
+/// "Escrito em X, enviado em Y": só quando o envio esperou na fila.
+bool esperouNaFila(RegistroDiario registro) {
+  final enviado = registro.enviadoEm;
+  return enviado != null &&
+      enviado.difference(registro.registradoEm) > esperaQueAparece;
 }

@@ -1,38 +1,52 @@
+/// O registro novo do diário (TM13), o recibo (TM04) e a ajuda imediata
+/// (TM05), iguais aos do portal da família (P3; quadros 18e, 18f, 18g e 19d).
+library;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:terae_app/dados/enums/adesao.dart';
 import 'package:terae_app/dados/enums/intensidade.dart';
 import 'package:terae_app/dados/enums/situacao_envio.dart';
-import 'package:terae_app/funcionalidades/paciente/diario/diario_controlador.dart';
-import 'package:terae_app/funcionalidades/paciente/diario/diario_enviado_tela.dart';
+import 'package:terae_app/funcionalidades/paciente/registros/correcao_tela.dart';
+import 'package:terae_app/funcionalidades/paciente/registros/novo_registro_controlador.dart';
 import 'package:terae_app/nucleo/rotas/rotas.dart';
 import 'package:terae_app/nucleo/uuid.dart';
 
 import '../../apoio/dubles.dart';
 import 'apoio_paciente.dart';
 
-/// Só a tela [tela] entre as do paciente está montada.
+/// As telas cheias e a do formulário: só [tela] está aberta entre elas.
 void _naTela(String tela) {
-  // As abas ficam montadas (IndexedStack); só TM04/TM05 saem de verdade.
+  // As abas ficam montadas (IndexedStack); TM04/TM05/TM13 saem de verdade.
   expect(find.byKey(Key(tela)), findsOneWidget, reason: 'esperava $tela');
-  for (final cheia in ['TM04', 'TM05']) {
-    if (cheia != tela) {
-      expect(find.byKey(Key(cheia)), findsNothing, reason: '$cheia aberta');
+  for (final outra in ['TM04', 'TM05', 'TM13']) {
+    if (outra != tela) {
+      expect(find.byKey(Key(outra)), findsNothing, reason: '$outra aberta');
     }
   }
 }
 
-/// A opção [texto] do seletor está marcada (semântica `selected`)?
+/// O cartão de opção com [texto] está marcado (semântica `checked`)?
 Matcher _marcada({required bool sim}) => isSemantics(
-  isButton: true,
   isInMutuallyExclusiveGroup: true,
-  hasSelectedState: true,
-  isSelected: sim,
+  hasCheckedState: true,
+  isChecked: sim,
 );
 
+const String _muito = 'Muito — precisamos de ajuda';
+const String _bastante = 'Bastante — atrapalhou o dia';
+const String _maisOuMenos = 'Mais ou menos — atrapalhou um pouco';
+
+/// Abre o "Novo registro" (TM13).
+Future<AppDoPaciente> _abrirNovo(
+  WidgetTester tester, {
+  DiarioControlavel? diario,
+}) =>
+    abrirAppDoPaciente(tester, em: Rotas.pacienteNovoRegistro, diario: diario);
+
 void main() {
-  group('TM03 → TM04 em até cinco toques (§12, RNFM02)', () {
-    testWidgets('do Início ao diário enviado, contando os toques', (
+  group('Início → novo registro → TM04 em até cinco toques (§12, RNFM02)', () {
+    testWidgets('do Início ao registro enviado, contando os toques', (
       tester,
     ) async {
       final app = await abrirAppDoPaciente(tester);
@@ -41,81 +55,146 @@ void main() {
 
       await toques.tocar(find.byKey(const Key('atalho-diario')));
       expect(toques.total, lessThanOrEqualTo(2), reason: '§12: até 2 toques');
-      expect(localDe(tester), Rotas.pacienteDiario);
+      _naTela('TM13');
 
       await preencherDiario(toques);
       await toques.tocar(botaoEnviar);
 
       expect(toques.total, lessThanOrEqualTo(5));
       _naTela('TM04');
-      expect(find.text('Registro enviado!'), findsOneWidget);
+      expect(find.text('Registro enviado.'), findsOneWidget);
+      expect(find.text('A sua equipe vai ler com atenção.'), findsOneWidget);
 
       final registro = app.diario.enviados.single;
       expect(uuidV4Valido(registro.id), isTrue, reason: 'UUID do aparelho');
       expect(registro.pacienteId, 'p-ana');
       expect(registro.registradoEm, agoraDeTeste);
       expect(registro.adesao, Adesao.total);
-      expect(registro.intensidade, Intensidade.leve);
-      expect(registro.sintomaPredominante, 'Cansaço');
-      expect(registro.observacao, isNull, reason: 'observação é opcional');
+      expect(registro.intensidadeSintoma, Intensidade.leve);
+      expect(registro.sintomas, isNull, reason: 'opcional');
+      expect(registro.observacoes, isNull, reason: 'opcional');
+      expect(registro.versao, 1);
       expect(registro.situacaoEnvio, SituacaoEnvio.naFila);
 
-      // Resumo do que foi enviado, com o nome da intensidade (não só cor).
-      final resumo = find.byKey(const Key('resumo-envio'));
-      for (final texto in ['Tomei tudo', 'Leve', 'Cansaço']) {
+      // O recibo do 18f: as quatro respostas, com a palavra curta do selo.
+      final recibo = find.byKey(const Key('resumo-envio'));
+      for (final texto in [
+        'Segui tudo',
+        'Nada a contar',
+        'Pouco',
+        'Sem observação',
+      ]) {
         expect(
-          find.descendant(of: resumo, matching: find.text(texto)),
+          find.descendant(of: recibo, matching: find.text(texto)),
           findsOneWidget,
+          reason: texto,
         );
       }
-    });
-
-    testWidgets('pela aba também é um toque até o diário', (tester) async {
-      await abrirAppDoPaciente(tester);
-      await tester.tap(find.byKey(const Key('aba-diario')));
-      await tester.pumpAndSettle();
-      expect(localDe(tester), Rotas.pacienteDiario);
-    });
-
-    testWidgets('sem as três escolhas, Enviar fica desabilitado', (
-      tester,
-    ) async {
-      final app = await abrirAppDoPaciente(tester, em: Rotas.pacienteDiario);
-      final toques = ContadorDeToques(tester);
+      expect(find.byKey(const Key('corrigir-agora')), findsOneWidget);
       expect(
-        tester.widget<FilledButton>(_filledDe(botaoEnviar)).enabled,
-        false,
+        find.textContaining('Enquanto a equipe não revisar'),
+        findsOneWidget,
       );
-      await toques.tocar(find.text('Tomei tudo'));
-      await toques.tocar(find.text('Leve'));
-      expect(find.text('Para enviar, escolha o sintoma.'), findsOneWidget);
-      await tester.ensureVisible(botaoEnviar);
-      await tester.tap(botaoEnviar, warnIfMissed: false);
-      await tester.pumpAndSettle();
-      expect(app.diario.enviados, isEmpty);
     });
 
-    testWidgets('a observação opcional vai no registro', (tester) async {
-      final app = await abrirAppDoPaciente(tester, em: Rotas.pacienteDiario);
+    testWidgets('pela aba: a lista e o "Novo registro"', (tester) async {
+      await abrirAppDoPaciente(tester);
       final toques = ContadorDeToques(tester);
-      await preencherDiario(toques);
-      await tester.enterText(
-        find.byKey(const Key('campo-observacao')),
-        '  Dormi pouco.  ',
+      await toques.tocar(find.byKey(const Key('aba-diario')));
+      expect(localDe(tester), Rotas.pacienteDiario);
+      await toques.tocar(find.byKey(const Key('novo-registro')));
+      _naTela('TM13');
+      expect(find.text('Como foi o seu dia?'), findsOneWidget);
+      expect(
+        find.text('Você conseguiu seguir o tratamento combinado?'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('só a primeira pergunta é obrigatória: sem ela, a tela '
+        'explica e nada é enviado', (tester) async {
+      final app = await _abrirNovo(tester);
+      final toques = ContadorDeToques(tester);
+      await toques.tocar(botaoEnviar);
+      expect(
+        find.text('Conte se você conseguiu seguir o tratamento combinado.'),
+        findsOneWidget,
+      );
+      expect(app.diario.enviados, isEmpty);
+      _naTela('TM13');
+
+      await toques.tocar(find.text('Não deu para seguir'));
+      expect(
+        find.text('Conte se você conseguiu seguir o tratamento combinado.'),
+        findsNothing,
       );
       await toques.tocar(botaoEnviar);
-      expect(app.diario.enviados.single.observacao, 'Dormi pouco.');
-      expect(find.text('Dormi pouco.'), findsOneWidget, reason: 'no resumo');
+      _naTela('TM04');
+      final registro = app.diario.enviados.single;
+      expect(registro.adesao, Adesao.nenhuma);
+      expect(registro.intensidadeSintoma, isNull);
+      expect(find.text('Sem resposta'), findsOneWidget);
+    });
+
+    testWidgets('os textos opcionais vão no registro, sem os espaços', (
+      tester,
+    ) async {
+      final app = await _abrirNovo(tester);
+      final toques = ContadorDeToques(tester);
+      await preencherDiario(toques, sintomas: '  Dormi pouco.  ');
+      await tester.enterText(
+        find.byKey(const Key('campo-observacoes')),
+        '  Tomei café tarde.  ',
+      );
+      await toques.tocar(botaoEnviar);
+      final registro = app.diario.enviados.single;
+      expect(registro.sintomas, 'Dormi pouco.');
+      expect(registro.observacoes, 'Tomei café tarde.');
+      expect(find.text('Dormi pouco.'), findsOneWidget, reason: 'no recibo');
+      expect(find.text('Tomei café tarde.'), findsOneWidget);
+    });
+
+    testWidgets('"Deixar sem resposta" desmarca o quanto atrapalhou', (
+      tester,
+    ) async {
+      final semantica = tester.ensureSemantics();
+      final app = await _abrirNovo(tester);
+      final toques = ContadorDeToques(tester);
+      await preencherDiario(toques, intensidade: _maisOuMenos);
+      expect(tester.getSemantics(find.text(_maisOuMenos)), _marcada(sim: true));
+      await toques.tocar(find.byKey(const Key('deixar-sem-resposta')));
+      expect(
+        tester.getSemantics(find.text(_maisOuMenos)),
+        _marcada(sim: false),
+      );
+      expect(find.byKey(const Key('deixar-sem-resposta')), findsNothing);
+      await toques.tocar(botaoEnviar);
+      expect(app.diario.enviados.single.intensidadeSintoma, isNull);
+      semantica.dispose();
+    });
+
+    testWidgets('trocar a escolha desmarca a anterior', (tester) async {
+      final semantica = tester.ensureSemantics();
+      await _abrirNovo(tester);
+      final toques = ContadorDeToques(tester);
+      await preencherDiario(toques, adesao: 'Segui uma parte');
+      await toques.tocar(find.text('Segui tudo'));
+      expect(tester.getSemantics(find.text('Segui tudo')), _marcada(sim: true));
+      expect(
+        tester.getSemantics(find.text('Segui uma parte')),
+        _marcada(sim: false),
+      );
+      semantica.dispose();
     });
 
     testWidgets('cada registro ganha um UUID novo', (tester) async {
-      final app = await abrirAppDoPaciente(tester, em: Rotas.pacienteDiario);
+      final app = await _abrirNovo(tester);
       final toques = ContadorDeToques(tester);
       for (var i = 0; i < 2; i++) {
         await preencherDiario(toques);
         await toques.tocar(botaoEnviar);
         await toques.tocar(find.byKey(const Key('voltar-ao-inicio')));
-        await toques.tocar(find.byKey(const Key('aba-diario')));
+        await toques.tocar(find.byKey(const Key('atalho-diario')));
       }
       final ids = app.diario.enviados.map((r) => r.id).toList();
       expect(ids, hasLength(2));
@@ -123,9 +202,8 @@ void main() {
     });
 
     testWidgets('dois toques em Enviar mandam um registro só', (tester) async {
-      final app = await abrirAppDoPaciente(
+      final app = await _abrirNovo(
         tester,
-        em: Rotas.pacienteDiario,
         diario: DiarioControlavel(ModoDoDiario.lento),
       );
       await preencherDiario(ContadorDeToques(tester));
@@ -150,34 +228,32 @@ void main() {
       tester,
     ) async {
       final semantica = tester.ensureSemantics();
-      final app = await abrirAppDoPaciente(
+      final app = await _abrirNovo(
         tester,
-        em: Rotas.pacienteDiario,
         diario: DiarioControlavel(ModoDoDiario.falha),
       );
       final toques = ContadorDeToques(tester);
       await preencherDiario(toques);
       await toques.tocar(botaoEnviar);
-      _naTela('TM03');
+      _naTela('TM13');
       expect(
         find.textContaining('Não foi possível guardar seu registro'),
         findsOneWidget,
       );
       expect(app.diario.enviados, hasLength(1));
-      expect(tester.getSemantics(find.text('Cansaço')), _marcada(sim: true));
+      expect(tester.getSemantics(find.text('Segui tudo')), _marcada(sim: true));
       semantica.dispose();
     });
   });
 
-  group('crítica → TM05 sem esperar a rede (RFM04, §7.1)', () {
+  group('"Muito" → TM05 sem esperar a rede (RFM04, §7.1; 18g)', () {
     testWidgets('abre a TM05 na hora mesmo com envio lento', (tester) async {
-      final app = await abrirAppDoPaciente(
+      final app = await _abrirNovo(
         tester,
-        em: Rotas.pacienteDiario,
         diario: DiarioControlavel(ModoDoDiario.lento),
       );
       final toques = ContadorDeToques(tester);
-      await preencherDiario(toques, intensidade: 'Crítica');
+      await preencherDiario(toques, intensidade: _muito);
       await toques.tocar(botaoEnviar);
 
       _naTela('TM05');
@@ -187,32 +263,46 @@ void main() {
       expect(find.text('Envio pendente'), findsOneWidget);
       expect(falaEmAvisado, findsNothing);
 
-      // A resposta chega depois: só então "avisado".
+      // A resposta chega depois: só então "avisada".
       app.diario.responder();
       await tester.pumpAndSettle();
-      expect(find.text('Seu profissional foi avisado.'), findsOneWidget);
+      expect(find.text('A equipe da clínica foi avisada.'), findsOneWidget);
       expect(
-        find.text('O aviso chegou para Dra. Helena Prado.'),
+        find.text(
+          'O que você contou chegou agora para a equipe e vai ser lido por '
+          'Dra. Helena Prado.',
+        ),
         findsOneWidget,
       );
       expect(find.text('Envio pendente'), findsNothing);
     });
 
+    testWidgets('o formulário nunca diz "alerta" nem "crítico"', (
+      tester,
+    ) async {
+      await _abrirNovo(tester);
+      expect(find.textContaining('alerta'), findsNothing);
+      expect(find.textContaining('rítico'), findsNothing);
+      expect(find.text(_muito), findsOneWidget);
+    });
+
     testWidgets('sem conexão: envio pendente, nunca "avisado"', (tester) async {
-      final app = await abrirAppDoPaciente(
+      final app = await _abrirNovo(
         tester,
-        em: Rotas.pacienteDiario,
         diario: DiarioControlavel(ModoDoDiario.semConexao),
       );
       final toques = ContadorDeToques(tester);
-      await preencherDiario(toques, intensidade: 'Crítica');
+      await preencherDiario(toques, intensidade: _muito);
       await toques.tocar(botaoEnviar);
 
       _naTela('TM05');
       expect(find.text('Envio pendente'), findsOneWidget);
       expect(find.textContaining('quando houver conexão'), findsOneWidget);
       expect(falaEmAvisado, findsNothing);
-      expect(app.diario.enviados.single.intensidade, Intensidade.critica);
+      expect(
+        app.diario.enviados.single.intensidadeSintoma,
+        Intensidade.critico,
+      );
 
       // CVV com um toque.
       await tester.tap(find.byKey(const Key('ligar-188')));
@@ -220,85 +310,100 @@ void main() {
       expect(app.lancador.abertos, [Uri(scheme: 'tel', path: '188')]);
     });
 
-    testWidgets('falha do envio crítico: "Não conseguimos enviar", sem '
-        '"avisado" nem "guardado"', (tester) async {
-      await abrirAppDoPaciente(
-        tester,
-        em: Rotas.pacienteDiario,
-        diario: DiarioControlavel(ModoDoDiario.falha),
-      );
+    testWidgets('falha do envio: "Não conseguimos enviar", sem "avisado" '
+        'nem "guardado"', (tester) async {
+      await _abrirNovo(tester, diario: DiarioControlavel(ModoDoDiario.falha));
       final toques = ContadorDeToques(tester);
-      await preencherDiario(toques, intensidade: 'Crítica');
+      await preencherDiario(toques, intensidade: _muito);
       await toques.tocar(botaoEnviar);
       _naTela('TM05');
       expect(find.text('Não conseguimos enviar'), findsOneWidget);
       expect(falaEmAvisado, findsNothing);
-      // Falha inesperada: não promete que ficou guardado.
       expect(find.textContaining('guardado'), findsNothing);
       expect(find.textContaining('ainda não chegou'), findsOneWidget);
     });
 
     testWidgets('"Ciente" leva ao Início', (tester) async {
-      await abrirAppDoPaciente(tester, em: Rotas.pacienteDiario);
+      await _abrirNovo(tester);
       final toques = ContadorDeToques(tester);
-      await preencherDiario(toques, intensidade: 'Crítica');
+      await preencherDiario(toques, intensidade: _muito);
       await toques.tocar(botaoEnviar);
-      expect(find.text('Seu profissional foi avisado.'), findsOneWidget);
+      expect(find.text('A equipe da clínica foi avisada.'), findsOneWidget);
       await toques.tocar(find.byKey(const Key('ciente')));
       expect(localDe(tester), Rotas.pacienteInicio);
       _naTela('TM02');
     });
   });
 
-  group('TM04 sem conexão e volta automática (RFM05, §19, D10)', () {
-    testWidgets(
-      'na fila: "será enviado quando houver conexão", sem "avisado"',
-      (tester) async {
-        await abrirAppDoPaciente(
-          tester,
-          em: Rotas.pacienteDiario,
-          diario: DiarioControlavel(ModoDoDiario.semConexao),
-        );
-        final toques = ContadorDeToques(tester);
-        await preencherDiario(toques, intensidade: 'Grave');
-        await toques.tocar(botaoEnviar);
-        _naTela('TM04');
-        expect(find.text('Registro guardado'), findsOneWidget);
-        expect(find.textContaining('quando houver conexão'), findsOneWidget);
-        expect(falaEmAvisado, findsNothing);
-      },
-    );
+  group('TM04: guardado neste aparelho, lento e falha (RFM05, §19; 19d)', () {
+    testWidgets('na fila: "Registro guardado neste aparelho.", com os '
+        'números de emergência para "Bastante"', (tester) async {
+      await _abrirNovo(
+        tester,
+        diario: DiarioControlavel(ModoDoDiario.semConexao),
+      );
+      final toques = ContadorDeToques(tester);
+      await preencherDiario(toques, intensidade: _bastante);
+      await toques.tocar(botaoEnviar);
+      _naTela('TM04');
+      expect(find.text('Registro guardado neste aparelho.'), findsOneWidget);
+      expect(find.textContaining('ainda não foi enviado'), findsOneWidget);
+      expect(find.byKey(const Key('ajuda-sem-internet')), findsOneWidget);
+      expect(find.byKey(const Key('ligar-192')), findsOneWidget);
+      // Diz que a equipe só é avisada quando chegar; nunca que "foi".
+      expect(find.textContaining('foi avisad'), findsNothing);
+      expect(find.byKey(const Key('corrigir-agora')), findsNothing);
+
+      // "Ver no diário": o guardado aparece no alto da lista.
+      await toques.tocar(find.byKey(const Key('ver-no-diario')));
+      expect(localDe(tester), Rotas.pacienteDiario);
+      expect(find.byKey(const Key('pendentes-do-diario')), findsOneWidget);
+      expect(find.text('Guardado, aguardando a internet'), findsOneWidget);
+    });
+
+    testWidgets('na fila com "Pouco": sem os números de emergência', (
+      tester,
+    ) async {
+      await _abrirNovo(
+        tester,
+        diario: DiarioControlavel(ModoDoDiario.semConexao),
+      );
+      final toques = ContadorDeToques(tester);
+      await preencherDiario(toques);
+      await toques.tocar(botaoEnviar);
+      expect(find.text('Registro guardado neste aparelho.'), findsOneWidget);
+      expect(find.byKey(const Key('ajuda-sem-internet')), findsNothing);
+    });
 
     testWidgets('envio lento abre a TM04 em 2 s e se atualiza depois', (
       tester,
     ) async {
-      final app = await abrirAppDoPaciente(
+      final app = await _abrirNovo(
         tester,
-        em: Rotas.pacienteDiario,
         diario: DiarioControlavel(ModoDoDiario.lento),
       );
       await preencherDiario(ContadorDeToques(tester));
       await tester.ensureVisible(botaoEnviar);
       await tester.tap(botaoEnviar);
       await tester.pump(const Duration(milliseconds: 1900));
-      _naTela('TM03');
+      _naTela('TM13');
       await tester.pump(const Duration(milliseconds: 200));
       await tester.pump();
+      await tester.pump(const Duration(seconds: 1)); // a transição
       _naTela('TM04');
       expect(find.text('Enviando…'), findsOneWidget);
       expect(find.textContaining('guardado'), findsNothing);
 
       app.diario.responder();
       await tester.pump();
-      expect(find.text('Registro enviado!'), findsOneWidget);
+      expect(find.text('Registro enviado.'), findsOneWidget);
     });
 
     testWidgets('falha depois do prazo: TM04 não promete que ficou guardado', (
       tester,
     ) async {
-      final app = await abrirAppDoPaciente(
+      final app = await _abrirNovo(
         tester,
-        em: Rotas.pacienteDiario,
         diario: DiarioControlavel(ModoDoDiario.lento),
       );
       await preencherDiario(ContadorDeToques(tester));
@@ -306,6 +411,7 @@ void main() {
       await tester.tap(botaoEnviar);
       await tester.pump(prazoDeResposta);
       await tester.pump();
+      await tester.pump(const Duration(seconds: 1)); // a transição
       _naTela('TM04');
 
       app.diario.falharPendente();
@@ -315,95 +421,86 @@ void main() {
       expect(falaEmAvisado, findsNothing);
     });
 
-    testWidgets('volta sozinha ao Início em 3 s', (tester) async {
-      await abrirAppDoPaciente(tester, em: Rotas.pacienteDiario);
-      await preencherDiario(ContadorDeToques(tester));
-      await tester.ensureVisible(botaoEnviar);
-      await tester.tap(botaoEnviar);
-      await tester.pump();
-      await tester.pump();
-      _naTela('TM04');
-
-      await tester.pump(const Duration(milliseconds: 2900));
-      _naTela('TM04');
-      await tester.pump(const Duration(milliseconds: 200));
-      await tester.pumpAndSettle();
-      expect(localDe(tester), Rotas.pacienteInicio);
-      _naTela('TM02');
-    });
-
-    testWidgets('com navegação acessível não volta sozinha (D10)', (
-      tester,
-    ) async {
-      tester.platformDispatcher.accessibilityFeaturesTestValue =
-          const FakeAccessibilityFeatures(accessibleNavigation: true);
-      addTearDown(
-        tester.platformDispatcher.clearAccessibilityFeaturesTestValue,
-      );
-
-      await abrirAppDoPaciente(tester, em: Rotas.pacienteDiario);
+    testWidgets('não volta sozinha (como o recibo do portal); "Voltar ao '
+        'início" volta', (tester) async {
+      await _abrirNovo(tester);
       final toques = ContadorDeToques(tester);
       await preencherDiario(toques);
       await toques.tocar(botaoEnviar);
       _naTela('TM04');
-
       await tester.pump(const Duration(seconds: 10));
       await tester.pumpAndSettle();
       _naTela('TM04');
-      expect(find.textContaining('abre sozinha'), findsNothing);
-
       await toques.tocar(find.byKey(const Key('voltar-ao-inicio')));
       expect(localDe(tester), Rotas.pacienteInicio);
       _naTela('TM02');
     });
-  });
 
-  group('aba com estado e envio sem volta ao formulário (§21)', () {
-    testWidgets('trocar de aba e voltar preserva o diário em preenchimento', (
+    testWidgets('"Corrigir agora" abre a correção do mesmo registro', (
       tester,
     ) async {
-      final semantica = tester.ensureSemantics();
-      await abrirAppDoPaciente(tester, em: Rotas.pacienteDiario);
+      final app = await _abrirNovo(tester);
       final toques = ContadorDeToques(tester);
-      await preencherDiario(toques, adesao: 'Tomei uma parte');
-      await tester.enterText(
-        find.byKey(const Key('campo-observacao')),
-        'Rascunho',
-      );
-
-      await toques.tocar(find.byKey(const Key('aba-agenda')));
-      expect(localDe(tester), Rotas.pacienteSessoes);
-      await toques.tocar(find.byKey(const Key('aba-diario')));
-      expect(localDe(tester), Rotas.pacienteDiario);
-
+      await preencherDiario(toques);
+      await toques.tocar(botaoEnviar);
+      await toques.tocar(find.byKey(const Key('corrigir-agora')));
+      expect(find.byKey(const Key('TM15')), findsOneWidget);
       expect(
-        tester.getSemantics(find.text('Tomei uma parte')),
-        _marcada(sim: true),
+        tester.widget<CorrecaoTela>(find.byType(CorrecaoTela)).registroId,
+        app.diario.enviados.single.id,
       );
-      expect(
-        tester.getSemantics(find.text('Tomei tudo')),
-        _marcada(sim: false),
+    });
+  });
+
+  group('sem internet no aparelho (18m, 19d)', () {
+    testWidgets('"Enviar" fica travado com o motivo; "Guardar e enviar '
+        'depois" guarda e abre a TM04', (tester) async {
+      final app = await abrirAppDoPaciente(
+        tester,
+        em: Rotas.pacienteNovoRegistro,
+        diario: DiarioControlavel(ModoDoDiario.semConexao),
+        conexao: semInternet(),
       );
-      expect(tester.getSemantics(find.text('Leve')), _marcada(sim: true));
-      expect(tester.getSemantics(find.text('Cansaço')), _marcada(sim: true));
-      expect(find.text('Rascunho'), findsOneWidget);
-      semantica.dispose();
+      final toques = ContadorDeToques(tester);
+      expect(find.text('Enviar · precisa de internet'), findsOneWidget);
+      expect(find.byKey(const Key('motivo-sem-internet')), findsOneWidget);
+      await preencherDiario(toques);
+      await tester.ensureVisible(botaoEnviar);
+      await tester.tap(botaoEnviar, warnIfMissed: false);
+      await tester.pumpAndSettle();
+      expect(app.diario.enviados, isEmpty, reason: 'travado sem internet');
+
+      await toques.tocar(find.byKey(const Key('guardar-e-enviar-depois')));
+      _naTela('TM04');
+      expect(find.text('Registro guardado neste aparelho.'), findsOneWidget);
+      expect(app.diario.enviados.single.situacaoEnvio, SituacaoEnvio.naFila);
     });
 
+    testWidgets('com internet não aparece "Guardar e enviar depois"', (
+      tester,
+    ) async {
+      await _abrirNovo(tester);
+      expect(find.byKey(const Key('guardar-e-enviar-depois')), findsNothing);
+      expect(find.text('Enviar'), findsOneWidget);
+    });
+  });
+
+  group('envio sem volta ao formulário (§21)', () {
     for (final critica in [false, true]) {
       final saida = critica ? 'TM05' : 'TM04';
       testWidgets(
         'depois da $saida, voltar não reabre o formulário preenchido',
         (tester) async {
           final semantica = tester.ensureSemantics();
-          await abrirAppDoPaciente(tester, em: Rotas.pacienteDiario);
+          await abrirAppDoPaciente(tester);
           final toques = ContadorDeToques(tester);
+          await toques.tocar(find.byKey(const Key('atalho-diario')));
           await preencherDiario(
             toques,
-            intensidade: critica ? 'Crítica' : 'Moderada',
+            intensidade: critica ? _muito : _maisOuMenos,
           );
           await tester.enterText(
-            find.byKey(const Key('campo-observacao')),
+            find.byKey(const Key('campo-observacoes')),
             'Texto enviado',
           );
           await toques.tocar(botaoEnviar);
@@ -415,9 +512,9 @@ void main() {
           expect(localDe(tester), Rotas.pacienteInicio);
           _naTela('TM02');
 
-          await toques.tocar(find.byKey(const Key('aba-diario')));
-          _naTela('TM03');
-          for (final opcao in ['Tomei tudo', 'Leve', 'Crítica', 'Cansaço']) {
+          await toques.tocar(find.byKey(const Key('atalho-diario')));
+          _naTela('TM13');
+          for (final opcao in ['Segui tudo', _muito, _maisOuMenos]) {
             expect(
               tester.getSemantics(find.text(opcao)),
               _marcada(sim: false),
@@ -425,10 +522,6 @@ void main() {
             );
           }
           expect(find.text('Texto enviado'), findsNothing);
-          expect(
-            tester.widget<FilledButton>(_filledDe(botaoEnviar)).enabled,
-            false,
-          );
           semantica.dispose();
         },
       );
@@ -444,15 +537,11 @@ void main() {
     testWidgets('falha no formulário: "Tentar de novo" reenvia o mesmo UUID; '
         'o próximo registro ganha outro', (tester) async {
       final diario = DiarioControlavel(ModoDoDiario.falha);
-      await abrirAppDoPaciente(
-        tester,
-        em: Rotas.pacienteDiario,
-        diario: diario,
-      );
+      await _abrirNovo(tester, diario: diario);
       final toques = ContadorDeToques(tester);
       await preencherDiario(toques);
       await toques.tocar(botaoEnviar);
-      _naTela('TM03');
+      _naTela('TM13');
       expect(
         find.descendant(of: botaoEnviar, matching: find.text('Tentar de novo')),
         findsOneWidget,
@@ -465,24 +554,20 @@ void main() {
       expect(diario.enviados[1].id, diario.enviados[0].id);
 
       await toques.tocar(find.byKey(const Key('voltar-ao-inicio')));
-      await toques.tocar(find.byKey(const Key('aba-diario')));
+      await toques.tocar(find.byKey(const Key('atalho-diario')));
       await preencherDiario(toques);
       await toques.tocar(botaoEnviar);
       expect(diario.enviados, hasLength(3));
       expect(diario.enviados[2].id, isNot(diario.enviados[0].id));
     });
 
-    testWidgets('TM05: envio crítico que falha mostra "Não conseguimos '
+    testWidgets('TM05: envio de "Muito" que falha mostra "Não conseguimos '
         'enviar", mantém 188/192 e "Tentar de novo" reenvia o mesmo '
         'registro', (tester) async {
       final diario = DiarioControlavel(ModoDoDiario.lento);
-      await abrirAppDoPaciente(
-        tester,
-        em: Rotas.pacienteDiario,
-        diario: diario,
-      );
+      await _abrirNovo(tester, diario: diario);
       final toques = ContadorDeToques(tester);
-      await preencherDiario(toques, intensidade: 'Crítica');
+      await preencherDiario(toques, intensidade: _muito);
       await toques.tocar(botaoEnviar);
       _naTela('TM05');
       expect(tentarDeNovo, findsNothing, reason: 'ainda enviando');
@@ -503,51 +588,38 @@ void main() {
 
       diario.responder();
       await tester.pumpAndSettle();
-      expect(find.text('Seu profissional foi avisado.'), findsOneWidget);
+      expect(find.text('A equipe da clínica foi avisada.'), findsOneWidget);
       _naTela('TM05');
     });
 
-    testWidgets('TM04: enquanto o envio não resolve diz "Enviando…" e só '
-        'volta sozinha 3 s depois da resposta', (tester) async {
+    testWidgets('TM04: enquanto o envio não resolve diz "Enviando…"', (
+      tester,
+    ) async {
       final diario = DiarioControlavel(ModoDoDiario.lento);
-      await abrirAppDoPaciente(
-        tester,
-        em: Rotas.pacienteDiario,
-        diario: diario,
-      );
+      await _abrirNovo(tester, diario: diario);
       await preencherDiario(ContadorDeToques(tester));
       await tester.ensureVisible(botaoEnviar);
       await tester.tap(botaoEnviar);
       await tester.pump(prazoDeResposta);
       await tester.pump();
+      await tester.pump(const Duration(seconds: 1)); // a transição
       _naTela('TM04');
       expect(tituloDaTm04(tester), 'Enviando…');
       expect(find.textContaining('guardado'), findsNothing);
-      expect(find.textContaining('abre sozinha'), findsNothing);
-
-      await tester.pump(const Duration(seconds: 10));
-      _naTela('TM04');
+      expect(find.byKey(const Key('corrigir-agora')), findsNothing);
 
       diario.responder();
       // Sem quadro agendado, o primeiro pump só roda a resposta.
       await tester.pump();
       await tester.pump();
-      expect(tituloDaTm04(tester), 'Registro enviado!');
-      await tester.pump(const Duration(milliseconds: 2900));
-      _naTela('TM04');
-      await tester.pump(const Duration(milliseconds: 200));
-      await tester.pumpAndSettle();
-      expect(localDe(tester), Rotas.pacienteInicio);
+      expect(tituloDaTm04(tester), 'Registro enviado.');
+      expect(find.byKey(const Key('corrigir-agora')), findsOneWidget);
     });
 
-    testWidgets('TM04: falha depois do prazo não volta sozinha; "Tentar de '
-        'novo" reenvia o mesmo registro', (tester) async {
+    testWidgets('TM04: falha depois do prazo; "Tentar de novo" reenvia o '
+        'mesmo registro', (tester) async {
       final diario = DiarioControlavel(ModoDoDiario.lento);
-      await abrirAppDoPaciente(
-        tester,
-        em: Rotas.pacienteDiario,
-        diario: diario,
-      );
+      await _abrirNovo(tester, diario: diario);
       await preencherDiario(ContadorDeToques(tester));
       await tester.ensureVisible(botaoEnviar);
       await tester.tap(botaoEnviar);
@@ -557,23 +629,16 @@ void main() {
       await tester.pump();
       expect(tituloDaTm04(tester), 'Registro não enviado');
 
-      await tester.pump(const Duration(seconds: 10));
-      await tester.pumpAndSettle();
-      _naTela('TM04');
-
       diario.modo = ModoDoDiario.comConexao;
       await ContadorDeToques(tester).tocar(tentarDeNovo, assentar: false);
       await tester.pump();
       expect(diario.enviados, hasLength(2));
       expect(diario.enviados[1], diario.enviados[0], reason: 'mesmo registro');
-      expect(tituloDaTm04(tester), 'Registro enviado!');
-      await tester.pump(esperaDaConfirmacao);
-      await tester.pumpAndSettle();
-      expect(localDe(tester), Rotas.pacienteInicio);
+      expect(tituloDaTm04(tester), 'Registro enviado.');
     });
   });
 
-  group('voltar do Android nas abas (§21)', () {
+  group('voltar do Android (§21)', () {
     testWidgets('no Diário volta ao Início; no Início fecha o app', (
       tester,
     ) async {

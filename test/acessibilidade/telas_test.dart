@@ -7,11 +7,9 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:terae_app/dados/enums/adesao.dart';
 import 'package:terae_app/dados/enums/canal_autorizado.dart';
 import 'package:terae_app/dados/enums/intensidade.dart';
 import 'package:terae_app/dados/enums/qualidade_consentimento.dart';
-import 'package:terae_app/funcionalidades/paciente/diario/diario_controlador.dart';
 import 'package:terae_app/nucleo/rotas/rotas.dart';
 
 import '../dados/memoria_apoio.dart';
@@ -25,6 +23,29 @@ Matcher _opcao({required bool marcada}) => isSemantics(
   isSelected: marcada,
   hasTapAction: true,
 );
+
+/// Cartão de opção do portal (P3), marcado ou não.
+Matcher _cartao({required bool marcado}) => isSemantics(
+  isInMutuallyExclusiveGroup: true,
+  hasCheckedState: true,
+  isChecked: marcado,
+  hasTapAction: true,
+);
+
+/// Confere que, entre os cartões [rotulos], só [marcado] está `checked`.
+void _soEstaMarcado(
+  WidgetTester tester,
+  Iterable<String> rotulos, {
+  String? marcado,
+}) {
+  for (final rotulo in rotulos) {
+    expect(
+      tester.getSemantics(find.text(rotulo)),
+      _cartao(marcado: rotulo == marcado),
+      reason: rotulo,
+    );
+  }
+}
 
 /// Confere que, entre [rotulos], só [marcado] está `selected`.
 void _soEstaMarcada(
@@ -72,33 +93,33 @@ void main() {
   }
 
   group('seletores expõem a opção marcada (D10)', () {
-    testWidgets('TM03: adesão, intensidade e sintoma', (tester) async {
+    testWidgets('TM13: a adesão e o quanto atrapalhou, em cartões (P3)', (
+      tester,
+    ) async {
       final semantica = tester.ensureSemantics();
       aparelho(tester);
       await abrirComMemoria(
         tester,
         persona: Persona.ana,
-        em: Rotas.pacienteDiario,
+        em: Rotas.pacienteNovoRegistro,
       );
-      final adesoes = Adesao.values.map((a) => a.rotulo);
+      // Ana tem terapia ocupacional: a primeira pergunta é das atividades.
+      const adesoes = ['Fiz tudo', 'Fiz parte', 'Não deu para fazer'];
       final intensidades = Intensidade.values.map((i) => i.rotulo);
-      _soEstaMarcada(tester, adesoes);
-      _soEstaMarcada(tester, intensidades);
-      _soEstaMarcada(tester, sintomasDoDiario);
+      _soEstaMarcado(tester, adesoes);
+      _soEstaMarcado(tester, intensidades);
 
       await preencherDiario(
         tester,
-        adesao: Adesao.parcial.rotulo,
+        adesao: 'Fiz parte',
         intensidade: Intensidade.grave.rotulo,
-        sintoma: 'Sono ruim',
       );
-      _soEstaMarcada(tester, adesoes, marcado: Adesao.parcial.rotulo);
-      _soEstaMarcada(tester, intensidades, marcado: Intensidade.grave.rotulo);
-      _soEstaMarcada(tester, sintomasDoDiario, marcado: 'Sono ruim');
+      _soEstaMarcado(tester, adesoes, marcado: 'Fiz parte');
+      _soEstaMarcado(tester, intensidades, marcado: Intensidade.grave.rotulo);
 
       // Trocar a escolha desmarca a anterior.
       await tocar(tester, find.text(Intensidade.leve.rotulo));
-      _soEstaMarcada(tester, intensidades, marcado: Intensidade.leve.rotulo);
+      _soEstaMarcado(tester, intensidades, marcado: Intensidade.leve.rotulo);
       semantica.dispose();
     });
 

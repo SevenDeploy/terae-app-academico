@@ -65,9 +65,9 @@ void main() {
       await tester.pumpWidget(_app(const _SeletorDeAdesao()));
 
       expect(
-        tester.getSemantics(find.text('Tomei tudo')),
+        tester.getSemantics(find.text('Fizemos tudo')),
         isSemantics(
-          label: 'Tomei tudo',
+          label: 'Fizemos tudo',
           isButton: true,
           isInMutuallyExclusiveGroup: true,
           hasSelectedState: true,
@@ -76,15 +76,15 @@ void main() {
         ),
       );
 
-      await tester.tap(find.text('Tomei uma parte'));
+      await tester.tap(find.text('Fizemos parte'));
       await tester.pump();
 
       expect(
-        tester.getSemantics(find.text('Tomei uma parte')),
+        tester.getSemantics(find.text('Fizemos parte')),
         isSemantics(isSelected: true, isInMutuallyExclusiveGroup: true),
       );
       expect(
-        tester.getSemantics(find.text('Tomei tudo')),
+        tester.getSemantics(find.text('Fizemos tudo')),
         isSemantics(isSelected: false),
       );
       expect(find.byIcon(Icons.check_circle), findsOneWidget);

@@ -96,8 +96,13 @@ Future<MemoriaDemonstracao> abrirComMemoria(
   return memoria;
 }
 
-/// Registro de Ana feito hoje às 8h30 (D17: ainda dá para corrigir e excluir).
+/// Registro de Ana feito hoje às 8h30 (ainda pode ser corrigido e
+/// retirado: a terapeuta não revisou).
 const String registroDeHoje = 'f0000000-0000-4000-8000-000000000001';
+
+/// O registro de ontem da Ana na demonstração: corrigido (versão 2) e ainda
+/// sem revisão (P3).
+const String registroCorrigido = 'dd000000-0000-4000-8000-000000000013';
 
 /// Envia o [registroDeHoje] de Ana pela memória (TM14, TM15).
 Future<void> registrarHoje(MemoriaDemonstracao memoria) async {
@@ -107,9 +112,8 @@ Future<void> registrarHoje(MemoriaDemonstracao memoria) async {
       pacienteId: idAna,
       registradoEm: instanteNaClinica(2026, 10, 2, 8, 30),
       adesao: Adesao.total,
-      intensidade: Intensidade.moderada,
-      sintomaPredominante: 'Ansiedade',
-      observacao: 'Acordei preocupada com a prova.',
+      sintomas: 'Acordei preocupada com a prova.',
+      intensidadeSintoma: Intensidade.moderado,
       situacaoEnvio: SituacaoEnvio.naFila,
     ),
   );
@@ -123,15 +127,20 @@ Future<void> tocar(WidgetTester tester, Finder alvo) async {
   await tester.pumpAndSettle();
 }
 
-/// Marca adesão, intensidade e sintoma no diário (TM03).
+/// Preenche o novo registro (TM13): a adesão, o quanto atrapalhou e, se
+/// dado, o que aconteceu.
 Future<void> preencherDiario(
   WidgetTester tester, {
   required String adesao,
   required String intensidade,
-  required String sintoma,
+  String? sintomas,
 }) async {
-  for (final opcao in [adesao, intensidade, sintoma]) {
+  for (final opcao in [adesao, intensidade]) {
     await tocar(tester, find.text(opcao));
+  }
+  if (sintomas != null) {
+    await tester.enterText(find.byKey(const Key('campo-sintomas')), sintomas);
+    await tester.pumpAndSettle();
   }
 }
 
@@ -228,48 +237,49 @@ final List<TelaReal> telasReais = [
   TelaReal(
     tela: 'TM03',
     arquivo: 'TM03-diario',
-    descricao: 'TM03 Diário com adesão, intensidade e sintoma marcados',
+    descricao: 'TM03 Diário (Ana): a lista com os selos do portal',
     abrir: (t) async {
       await abrirComMemoria(t, persona: Persona.ana, em: Rotas.pacienteDiario);
-      await preencherDiario(
-        t,
-        adesao: 'Tomei tudo',
-        intensidade: 'Leve',
-        sintoma: 'Cansaço',
-      );
-      await voltarAoTopo(t, 'TM03');
+      expect(find.text('Seu diário'), findsOneWidget);
     },
   ),
   TelaReal(
     tela: 'TM04',
     arquivo: 'TM04-diario-enviado',
-    descricao: 'TM04 Diário enviado, com conexão',
+    descricao: 'TM04 Registro enviado, com o recibo',
     abrir: (t) async {
-      await abrirComMemoria(t, persona: Persona.ana, em: Rotas.pacienteDiario);
+      await abrirComMemoria(
+        t,
+        persona: Persona.ana,
+        em: Rotas.pacienteNovoRegistro,
+      );
       await preencherDiario(
         t,
-        adesao: 'Tomei tudo',
-        intensidade: 'Moderada',
-        sintoma: 'Cansaço',
+        adesao: 'Fiz tudo',
+        intensidade: 'Mais ou menos — atrapalhou um pouco',
+        sintomas: 'Fiquei ansiosa antes da prova.',
       );
       await tocar(t, find.byKey(const Key('enviar-diario')));
-      expect(find.text('Registro enviado!'), findsOneWidget);
+      expect(find.text('Registro enviado.'), findsOneWidget);
     },
   ),
   TelaReal(
     tela: 'TM05',
     arquivo: 'TM05-ajuda-imediata',
-    descricao: 'TM05 Ajuda imediata, crítica com "profissional avisado"',
+    descricao: 'TM05 Ajuda imediata: "Muito", com a equipe avisada',
     abrir: (t) async {
-      await abrirComMemoria(t, persona: Persona.ana, em: Rotas.pacienteDiario);
+      await abrirComMemoria(
+        t,
+        persona: Persona.ana,
+        em: Rotas.pacienteNovoRegistro,
+      );
       await preencherDiario(
         t,
-        adesao: 'Tomei uma parte',
-        intensidade: 'Crítica',
-        sintoma: 'Tristeza',
+        adesao: 'Fiz parte',
+        intensidade: 'Muito — precisamos de ajuda',
       );
       await tocar(t, find.byKey(const Key('enviar-diario')));
-      expect(find.text('Seu profissional foi avisado.'), findsOneWidget);
+      expect(find.text('A equipe da clínica foi avisada.'), findsOneWidget);
     },
   ),
   TelaReal(
@@ -339,31 +349,44 @@ final List<TelaReal> telasReais = [
   ),
   TelaReal(
     tela: 'TM13',
-    arquivo: 'TM13-meus-registros',
-    descricao: 'TM13 Meus registros (Ana), com a lista do diário',
-    abrir: (t) =>
-        abrirComMemoria(t, persona: Persona.ana, em: Rotas.pacienteRegistros),
+    arquivo: 'TM13-novo-registro',
+    descricao: 'TM13 Novo registro (Ana), com a adesão e o quanto atrapalhou',
+    abrir: (t) async {
+      await abrirComMemoria(
+        t,
+        persona: Persona.ana,
+        em: Rotas.pacienteNovoRegistro,
+      );
+      await preencherDiario(
+        t,
+        adesao: 'Fiz parte',
+        intensidade: 'Pouco — quase não atrapalhou',
+      );
+      await voltarAoTopo(t, 'TM13');
+    },
   ),
   TelaReal(
     tela: 'TM14',
     arquivo: 'TM14-registro',
-    descricao: 'TM14 Registro de hoje (Ana), com Corrigir e Excluir',
-    abrir: (t) => abrirComMemoria(
-      t,
-      persona: Persona.ana,
-      em: Rotas.registro(registroDeHoje),
-      preparar: registrarHoje,
-    ),
+    descricao: 'TM14 Registro corrigido (Ana), com a versão 1 aberta',
+    abrir: (t) async {
+      await abrirComMemoria(
+        t,
+        persona: Persona.ana,
+        em: Rotas.registro(registroCorrigido),
+      );
+      await tocar(t, find.text('Ver a versão 1'));
+      await voltarAoTopo(t, 'TM14');
+    },
   ),
   TelaReal(
     tela: 'TM15',
     arquivo: 'TM15-corrigir-registro',
-    descricao: 'TM15 Corrigir o registro de hoje (Ana)',
+    descricao: 'TM15 Corrigir o registro de ontem (Ana), versão 2',
     abrir: (t) => abrirComMemoria(
       t,
       persona: Persona.ana,
-      em: Rotas.corrigirRegistro(registroDeHoje),
-      preparar: registrarHoje,
+      em: Rotas.corrigirRegistro(registroCorrigido),
     ),
   ),
   TelaReal(

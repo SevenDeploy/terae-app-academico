@@ -10,14 +10,15 @@ import '../enums/intensidade.dart';
 import '../enums/regra_alerta.dart';
 
 /// §7.1 — a regra disparada pelo registro [nova], dado o registro
-/// imediatamente anterior do mesmo paciente ([anterior], nulo se não houver):
-/// (a) intensidade crítica, sempre; (b) grave quando o anterior também foi
-/// grave. `null` = sem alerta.
+/// imediatamente anterior do mesmo paciente ([anterior]). A pergunta "O
+/// quanto isso atrapalhou o dia?" é opcional (P3), então as duas podem
+/// faltar: (a) "Muito" (crítico), sempre; (b) "Bastante" (grave) quando o
+/// anterior também foi "Bastante". `null` = sem alerta.
 RegraAlerta? regraDoAlerta({
-  required Intensidade nova,
+  required Intensidade? nova,
   required Intensidade? anterior,
 }) {
-  if (nova == Intensidade.critica) return RegraAlerta.intensidadeCritica;
+  if (nova == Intensidade.critico) return RegraAlerta.intensidadeCritica;
   if (nova == Intensidade.grave && anterior == Intensidade.grave) {
     return RegraAlerta.graveConsecutivo;
   }

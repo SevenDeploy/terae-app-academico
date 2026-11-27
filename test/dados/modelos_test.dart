@@ -7,6 +7,7 @@ import 'package:terae_app/dados/enums/adesao_em_casa.dart';
 import 'package:terae_app/dados/enums/canal_autorizado.dart';
 import 'package:terae_app/dados/enums/intensidade.dart';
 import 'package:terae_app/dados/enums/linha_de_cuidado.dart';
+import 'package:terae_app/dados/enums/motivo_da_retirada.dart';
 import 'package:terae_app/dados/enums/ocupacao.dart';
 import 'package:terae_app/dados/enums/qualidade_consentimento.dart';
 import 'package:terae_app/dados/enums/quem_registrou.dart';
@@ -129,10 +130,28 @@ void main() {
       pacienteId: 'p-ana',
       registradoEm: _instante,
       adesao: Adesao.parcial,
-      intensidade: Intensidade.critica,
-      sintomaPredominante: 'Tristeza',
-      observacao: 'Dormi mal',
-      situacaoEnvio: SituacaoEnvio.naFila,
+      sintomas: 'Recusou o jantar duas vezes.',
+      intensidadeSintoma: Intensidade.critico,
+      observacoes: 'Dormi mal',
+      situacaoEnvio: SituacaoEnvio.enviado,
+      versao: 2,
+      enviadoEm: _instante,
+      atualizadoEm: _instante,
+      alertouAEquipe: true,
+      revisadoEm: _instante,
+      retiradoEm: _instante,
+      motivoDaRetirada: RetiradaDoRegistro(
+        categoria: MotivoDaRetirada.outro,
+        detalhe: 'Era do irmão',
+      ),
+      versoesAnteriores: [
+        VersaoDoRegistro(
+          versao: 1,
+          enviadaEm: _instante,
+          adesao: Adesao.total,
+          intensidadeSintoma: Intensidade.leve,
+        ),
+      ],
     );
     casos['RegistroDiario'] = (
       registro,
@@ -279,12 +298,14 @@ void main() {
         pacienteId: 'p-ana',
         registradoEm: _instante,
         adesao: Adesao.total,
-        intensidade: Intensidade.leve,
-        sintomaPredominante: 'Cansaço',
         situacaoEnvio: SituacaoEnvio.enviado,
       );
       final volta = RegistroDiario.fromMap(_peloJson(semOpcionais.toMap()));
-      expect(volta.observacao, isNull);
+      expect(volta.sintomas, isNull);
+      expect(volta.intensidadeSintoma, isNull);
+      expect(volta.observacoes, isNull);
+      expect(volta.versao, 1);
+      expect(volta.versoesAnteriores, isEmpty);
       expect(volta, semOpcionais);
       // F3: marco e atividade das fases anteriores, sem `metaId`.
       final marcoAntigo = MarcoJornada.fromMap({
@@ -431,8 +452,7 @@ void main() {
         pacienteId: 'p',
         registradoEm: _instante,
         adesao: Adesao.nenhuma,
-        intensidade: Intensidade.grave,
-        sintomaPredominante: 'Dor',
+        intensidadeSintoma: Intensidade.grave,
         situacaoEnvio: SituacaoEnvio.naFila,
       );
       final enviado = r.copyWith(situacaoEnvio: SituacaoEnvio.enviado);
@@ -694,7 +714,7 @@ void main() {
       'Consentimento.canalAutorizado': CanalAutorizado.values,
       'VinculoCuidador.situacao': SituacaoVinculo.values,
       'RegistroDiario.adesao': Adesao.values,
-      'RegistroDiario.intensidade': Intensidade.values,
+      'RegistroDiario.intensidadeSintoma': Intensidade.values,
       'RegistroDiario.situacaoEnvio': SituacaoEnvio.values,
       'Alerta.regraDisparada': RegraAlerta.values,
       'Agendamento.situacao': SituacaoAgendamento.values,
@@ -727,11 +747,12 @@ void main() {
         'revogado',
       ]);
       expect(nomes['RegistroDiario.adesao'], ['total', 'parcial', 'nenhuma']);
-      expect(nomes['RegistroDiario.intensidade'], [
+      // P3 (D8 revista): os nomes do corpo da API do portal.
+      expect(nomes['RegistroDiario.intensidadeSintoma'], [
         'leve',
-        'moderada',
+        'moderado',
         'grave',
-        'critica',
+        'critico',
       ]);
       expect(nomes['RegistroDiario.situacaoEnvio'], ['naFila', 'enviado']);
       expect(nomes['Alerta.regraDisparada'], [
@@ -812,14 +833,204 @@ void main() {
         for (final v in SituacaoMeta.values) v.rotulo,
       ];
       expect(rotulos, everyElement(isNotEmpty));
-      expect(Adesao.total.rotulo, 'Tomei tudo');
-      expect(Intensidade.critica.rotulo, 'Crítica');
+      expect(Adesao.total.rotulo, 'Fizemos tudo');
+      expect(Intensidade.critico.rotulo, 'Muito — precisamos de ajuda');
+      expect(Intensidade.grave.curto, 'Bastante');
+      expect(Intensidade.moderado.naLista, 'Atrapalhou mais ou menos');
     });
 
-    test('só a intensidade crítica abre a ajuda imediata', () {
-      expect(Intensidade.values.where((i) => i.ehCritica), [
-        Intensidade.critica,
+    test('só "Muito" abre a ajuda imediata; "Bastante" e "Muito" mostram os '
+        'números quando o registro fica guardado', () {
+      expect(Intensidade.values.where((i) => i.ehCritico), [
+        Intensidade.critico,
       ]);
+      expect(Intensidade.values.where((i) => i.pedeAjudaSemInternet), [
+        Intensidade.grave,
+        Intensidade.critico,
+      ]);
+    });
+
+    test('a grafia antiga da intensidade (A3/A4) ainda é lida', () {
+      expect(Intensidade.doNome('moderada'), Intensidade.moderado);
+      expect(Intensidade.doNome('critica'), Intensidade.critico);
+      expect(Intensidade.doNome('grave'), Intensidade.grave);
+      expect(Intensidade.doNome('urgente'), isNull);
+    });
+
+    test('o motivo da retirada vai com a grafia da API do portal', () {
+      expect(
+        [for (final m in MotivoDaRetirada.values) m.valor],
+        ['dia_errado', 'paciente_errado', 'enviado_sem_querer', 'outro'],
+      );
+      for (final m in MotivoDaRetirada.values) {
+        expect(MotivoDaRetirada.doValor(m.valor), m);
+        expect(m.rotulo, isNotEmpty);
+      }
+      expect(MotivoDaRetirada.doValor('diaErrado'), isNull);
+    });
+  });
+
+  group('RegistroDiario igual ao do portal (P3, D17 revista)', () {
+    RegistroDiario enviado() => RegistroDiario(
+      id: 'r-1',
+      pacienteId: 'p',
+      registradoEm: _instante,
+      adesao: Adesao.parcial,
+      sintomas: 'Recusou o jantar.',
+      intensidadeSintoma: Intensidade.moderado,
+      situacaoEnvio: SituacaoEnvio.enviado,
+      enviadoEm: _instante,
+    );
+
+    test('corrigir guarda a versão vigente e cria a seguinte', () {
+      final depois = _instante.add(const Duration(hours: 1));
+      final corrigido = enviado().corrigido(
+        EntradaDoDiario(adesao: Adesao.total, observacoes: '  Melhorou. '),
+        em: depois,
+      );
+      expect(corrigido.versao, 2);
+      expect(corrigido.adesao, Adesao.total);
+      expect(corrigido.sintomas, isNull);
+      expect(corrigido.intensidadeSintoma, isNull);
+      expect(corrigido.observacoes, 'Melhorou.');
+      expect(corrigido.atualizadoEm, depois.toUtc());
+      expect(corrigido.enviadoEm, _instante.toUtc());
+      expect(corrigido.versoesAnteriores.single.versao, 1);
+      expect(corrigido.versoesAnteriores.single.sintomas, 'Recusou o jantar.');
+      expect(
+        corrigido.versoesAnteriores.single.intensidadeSintoma,
+        Intensidade.moderado,
+      );
+      final terceira = corrigido.corrigido(
+        EntradaDoDiario(adesao: Adesao.nenhuma),
+        em: depois,
+      );
+      expect(terceira.versao, 3);
+      expect([for (final v in terceira.versoesAnteriores) v.versao], [1, 2]);
+      expect(terceira.versoesAnteriores.last.enviadaEm, depois.toUtc());
+    });
+
+    test('retirar guarda a data e o motivo; nada mais muda', () {
+      final motivo = RetiradaDoRegistro(categoria: MotivoDaRetirada.diaErrado);
+      final retirado = enviado().retiradoCom(motivo, em: _instante);
+      expect(retirado.retirado, isTrue);
+      expect(retirado.situacao, SituacaoDoRegistro.retirado);
+      expect(retirado.motivoDaRetirada, motivo);
+      expect(retirado.entrada, enviado().entrada);
+    });
+
+    test('a situação: retirado vence revisado, que vence enviado', () {
+      expect(enviado().situacao, SituacaoDoRegistro.enviado);
+      final revisado = RegistroDiario.fromMap({
+        ...enviado().toMap(),
+        'revisadoEm': escreverInstante(_instante),
+      });
+      expect(revisado.situacao, SituacaoDoRegistro.revisado);
+      expect(
+        revisado
+            .retiradoCom(
+              RetiradaDoRegistro(
+                categoria: MotivoDaRetirada.outro,
+                detalhe: 'x',
+              ),
+              em: _instante,
+            )
+            .situacao,
+        SituacaoDoRegistro.retirado,
+      );
+    });
+
+    test('versões que não conferem e retirada sem motivo são recusadas', () {
+      expect(
+        () => RegistroDiario.fromMap({...enviado().toMap(), 'versao': 2}),
+        throwsFormatException,
+      );
+      expect(
+        () => RegistroDiario.fromMap({
+          ...enviado().toMap(),
+          'retiradoEm': escreverInstante(_instante),
+        }),
+        throwsFormatException,
+      );
+      expect(
+        () => RegistroDiario.fromMap({
+          ...enviado().toMap(),
+          'intensidadeSintoma': 'urgente',
+        }),
+        throwsFormatException,
+      );
+      expect(
+        () => RegistroDiario.fromMap({
+          ...enviado().toMap(),
+          'motivoDaRetirada': {'categoria': 'sumiu'},
+          'retiradoEm': escreverInstante(_instante),
+        }),
+        throwsFormatException,
+      );
+    });
+
+    test('o registro das A3/A4 é lido: o sintoma vira o texto contado e o '
+        'excluído vira retirado com "Outro"', () {
+      final antigo = RegistroDiario.fromMap({
+        'id': 'dd1',
+        'pacienteId': 'p',
+        'registradoEm': '2026-10-01T00:40:00.000Z',
+        'adesao': 'total',
+        'intensidade': 'critica',
+        'sintomaPredominante': 'Cansaço',
+        'observacao': 'Dormi mal',
+        'situacaoEnvio': 'enviado',
+        'atualizadoEm': null,
+        'excluidoEm': '2026-10-01T01:00:00.000Z',
+      });
+      expect(antigo.sintomas, 'Cansaço');
+      expect(antigo.intensidadeSintoma, Intensidade.critico);
+      expect(antigo.observacoes, 'Dormi mal');
+      expect(antigo.versao, 1);
+      expect(antigo.enviadoEm, DateTime.utc(2026, 10, 1, 0, 40));
+      expect(antigo.retiradoEm, DateTime.utc(2026, 10, 1, 1));
+      expect(antigo.motivoDaRetirada, RegistroDiario.retiradaDoAppAntigo);
+      // Gravado de novo, já sai no formato novo.
+      expect(RegistroDiario.fromMap(antigo.toMap()), antigo);
+    });
+
+    test('a entrada tira os espaços e trata texto vazio como sem resposta', () {
+      final e = EntradaDoDiario(
+        adesao: Adesao.total,
+        sintomas: '   ',
+        observacoes: ' oi ',
+      );
+      expect(e.sintomas, isNull);
+      expect(e.observacoes, 'oi');
+      expect(e, EntradaDoDiario(adesao: Adesao.total, observacoes: 'oi'));
+    });
+
+    test('"Outro" pede um detalhe de até 300 caracteres; as outras '
+        'categorias não guardam detalhe', () {
+      expect(
+        RetiradaDoRegistro(categoria: MotivoDaRetirada.outro).problema,
+        isNotNull,
+      );
+      expect(
+        RetiradaDoRegistro(
+          categoria: MotivoDaRetirada.outro,
+          detalhe: 'a' * 301,
+        ).problema,
+        isNotNull,
+      );
+      expect(
+        RetiradaDoRegistro(
+          categoria: MotivoDaRetirada.outro,
+          detalhe: ' Era do irmão ',
+        ).detalhe,
+        'Era do irmão',
+      );
+      final dia = RetiradaDoRegistro(
+        categoria: MotivoDaRetirada.diaErrado,
+        detalhe: 'ignorado',
+      );
+      expect(dia.detalhe, isNull);
+      expect(dia.problema, isNull);
     });
   });
 }

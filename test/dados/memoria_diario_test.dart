@@ -5,6 +5,7 @@ import 'package:terae_app/dados/enums/regra_alerta.dart';
 import 'package:terae_app/dados/enums/situacao_envio.dart';
 import 'package:terae_app/dados/memoria/memoria_demonstracao.dart';
 import 'package:terae_app/dados/modelos/registro_diario.dart';
+import 'package:terae_app/dados/regras/diario.dart';
 import 'package:terae_app/dados/repositorios/falhas.dart';
 import 'package:terae_app/nucleo/tempo/relogio.dart';
 import 'package:terae_app/nucleo/uuid.dart';
@@ -23,8 +24,8 @@ RegistroDiario _registro(
   pacienteId: pacienteId,
   registradoEm: em ?? agoraDaMemoria,
   adesao: Adesao.total,
-  intensidade: intensidade,
-  sintomaPredominante: sintoma,
+  intensidadeSintoma: intensidade,
+  sintomas: sintoma,
   situacaoEnvio: SituacaoEnvio.naFila,
 );
 
@@ -42,7 +43,9 @@ void main() {
       expect(r.registro.situacaoEnvio, SituacaoEnvio.enviado);
       expect(r.alerta, isNull);
       expect(r.equipeAvisada, isFalse);
-      final lista = await m.repositorios.diario.registros(idAna);
+      expect(r.registro.enviadoEm, agoraDaMemoria, reason: 'P3: recebido');
+      expect(r.registro.alertouAEquipe, isFalse);
+      final lista = (await m.repositorios.diario.pagina(idAna)).registros;
       expect(lista.first, r.registro);
     });
 
@@ -50,7 +53,7 @@ void main() {
         'referência', () async {
       final m = memoriaDeTeste();
       final r = await m.repositorios.diario.enviar(
-        _registro(idAna, Intensidade.critica),
+        _registro(idAna, Intensidade.critico),
       );
       expect(r.equipeAvisada, isTrue);
       final alerta = r.alerta!;
@@ -58,6 +61,7 @@ void main() {
       expect(alerta.registroId, r.registro.id);
       expect(alerta.emitidoEm, agoraDaMemoria);
       expect(alerta.cienteEm, isNull);
+      expect(r.registro.alertouAEquipe, isTrue, reason: 'P3: na lista');
       expect(m.estado.alertasDoProfissional(idHelena), contains(alerta));
       expect(m.estado.alertasDoProfissional(idLarissa), isEmpty);
       expect(
@@ -69,7 +73,7 @@ void main() {
     test('crítica do Miguel vai para a Dra. Larissa', () async {
       final m = memoriaDeTeste();
       final r = await m.repositorios.diario.enviar(
-        _registro(idMiguel, Intensidade.critica),
+        _registro(idMiguel, Intensidade.critico),
       );
       expect(m.estado.alertasDoProfissional(idLarissa), [r.alerta]);
     });
@@ -96,7 +100,7 @@ void main() {
         expect(primeiro.alerta, isNull);
         relogio.avancar(const Duration(hours: 2));
         final moderado = await diario.enviar(
-          _registro(idAna, Intensidade.moderada, em: relogio.agora()),
+          _registro(idAna, Intensidade.moderado, em: relogio.agora()),
         );
         expect(moderado.alerta, isNull);
         relogio.avancar(const Duration(hours: 2));
@@ -123,7 +127,7 @@ void main() {
       'idempotente pelo id do aparelho: sem duplicar nem 2º alerta',
       () async {
         final m = memoriaDeTeste();
-        final registro = _registro(idAna, Intensidade.critica);
+        final registro = _registro(idAna, Intensidade.critico);
         final primeiro = await m.repositorios.diario.enviar(registro);
         final alertas = m.estado.alertas.length;
         final registros = m.estado.registros.length;
@@ -143,7 +147,7 @@ void main() {
       );
       final antes = m.estado.paraMapa();
       final outra = await m.repositorios.diario.enviar(
-        _registro(idAna, Intensidade.critica, id: id, sintoma: 'Outro'),
+        _registro(idAna, Intensidade.critico, id: id, sintoma: 'Outro'),
       );
       expect(outra.registro, original.registro);
       expect(outra.alerta, isNull);
@@ -160,7 +164,11 @@ void main() {
         MotivoRecusa.acessoNegado,
       );
       await expectLater(
-        m.repositorios.diario.registros(gerarUuidV4()),
+        m.repositorios.diario.pagina(gerarUuidV4()),
+        recusa(MotivoRecusa.acessoNegado),
+      );
+      await expectLater(
+        m.repositorios.diario.pendentes(gerarUuidV4()),
         recusa(MotivoRecusa.acessoNegado),
       );
     });
@@ -173,7 +181,7 @@ void main() {
       expect(m.repositorios.demonstracao.semConexao, isTrue);
       final alertas = m.estado.alertas.length;
       final r = await m.repositorios.diario.enviar(
-        _registro(idAna, Intensidade.critica),
+        _registro(idAna, Intensidade.critico),
       );
       expect(r.registro.situacaoEnvio, SituacaoEnvio.naFila);
       expect(r.enviado, isFalse);
@@ -185,14 +193,18 @@ void main() {
         await m.repositorios.diario.alertaDoRegistro(r.registro.id),
         isNull,
       );
-      final lista = await m.repositorios.diario.registros(idAna);
-      expect(lista.first.id, r.registro.id);
-      expect(lista.first.situacaoEnvio, SituacaoEnvio.naFila);
+      // P3: fica em "Guardados neste aparelho", fora da lista do servidor.
+      final pendentes = await m.repositorios.diario.pendentes(idAna);
+      expect(pendentes.single.id, r.registro.id);
+      expect(pendentes.single.situacaoEnvio, SituacaoEnvio.naFila);
+      expect(pendentes.single.enviadoEm, isNull);
+      final lista = (await m.repositorios.diario.pagina(idAna)).registros;
+      expect(lista.map((x) => x.id), isNot(contains(r.registro.id)));
     });
 
     test('já enviado, reenviado sem conexão: não volta para a fila', () async {
       final m = memoriaDeTeste();
-      final registro = _registro(idAna, Intensidade.critica);
+      final registro = _registro(idAna, Intensidade.critico);
       final primeiro = await m.repositorios.diario.enviar(registro);
       await _semConexao(m, sem: true);
       final antes = m.estado.paraMapa();
@@ -215,11 +227,11 @@ void main() {
     test('sem conexão reenviarFila não envia', () async {
       final m = memoriaDeTeste();
       await _semConexao(m, sem: true);
-      await m.repositorios.diario.enviar(_registro(idAna, Intensidade.critica));
+      await m.repositorios.diario.enviar(_registro(idAna, Intensidade.critico));
       expect(await m.repositorios.diario.reenviarFila(), isEmpty);
       expect(m.estado.fila, hasLength(1));
-      final lista = await m.repositorios.diario.registros(idAna);
-      expect(lista.first.situacaoEnvio, SituacaoEnvio.naFila);
+      final pendentes = await m.repositorios.diario.pendentes(idAna);
+      expect(pendentes.single.situacaoEnvio, SituacaoEnvio.naFila);
     });
 
     test('religar reenvia a fila: a crítica vira enviada e o alerta nasce '
@@ -227,16 +239,21 @@ void main() {
       final m = memoriaDeTeste();
       final relogio = m.relogio as RelogioFixo;
       await _semConexao(m, sem: true);
-      final critica = _registro(idAna, Intensidade.critica);
+      final critica = _registro(idAna, Intensidade.critico);
       final naFila = await m.repositorios.diario.enviar(critica);
       expect(naFila.equipeAvisada, isFalse);
       relogio.avancar(const Duration(minutes: 40));
 
       await _semConexao(m, sem: false);
       expect(m.estado.fila, isEmpty);
-      final depois = (await m.repositorios.diario.registros(idAna)).first;
+      final depois = (await m.repositorios.diario.pagina(idAna))
+          .registros
+          .first;
       expect(depois.id, critica.id);
       expect(depois.situacaoEnvio, SituacaoEnvio.enviado);
+      expect(depois.enviadoEm, relogio.agora(), reason: 'quando chegou');
+      expect(depois.registradoEm, agoraDaMemoria, reason: 'quando escreveu');
+      expect(await m.repositorios.diario.pendentes(idAna), isEmpty);
       final alerta = await m.repositorios.diario.alertaDoRegistro(critica.id);
       expect(alerta, isNotNull, reason: 'o alerta nasce ao religar');
       expect(alerta!.regraDisparada, RegraAlerta.intensidadeCritica);
@@ -250,7 +267,7 @@ void main() {
       final relogio = m.relogio as RelogioFixo;
       await _semConexao(m, sem: true);
       // João: grave ontem. Na fila: moderada e, uma hora depois, grave.
-      final moderada = _registro(idJoao, Intensidade.moderada);
+      final moderada = _registro(idJoao, Intensidade.moderado);
       relogio.avancar(const Duration(hours: 1));
       final grave = _registro(idJoao, Intensidade.grave, em: relogio.agora());
       await m.repositorios.diario.enviar(moderada);
@@ -277,7 +294,7 @@ void main() {
         final relogio = m.relogio as RelogioFixo;
         await _semConexao(m, sem: true);
         // João: grave ontem. Na fila: moderada e depois grave.
-        final moderada = _registro(idJoao, Intensidade.moderada);
+        final moderada = _registro(idJoao, Intensidade.moderado);
         relogio.avancar(const Duration(hours: 1));
         final grave = _registro(idJoao, Intensidade.grave, em: relogio.agora());
         await m.repositorios.diario.enviar(moderada);
@@ -301,7 +318,7 @@ void main() {
       final m = memoriaDeTeste();
       final relogio = m.relogio as RelogioFixo;
       await _semConexao(m, sem: true);
-      final critica = _registro(idAna, Intensidade.critica);
+      final critica = _registro(idAna, Intensidade.critico);
       await m.repositorios.diario.enviar(critica);
       relogio.avancar(const Duration(minutes: 40));
       m.semConexao = false; // sem o painel, que já reenviaria
@@ -338,7 +355,7 @@ void main() {
       () async {
         final m = memoriaDeTeste();
         await _semConexao(m, sem: true);
-        final registro = _registro(idAna, Intensidade.critica);
+        final registro = _registro(idAna, Intensidade.critico);
         await m.repositorios.diario.enviar(registro);
         m.semConexao = false; // sem o painel, que já reenviaria
         final r = await m.repositorios.diario.enviar(registro);
@@ -352,13 +369,49 @@ void main() {
     );
   });
 
-  test('registros do mais recente para o mais antigo', () async {
-    final m = memoriaDeTeste();
-    final lista = await m.repositorios.diario.registros(idAna);
-    expect(lista, hasLength(13));
-    for (var i = 1; i < lista.length; i++) {
-      expect(lista[i - 1].registradoEm.isAfter(lista[i].registradoEm), isTrue);
-    }
-    expect(lista.every((r) => r.pacienteId == idAna), isTrue);
+  group('a lista do diário (P3, quadro 18e)', () {
+    test(
+      'do mais novo ao mais antigo, com os retirados e as versões',
+      () async {
+        final m = memoriaDeTeste();
+        final pagina = await m.repositorios.diario.pagina(idAna);
+        final lista = pagina.registros;
+        expect(lista, hasLength(13));
+        expect(pagina.haMais, isFalse);
+        for (var i = 1; i < lista.length; i++) {
+          expect(maisNovoPrimeiro(lista[i - 1], lista[i]), lessThan(0));
+        }
+        expect(lista.every((r) => r.pacienteId == idAna), isTrue);
+        expect(lista.where((r) => r.retirado), hasLength(1));
+        expect(lista.first.versao, 2, reason: 'o de ontem foi corrigido');
+      },
+    );
+
+    test(
+      'de 30 em 30: "Ver registros mais antigos" continua de onde parou',
+      () async {
+        final m = memoriaDeTeste();
+        final relogio = m.relogio as RelogioFixo;
+        for (var i = 0; i < 40; i++) {
+          relogio.avancar(const Duration(minutes: 1));
+          await m.repositorios.diario.enviar(
+            _registro(idMiguel, Intensidade.leve, em: relogio.agora()),
+          );
+        }
+        final primeira = await m.repositorios.diario.pagina(idMiguel);
+        expect(primeira.registros, hasLength(registrosPorPagina));
+        expect(primeira.haMais, isTrue);
+        final segunda = await m.repositorios.diario.pagina(
+          idMiguel,
+          antes: momentoNaLista(primeira.registros.last),
+        );
+        expect(segunda.haMais, isFalse);
+        final ids = [
+          for (final r in [...primeira.registros, ...segunda.registros]) r.id,
+        ];
+        expect(ids, hasLength(43), reason: '40 novos e 3 da demonstração');
+        expect(ids.toSet(), hasLength(43), reason: 'nenhum repetido');
+      },
+    );
   });
 }

@@ -303,7 +303,7 @@ void main() {
       // família de TO).
       for (final sessao in [clinico, to]) {
         expect(guardaDePerfil(sessao, Rotas.pacienteDiario), isNull);
-        expect(guardaDePerfil(sessao, Rotas.pacienteRegistros), isNull);
+        expect(guardaDePerfil(sessao, Rotas.pacienteNovoRegistro), isNull);
       }
       final cuidador = Sessao()..entrar(vinculosRegina());
       expect(

@@ -20,9 +20,9 @@ RegistroDiario _registro(Intensidade intensidade) => RegistroDiario(
   pacienteId: 'p-ana',
   registradoEm: agoraDeTeste,
   adesao: Adesao.parcial,
-  intensidade: intensidade,
-  sintomaPredominante: 'Nenhum em especial',
-  observacao: 'Uma observação comprida para ver a quebra de linha na tela.',
+  sintomas: 'Um relato comprido para ver a quebra de linha na tela do recibo.',
+  intensidadeSintoma: intensidade,
+  observacoes: 'Uma observação comprida para ver a quebra de linha na tela.',
   situacaoEnvio: SituacaoEnvio.naFila,
 );
 
@@ -42,14 +42,43 @@ Future<void> _ir(WidgetTester tester, String rota, {Object? extra}) async {
 
 final List<_Caso> _casos = [
   _Caso('TM02 Início', 'TM02', (t) => abrirAppDoPaciente(t)),
-  _Caso('TM03 Diário', 'TM03', (t) async {
+  _Caso('TM03 Diário (lista com os selos)', 'TM03', (t) async {
+    await abrirAppDoPaciente(
+      t,
+      em: Rotas.pacienteDiario,
+      diario: DiarioControlavel(ModoDoDiario.comConexao, [
+        registroEnviado('r1', observacoes: 'Uma observação comprida.'),
+        registroEnviado(
+          'r2',
+          em: agoraDeTeste.subtract(const Duration(days: 1)),
+          revisadoEm: agoraDeTeste,
+        ),
+        registroEnviado(
+          'r3',
+          em: agoraDeTeste.subtract(const Duration(days: 2)),
+          intensidade: Intensidade.critico,
+          alertou: true,
+        ),
+      ]),
+    );
+  }),
+  _Caso('TM03 Diário (vazio)', 'TM03', (t) async {
     await abrirAppDoPaciente(t, em: Rotas.pacienteDiario);
-    // Com escolhas feitas (marca de seleção e dica da crítica à vista).
-    for (final opcao in ['Tomei uma parte', 'Crítica', 'Nenhum em especial']) {
+  }),
+  _Caso('TM13 Novo registro (com escolhas)', 'TM13', (t) async {
+    await abrirAppDoPaciente(t, em: Rotas.pacienteNovoRegistro);
+    for (final opcao in ['Segui uma parte', 'Muito — precisamos de ajuda']) {
       await t.ensureVisible(find.text(opcao));
       await t.tap(find.text(opcao));
       await t.pumpAndSettle();
     }
+  }),
+  _Caso('TM13 Novo registro (sem internet)', 'TM13', (t) async {
+    await abrirAppDoPaciente(
+      t,
+      em: Rotas.pacienteNovoRegistro,
+      conexao: semInternet(),
+    );
   }),
   _Caso('TM04 Diário enviado (na fila)', 'TM04', (t) async {
     await abrirAppDoPaciente(t);
@@ -64,7 +93,7 @@ final List<_Caso> _casos = [
     await _ir(
       t,
       Rotas.pacienteDiarioEnviado,
-      extra: DiarioControlavel.enviadoDe(_registro(Intensidade.moderada)),
+      extra: DiarioControlavel.enviadoDe(_registro(Intensidade.moderado)),
     );
   }),
   _Caso('TM05 Ajuda imediata (avisado)', 'TM05', (t) async {
@@ -72,7 +101,7 @@ final List<_Caso> _casos = [
     await _ir(
       t,
       Rotas.pacienteDiarioAjuda,
-      extra: DiarioControlavel.enviadoDe(_registro(Intensidade.critica)),
+      extra: DiarioControlavel.enviadoDe(_registro(Intensidade.critico)),
     );
   }),
   _Caso('TM05 Ajuda imediata (pendente)', 'TM05', (t) async {
@@ -80,7 +109,7 @@ final List<_Caso> _casos = [
     await _ir(
       t,
       Rotas.pacienteDiarioAjuda,
-      extra: ResultadoEnvio(registro: _registro(Intensidade.critica)),
+      extra: ResultadoEnvio(registro: _registro(Intensidade.critico)),
     );
   }),
   _Caso(
@@ -146,58 +175,58 @@ void main() {
     }
   });
 
-  testWidgets('seletores do diário expõem selected e grupo exclusivo', (
+  testWidgets('os cartões do diário expõem checked e grupo exclusivo (P3)', (
     tester,
   ) async {
     final semantica = tester.ensureSemantics();
-    await abrirAppDoPaciente(tester, em: Rotas.pacienteDiario);
+    await abrirAppDoPaciente(tester, em: Rotas.pacienteNovoRegistro);
     for (final opcao in [
-      ...Adesao.values.map((a) => a.rotulo),
+      'Segui tudo',
+      'Segui uma parte',
+      'Não deu para seguir',
       ...Intensidade.values.map((i) => i.rotulo),
-      'Cansaço',
     ]) {
       expect(
         tester.getSemantics(find.text(opcao)),
         isSemantics(
-          isButton: true,
           isInMutuallyExclusiveGroup: true,
-          hasSelectedState: true,
-          isSelected: false,
+          hasCheckedState: true,
+          isChecked: false,
           hasTapAction: true,
         ),
         reason: opcao,
       );
     }
-    await tester.ensureVisible(find.text('Grave'));
-    await tester.tap(find.text('Grave'));
+    final bastante = Intensidade.grave.rotulo;
+    await tester.ensureVisible(find.text(bastante));
+    await tester.tap(find.text(bastante));
     await tester.pumpAndSettle();
     expect(
-      tester.getSemantics(find.text('Grave')),
-      isSemantics(isSelected: true, hasSelectedState: true, label: 'Grave'),
+      tester.getSemantics(find.text(bastante)),
+      isSemantics(isChecked: true, hasCheckedState: true, label: bastante),
     );
     expect(
-      tester.getSemantics(find.text('Leve')),
-      isSemantics(isSelected: false, hasSelectedState: true),
+      tester.getSemantics(find.text(Intensidade.leve.rotulo)),
+      isSemantics(isChecked: false, hasCheckedState: true),
     );
     semantica.dispose();
   });
 
-  testWidgets(
-    'a intensidade escolhida aparece com nome no resumo (nunca só cor)',
-    (tester) async {
-      await abrirAppDoPaciente(tester);
-      await _ir(
-        tester,
-        Rotas.pacienteDiarioEnviado,
-        extra: DiarioControlavel.enviadoDe(_registro(Intensidade.grave)),
-      );
-      expect(
-        find.descendant(
-          of: find.byKey(const Key('resumo-envio')),
-          matching: find.text('Grave'),
-        ),
-        findsOneWidget,
-      );
-    },
-  );
+  testWidgets('o quanto atrapalhou aparece com nome no recibo (nunca só cor)', (
+    tester,
+  ) async {
+    await abrirAppDoPaciente(tester);
+    await _ir(
+      tester,
+      Rotas.pacienteDiarioEnviado,
+      extra: DiarioControlavel.enviadoDe(_registro(Intensidade.grave)),
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('resumo-envio')),
+        matching: find.text('Bastante'),
+      ),
+      findsOneWidget,
+    );
+  });
 }

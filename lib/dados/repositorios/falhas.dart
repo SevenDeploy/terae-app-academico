@@ -2,8 +2,8 @@
 ///
 /// A tela mostra [MotivoRecusa.mensagem], já em linguagem simples (RNFM01).
 /// Sem conexão no envio do diário NÃO é recusa: o registro vai para a fila
-/// (`naFila`, §19). A correção e a exclusão do diário (D17) seguem a mesma
-/// fila.
+/// (`naFila`, §19, "Guardar e enviar depois"). Corrigir e retirar pedem a
+/// internet na hora (P3, como o portal) e recusam com [semConexao].
 enum MotivoRecusa {
   codigoInexistente(
     'Não encontramos esse código. Confira as letras e os números.',
@@ -55,12 +55,20 @@ enum MotivoRecusa {
   ),
   senhaFraca('A senha precisa ter pelo menos 8 caracteres.'),
 
-  /// TM14 — D17: só no mesmo dia em que o registro foi feito.
+  /// TM17 — o registro da atividade de casa só muda no mesmo dia (D26).
   edicaoEncerrada(
     'Este registro é de outro dia e não pode mais ser mudado. Se precisar, '
     'conte na próxima consulta.',
   ),
   registroInexistente('Não encontramos este registro.'),
+
+  /// TM15 e a folha de retirar (P3, D17 revista) — a terapeuta revisou, o
+  /// registro avisou a equipe, já foi retirado ou foi corrigido em outra
+  /// tela (o 409 do portal).
+  registroNaoMudaMais(
+    'Este registro não pode mais mudar. A terapeuta pode já tê-lo revisado, '
+    'ou ele foi corrigido em outra tela.',
+  ),
 
   /// TM17 — a atividade não existe, não é deste paciente ou foi encerrada.
   atividadeInexistente(

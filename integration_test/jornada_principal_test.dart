@@ -1,9 +1,10 @@
 /// Jornada principal da paciente no aparelho (Atividade 5, §12; RFM01, RFM03,
-/// RFM05, RFM11; D17, D20), sobre os repositórios em memória (D19): nada sai
+/// RFM05, RFM11; D17 revista, D20), sobre os repositórios em memória (D19): nada sai
 /// do aparelho, então roda em qualquer emulador sem o Firebase.
 ///
-/// TM00 → TM01 (e-mail e senha) → TM02 → TM03 (três escolhas) → TM04 →
-/// TM13 → TM14 → TM15 (corrigir) → TM14 → excluir → TM13 → "Sair" → TM00.
+/// TM00 → TM01 (e-mail e senha) → TM02 → TM13 (novo registro) → TM04 →
+/// TM15 (corrigir, versão 2) → TM04 → TM03 (a lista, "Ver a versão 1",
+/// retirar com motivo) → "Sair" → TM00 (P3: o diário do portal).
 ///
 /// Uso, com o emulador ligado:
 ///   flutter test integration_test/jornada_principal_test.dart -d emulator-5554
@@ -28,19 +29,10 @@ Future<void> _tocar(WidgetTester tester, Finder alvo) async {
   await tester.pumpAndSettle();
 }
 
-/// O primeiro cartão da TM13 (a lista vem do mais recente).
-Finder get _primeiroRegistro => find
-    .byWidgetPredicate(
-      (w) =>
-          w.key is ValueKey<String> &&
-          (w.key! as ValueKey<String>).value.startsWith('registro-'),
-    )
-    .first;
-
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('Ana entra, registra, corrige, exclui e sai', (tester) async {
+  testWidgets('Ana entra, registra, corrige, retira e sai', (tester) async {
     final relogio = RelogioFixo(_agora);
     final memoria = await MemoriaDemonstracao.carregar(
       relogio: relogio,
@@ -70,40 +62,44 @@ void main() {
     expect(find.byKey(const Key('TM02')), findsOneWidget);
     expect(find.text('Olá, Ana'), findsOneWidget);
 
-    // TM03 → TM04 (RFM03, RFM05, RNFM02).
+    // TM13 → TM04 (RFM03, RFM05, RNFM02; P3: o diário do portal).
     await _tocar(tester, find.byKey(const Key('atalho-diario')));
-    for (final opcao in ['Tomei tudo', 'Leve', 'Cansaço']) {
+    expect(find.byKey(const Key('TM13')), findsOneWidget);
+    for (final opcao in ['Fiz tudo', 'Pouco — quase não atrapalhou']) {
       await _tocar(tester, find.text(opcao));
     }
     await _tocar(tester, find.byKey(const Key('enviar-diario')));
-    expect(find.text('Registro enviado!'), findsOneWidget);
+    expect(find.text('Registro enviado.'), findsOneWidget);
+    final novo = memoria.estado.registros.values.singleWhere(
+      (r) => r.registradoEm == _agora,
+    );
 
-    // TM13 → TM14 → TM15 (RFM11, D17: o de hoje ainda muda).
+    // "Corrigir agora" → TM15: corrigir cria a versão 2 (D17 revista).
+    await _tocar(tester, find.byKey(const Key('corrigir-agora')));
+    expect(find.byKey(const Key('TM15')), findsOneWidget);
+    await _tocar(tester, find.text('Mais ou menos — atrapalhou um pouco'));
+    await tester.enterText(
+      find.byKey(const Key('campo-sintomas')),
+      'Dormi mal.',
+    );
+    await _tocar(tester, find.byKey(const Key('salvar-correcao')));
+    expect(find.text('Correção enviada.'), findsOneWidget);
+    expect(memoria.estado.registros[novo.id]!.versao, 2);
+
+    // TM03: a lista mostra a correção e "Ver a versão 1"; retirar com motivo.
     await _tocar(tester, find.byKey(const Key('voltar-ao-inicio')));
     await _tocar(tester, find.byKey(const Key('aba-diario')));
-    await _tocar(tester, find.byKey(const Key('abrir-registros')));
-    expect(find.byKey(const Key('TM13')), findsOneWidget);
-    final chaveDoNovo = tester.widget(_primeiroRegistro).key!;
-    await _tocar(tester, _primeiroRegistro);
-    expect(find.byKey(const Key('TM14')), findsOneWidget);
-    expect(find.text('Cansaço'), findsWidgets);
-    await _tocar(tester, find.byKey(const Key('corrigir-registro')));
-    await _tocar(tester, find.text('Moderada'));
-    await _tocar(tester, find.text('Sono ruim'));
-    await _tocar(tester, find.byKey(const Key('salvar-correcao')));
-    expect(find.byKey(const Key('TM14')), findsOneWidget);
-    expect(find.text('Registro corrigido.'), findsOneWidget);
-    expect(find.text('Sono ruim'), findsWidgets);
-
-    // Excluir: lógico, pede confirmação e some da TM13.
-    await _tocar(tester, find.byKey(const Key('excluir-registro')));
-    await _tocar(tester, find.byKey(const Key('confirmar-exclusao')));
-    expect(find.byKey(const Key('TM13')), findsOneWidget);
-    expect(find.byKey(chaveDoNovo), findsNothing, reason: 'some da lista');
-    final excluido = memoria.estado.registros.values.singleWhere(
-      (r) => r.excluidoEm != null,
-    );
-    expect(excluido.sintomaPredominante, 'Sono ruim');
+    expect(find.byKey(const Key('TM03')), findsOneWidget);
+    expect(find.text('Corrigido · versão 2'), findsOneWidget);
+    await _tocar(tester, find.byKey(Key('versoes-${novo.id}')));
+    expect(find.byKey(Key('versoes-anteriores-${novo.id}')), findsOneWidget);
+    await _tocar(tester, find.byKey(Key('retirar-${novo.id}')));
+    await _tocar(tester, find.text('Enviei sem querer'));
+    await _tocar(tester, find.byKey(const Key('confirmar-retirada')));
+    expect(find.byKey(const Key('aviso-retirado')), findsOneWidget);
+    final retirado = memoria.estado.registros[novo.id]!;
+    expect(retirado.retirado, isTrue, reason: 'nada é apagado');
+    expect(retirado.sintomas, 'Dormi mal.');
 
     // "Sair" volta à TM00 (D20).
     await _tocar(tester, find.byTooltip('Voltar'));

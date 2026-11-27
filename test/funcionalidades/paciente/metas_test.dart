@@ -3,11 +3,8 @@
 /// a TM17, e o programa encerrado depois da alta.
 library;
 
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:go_router/go_router.dart';
 import 'package:terae_app/dados/enums/ocupacao.dart';
 import 'package:terae_app/dados/enums/situacao_meta.dart';
 import 'package:terae_app/dados/enums/tipo_marco.dart';

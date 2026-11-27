@@ -3,241 +3,431 @@ import 'package:provider/provider.dart';
 
 import '../../../dados/enums/adesao.dart';
 import '../../../dados/enums/intensidade.dart';
+import '../../../dados/modelos/registro_diario.dart';
 import '../../../nucleo/sessao/sessao.dart';
 import '../../../nucleo/tema/cores.dart';
 import '../../../nucleo/tema/tema.dart';
-import '../../../nucleo/widgets/seletor_opcoes.dart';
+import '../../../nucleo/widgets/cartao_de_opcao.dart';
 
-/// Opções do sintoma predominante (RNFM02: escolher, nunca digitar). Partem
-/// dos exemplos do protótipo ("dor de cabeça, tristeza, falta de ar…"), em
-/// linguagem simples; o rótulo escolhido é o valor gravado no registro.
-const List<String> sintomasDoDiario = [
-  'Tristeza',
-  'Ansiedade',
-  'Cansaço',
-  'Dor',
-  'Sono ruim',
-  'Falta de ar',
-  'Outro',
-  'Nenhum em especial',
-];
-
-/// O que mais pesou no dia para quem só faz terapia ocupacional (F1): o
-/// que famílias de crianças atípicas e adultos em reabilitação costumam
-/// contar. Também escolhido, nunca digitado (RNFM02).
-const List<String> acontecimentosDaTerapiaOcupacional = [
-  'Crise ou desregulação',
-  'Sono ruim',
-  'Alimentação',
-  'Agitação',
-  'Dor',
-  'Cansaço',
-  'Outro',
-  'Nada em especial',
-];
-
-/// Os textos do diário conforme o paciente (evolução de TO, F1; D21, D24).
+/// Os textos do diário conforme o paciente e quem está com o aparelho (P3;
+/// D24, D32 revista).
 ///
-/// Quem tem acompanhamento clínico (com ou sem TO) vê o diário das
-/// Atividades 3 e 4: remédios e sintomas. Quem só faz terapia ocupacional vê
-/// o mesmo registro com outras palavras (a rotina combinada no lugar dos
-/// remédios e o que mais pesou no dia no lugar do sintoma), na voz de quem
-/// está com o aparelho. Os dados gravados são os mesmos, e o alerta da
-/// crítica vale igual.
+/// As quatro perguntas são as do portal (`textos.ts`, quadros 18e e 18f).
+/// Muda só a primeira, pela linha de cuidado: quem faz terapia ocupacional
+/// conta das atividades em casa ("Vocês conseguiram fazer as atividades em
+/// casa?"); quem só tem acompanhamento clínico, do tratamento combinado
+/// ("Você conseguiu seguir o tratamento combinado?"). A voz segue a D24: o
+/// titular lê sobre si; o responsável legal, sobre o paciente, no plural.
 @immutable
 class TextosDoDiario {
   const TextosDoDiario._({
-    required this.titulo,
-    required this.subtitulo,
+    required this.tituloDoDiario,
+    required this.subtituloDoDiario,
+    required this.tituloDoNovo,
+    required this.deQuemNoTitulo,
+    required this.oDia,
+    required this.sobreNaFrase,
     required this.perguntaAdesao,
-    required this.perguntaIntensidade,
-    required this.perguntaSintoma,
-    required this.sintomas,
-    required this.resumoAdesao,
-    required this.resumoSintoma,
-    required this.resumoSintomaNoRegistro,
-    required this.adesaoQueFalta,
-    required this.sintomaQueFalta,
+    required this.faltaAdesao,
+    required this.termoDaAdesao,
+    required this.prefixoNaLista,
+    required this.exemploDoQueContar,
+    required this.quemLe,
+    required this.quemLeNaFrase,
     required this.subtituloDoAtalho,
-    required this._rotulos,
+    required this.opcoesDaAdesao,
   });
-
-  /// O diário das Atividades 3 e 4.
-  static const TextosDoDiario clinico = TextosDoDiario._(
-    titulo: 'Como você está hoje?',
-    subtitulo: 'Suas respostas ajudam sua equipe a cuidar melhor de você.',
-    perguntaAdesao: 'E os seus remédios de hoje?',
-    perguntaIntensidade: 'Qual a intensidade do que você sente hoje?',
-    perguntaSintoma: 'O que mais incomoda hoje?',
-    sintomas: sintomasDoDiario,
-    resumoAdesao: 'Remédios',
-    resumoSintoma: 'O que mais incomoda',
-    resumoSintomaNoRegistro: 'O que mais incomodou',
-    adesaoQueFalta: 'os remédios',
-    sintomaQueFalta: 'o sintoma',
-    subtituloDoAtalho: 'Registre seu dia no diário. Leva menos de 1 minuto.',
-    rotulos: {},
-  );
 
   /// Os textos para o [perfil] ativo.
   factory TextosDoDiario.para(Perfil perfil) {
     final paciente = perfil.paciente;
-    if (paciente.temAcompanhamentoClinico) return clinico;
     final nome = paciente.primeiroNome;
     final deOutro = perfil.falaDeOutraPessoa;
+    final to = paciente.temTerapiaOcupacional;
+    final String pergunta;
+    final String falta;
+    final Map<Adesao, OpcaoDeCartao<Adesao>> opcoes;
+    if (to) {
+      pergunta = deOutro
+          ? 'Vocês conseguiram fazer as atividades em casa?'
+          : 'Você conseguiu fazer as atividades em casa?';
+      falta = deOutro
+          ? 'Conte se vocês conseguiram fazer as atividades em casa.'
+          : 'Conte se você conseguiu fazer as atividades em casa.';
+      opcoes = _opcoes(
+        tudo: deOutro ? 'Fizemos tudo' : 'Fiz tudo',
+        parte: deOutro ? 'Fizemos parte' : 'Fiz parte',
+        nada: 'Não deu para fazer',
+        descricaoDeTudo: 'Deu para seguir as orientações da terapeuta.',
+      );
+    } else {
+      pergunta = deOutro
+          ? 'Vocês conseguiram seguir o tratamento combinado?'
+          : 'Você conseguiu seguir o tratamento combinado?';
+      falta = deOutro
+          ? 'Conte se vocês conseguiram seguir o tratamento combinado.'
+          : 'Conte se você conseguiu seguir o tratamento combinado.';
+      opcoes = _opcoes(
+        tudo: deOutro ? 'Seguimos tudo' : 'Segui tudo',
+        parte: deOutro ? 'Seguimos uma parte' : 'Segui uma parte',
+        nada: 'Não deu para seguir',
+        descricaoDeTudo: 'Os remédios e as orientações da equipe.',
+      );
+    }
     return TextosDoDiario._(
-      titulo: deOutro ? 'Como foi o dia de $nome?' : 'Como foi o seu dia?',
-      subtitulo: deOutro
-          ? 'Suas respostas ajudam a terapia de $nome a acompanhar a semana.'
-          : 'Suas respostas ajudam a sua terapia a acompanhar a semana.',
-      perguntaAdesao: 'E a rotina combinada, deu para seguir?',
-      perguntaIntensidade: 'O quanto o dia foi difícil?',
-      perguntaSintoma: 'O que mais pesou hoje?',
-      sintomas: acontecimentosDaTerapiaOcupacional,
-      resumoAdesao: 'Rotina',
-      resumoSintoma: 'O que mais pesou',
-      resumoSintomaNoRegistro: 'O que mais pesou',
-      adesaoQueFalta: 'a rotina',
-      sintomaQueFalta: 'o que mais pesou',
-      subtituloDoAtalho: 'Registre o dia no diário. Leva menos de 1 minuto.',
-      rotulos: {
-        Adesao.total: deOutro ? 'Seguimos' : 'Segui',
-        Adesao.parcial: 'Em parte',
-        Adesao.nenhuma: 'Não deu hoje',
-      },
+      tituloDoDiario: deOutro ? 'Diário de $nome' : 'Seu diário',
+      subtituloDoDiario:
+          'O que você registra em casa. ${to ? 'A terapeuta' : 'A equipe'} '
+          'lê e marca como revisado.',
+      tituloDoNovo: deOutro
+          ? 'Como foi o dia de $nome?'
+          : 'Como foi o seu dia?',
+      deQuemNoTitulo: deOutro ? ' de $nome' : '',
+      oDia: deOutro ? 'o dia de $nome' : 'o seu dia',
+      sobreNaFrase: deOutro ? ' sobre $nome' : '',
+      perguntaAdesao: pergunta,
+      faltaAdesao: falta,
+      termoDaAdesao: to ? 'Atividades em casa' : 'Tratamento',
+      prefixoNaLista: to ? 'Atividades' : 'Tratamento',
+      exemploDoQueContar: to
+          ? 'Pode escrever do seu jeito. Por exemplo: “recusou o jantar duas '
+                'vezes”.'
+          : 'Pode escrever do seu jeito. Por exemplo: “dormi mal e acordei '
+                'com dor de cabeça”.',
+      quemLe: to ? 'terapeuta' : 'equipe',
+      quemLeNaFrase: deOutro
+          ? '${to ? 'A terapeuta' : 'A equipe'} de $nome'
+          : (to ? 'A sua terapeuta' : 'A sua equipe'),
+      subtituloDoAtalho: deOutro
+          ? 'Conte como foi o dia de $nome. Leva menos de 1 minuto.'
+          : 'Conte como foi o seu dia. Leva menos de 1 minuto.',
+      opcoesDaAdesao: opcoes,
     );
   }
 
-  final String titulo;
-  final String subtitulo;
+  static Map<Adesao, OpcaoDeCartao<Adesao>> _opcoes({
+    required String tudo,
+    required String parte,
+    required String nada,
+    required String descricaoDeTudo,
+  }) => {
+    Adesao.total: OpcaoDeCartao(
+      valor: Adesao.total,
+      titulo: tudo,
+      descricao: descricaoDeTudo,
+    ),
+    Adesao.parcial: OpcaoDeCartao(
+      valor: Adesao.parcial,
+      titulo: parte,
+      descricao: 'Deu para fazer algumas coisas, outras não.',
+    ),
+    Adesao.nenhuma: OpcaoDeCartao(
+      valor: Adesao.nenhuma,
+      titulo: nada,
+      descricao: 'O dia não permitiu. Tudo bem, é comum.',
+    ),
+  };
+
+  /// "Diário de Miguel" | "Seu diário".
+  final String tituloDoDiario;
+  final String subtituloDoDiario;
+
+  /// "Como foi o dia de Miguel?" | "Como foi o seu dia?".
+  final String tituloDoNovo;
+
+  /// " de Miguel" | "" ("Corrigir registro de Miguel").
+  final String deQuemNoTitulo;
+
+  /// "o dia de Miguel" | "o seu dia".
+  final String oDia;
+
+  /// " sobre Miguel" | "" ("O que você contou sobre Miguel chegou…").
+  final String sobreNaFrase;
+
+  /// A primeira pergunta, a única obrigatória (D32).
   final String perguntaAdesao;
-  final String perguntaIntensidade;
-  final String perguntaSintoma;
-  final List<String> sintomas;
 
-  /// Rótulo da adesão nos resumos (TM04, TM14).
-  final String resumoAdesao;
+  /// A mensagem quando a primeira pergunta fica sem resposta.
+  final String faltaAdesao;
 
-  /// Rótulo do sintoma no resumo do envio (TM04).
-  final String resumoSintoma;
+  /// "Atividades em casa" | "Tratamento", no recibo.
+  final String termoDaAdesao;
 
-  /// Rótulo do sintoma num registro já feito (TM14).
-  final String resumoSintomaNoRegistro;
+  /// "Atividades" | "Tratamento", na lista ("Atividades: fizemos parte").
+  final String prefixoNaLista;
+  final String exemploDoQueContar;
 
-  /// "Para enviar, escolha os remédios" ou "a rotina".
-  final String adesaoQueFalta;
+  /// "terapeuta" | "equipe" ("Aguardando a terapeuta").
+  final String quemLe;
 
-  /// "… e o sintoma" ou "… e o que mais pesou".
-  final String sintomaQueFalta;
+  /// "A terapeuta de Miguel" | "A sua terapeuta" | "A sua equipe".
+  final String quemLeNaFrase;
+
+  /// O cartão do diário no Início.
   final String subtituloDoAtalho;
-  final Map<Adesao, String> _rotulos;
+  final Map<Adesao, OpcaoDeCartao<Adesao>> opcoesDaAdesao;
 
-  /// O texto da opção de adesão (o do enum no diário clínico).
-  String rotuloDaAdesao(Adesao a) => _rotulos[a] ?? a.rotulo;
+  /// O título da opção de adesão ("Fizemos parte").
+  String tituloDaAdesao(Adesao a) => opcoesDaAdesao[a]!.titulo;
+
+  /// "Atividades: fizemos parte" (quadro 18e).
+  String adesaoNaLista(Adesao a) =>
+      '$prefixoNaLista: ${tituloDaAdesao(a).toLowerCase()}';
 }
 
 /// As [TextosDoDiario] do perfil ativo, para as telas que mostram ou pedem
-/// um registro (TM02, TM04, TM14, TM15).
+/// um registro. Sem perfil (teste isolado), a voz do titular só com TO.
 TextosDoDiario palavrasDoDiario(BuildContext context) {
   final perfil = context.select<Sessao, Perfil?>((s) => s.perfilAtivo);
-  return perfil == null ? TextosDoDiario.clinico : TextosDoDiario.para(perfil);
+  return perfil == null ? _semPerfil : TextosDoDiario.para(perfil);
 }
 
-/// As perguntas do diário (RFM03, RNFM02): adesão, intensidade, sintoma e a
-/// observação opcional. Usadas no cadastro (TM03) e na correção (TM15, D17),
-/// para as duas telas perguntarem igual.
+final TextosDoDiario _semPerfil = TextosDoDiario._(
+  tituloDoDiario: 'Seu diário',
+  subtituloDoDiario:
+      'O que você registra em casa. A terapeuta lê e marca como revisado.',
+  tituloDoNovo: 'Como foi o seu dia?',
+  deQuemNoTitulo: '',
+  oDia: 'o seu dia',
+  sobreNaFrase: '',
+  perguntaAdesao: 'Você conseguiu fazer as atividades em casa?',
+  faltaAdesao: 'Conte se você conseguiu fazer as atividades em casa.',
+  termoDaAdesao: 'Atividades em casa',
+  prefixoNaLista: 'Atividades',
+  exemploDoQueContar:
+      'Pode escrever do seu jeito. Por exemplo: “recusou o jantar duas '
+      'vezes”.',
+  quemLe: 'terapeuta',
+  quemLeNaFrase: 'A sua terapeuta',
+  subtituloDoAtalho: 'Conte como foi o seu dia. Leva menos de 1 minuto.',
+  opcoesDaAdesao: TextosDoDiario._opcoes(
+    tudo: 'Fiz tudo',
+    parte: 'Fiz parte',
+    nada: 'Não deu para fazer',
+    descricaoDeTudo: 'Deu para seguir as orientações da terapeuta.',
+  ),
+);
+
+/// O estado das quatro perguntas (quadros 18e e 18f), para o registro novo
+/// (TM13) e a correção (TM15) perguntarem igual. Só a primeira é obrigatória
+/// (RNFM02: nenhum texto é exigido).
+class RespostasDoDiario extends ChangeNotifier {
+  RespostasDoDiario({EntradaDoDiario? inicial})
+    : _adesao = inicial?.adesao,
+      _intensidade = inicial?.intensidadeSintoma,
+      sintomas = TextEditingController(text: inicial?.sintomas ?? ''),
+      observacoes = TextEditingController(text: inicial?.observacoes ?? '');
+
+  /// "Aconteceu alguma coisa que você queira contar?"
+  final TextEditingController sintomas;
+
+  /// "Quer deixar mais alguma observação?"
+  final TextEditingController observacoes;
+
+  Adesao? _adesao;
+  Intensidade? _intensidade;
+  bool _faltaAdesao = false;
+  bool _descartado = false;
+
+  Adesao? get adesao => _adesao;
+  Intensidade? get intensidade => _intensidade;
+
+  /// A primeira pergunta ficou sem resposta na última tentativa de enviar.
+  bool get faltaAdesao => _faltaAdesao;
+
+  void escolherAdesao(Adesao valor) {
+    _adesao = valor;
+    _faltaAdesao = false;
+    avisar();
+  }
+
+  /// `null` = "Deixar sem resposta".
+  void escolherIntensidade(Intensidade? valor) {
+    _intensidade = valor;
+    avisar();
+  }
+
+  /// As respostas como o corpo da API, ou `null` (e [faltaAdesao]) sem a
+  /// primeira.
+  EntradaDoDiario? entrada() {
+    final adesao = _adesao;
+    if (adesao == null) {
+      _faltaAdesao = true;
+      avisar();
+      return null;
+    }
+    return EntradaDoDiario(
+      adesao: adesao,
+      sintomas: sintomas.text,
+      intensidadeSintoma: _intensidade,
+      observacoes: observacoes.text,
+    );
+  }
+
+  /// Volta tudo ao começo.
+  void limpar() {
+    _adesao = null;
+    _intensidade = null;
+    _faltaAdesao = false;
+    sintomas.clear();
+    observacoes.clear();
+    avisar();
+  }
+
+  @protected
+  void avisar() {
+    if (!_descartado) notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _descartado = true;
+    sintomas.dispose();
+    observacoes.dispose();
+    super.dispose();
+  }
+}
+
+/// As quatro perguntas do diário (quadros 18e e 18f): a adesão em cartões,
+/// "Aconteceu alguma coisa que você queira contar?", "O quanto isso
+/// atrapalhou o dia?" (quatro cartões e "Deixar sem resposta") e "Quer
+/// deixar mais alguma observação?". O formulário nunca diz "alerta" nem
+/// "crítico".
 class CamposDoDiario extends StatelessWidget {
   const CamposDoDiario({
     super.key,
-    required this.adesao,
-    required this.intensidade,
-    required this.sintoma,
-    required this.observacao,
-    required this.aoMudarAdesao,
-    required this.aoMudarIntensidade,
-    required this.aoMudarSintoma,
-    this.palavras = TextosDoDiario.clinico,
+    required this.respostas,
+    required this.palavras,
   });
 
-  final Adesao? adesao;
-  final Intensidade? intensidade;
-  final String? sintoma;
-  final TextEditingController observacao;
-  final ValueChanged<Adesao> aoMudarAdesao;
-  final ValueChanged<Intensidade> aoMudarIntensidade;
-  final ValueChanged<String> aoMudarSintoma;
-
-  /// As palavras do diário para o paciente (F1).
+  final RespostasDoDiario respostas;
   final TextosDoDiario palavras;
+
+  static const TextStyle _pergunta = TextStyle(
+    fontSize: 15,
+    fontWeight: FontWeight.w600,
+    color: CoresTerae.neutro900,
+  );
 
   @override
   Widget build(BuildContext context) {
-    final textos = Theme.of(context).textTheme;
+    final r = respostas;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        SeletorOpcoes<Adesao>(
+        GrupoDeCartoes<Adesao>(
           key: const Key('seletor-adesao'),
-          rotulo: palavras.perguntaAdesao,
-          valor: adesao,
-          aoMudar: aoMudarAdesao,
-          opcoes: [
-            for (final a in Adesao.values)
-              OpcaoSeletor(
-                valor: a,
-                rotulo: palavras.rotuloDaAdesao(a),
-                icone: iconeDaAdesao(a),
-                cores: CoresTerae.daAdesao(a),
-              ),
-          ],
+          pergunta: palavras.perguntaAdesao,
+          valor: r.adesao,
+          aoMudar: r.escolherAdesao,
+          erro: r.faltaAdesao ? palavras.faltaAdesao : null,
+          opcoes: [for (final a in Adesao.values) palavras.opcoesDaAdesao[a]!],
         ),
         const SizedBox(height: MedidasTerae.espacoGrande),
-        SeletorOpcoes<Intensidade>(
+        _CampoDeTexto(
+          chave: const Key('campo-sintomas'),
+          pergunta: 'Aconteceu alguma coisa que você queira contar?',
+          ajuda: palavras.exemploDoQueContar,
+          controlador: r.sintomas,
+          linhas: 4,
+        ),
+        const SizedBox(height: MedidasTerae.espacoGrande),
+        GrupoDeCartoes<Intensidade>(
           key: const Key('seletor-intensidade'),
-          rotulo: palavras.perguntaIntensidade,
-          colunas: 2,
-          valor: intensidade,
-          aoMudar: aoMudarIntensidade,
+          pergunta: 'O quanto isso atrapalhou o dia?',
+          opcional: true,
+          estiloDaPergunta: _pergunta,
+          valor: r.intensidade,
+          aoMudar: r.escolherIntensidade,
           opcoes: [
             for (final i in Intensidade.values)
-              OpcaoSeletor(
-                valor: i,
-                rotulo: i.rotulo,
-                icone: iconeDaIntensidade(i),
-                cores: CoresTerae.daIntensidade(i),
-              ),
+              OpcaoDeCartao(valor: i, titulo: i.rotulo),
           ],
         ),
-        if (intensidade?.ehCritica ?? false) ...[
-          const SizedBox(height: MedidasTerae.espacoPequeno),
-          Text(
-            'Ao enviar, vamos mostrar na hora os contatos de ajuda.',
-            style: textos.bodySmall?.copyWith(color: CoresTerae.sevCritica),
+        if (r.intensidade != null)
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton(
+              key: const Key('deixar-sem-resposta'),
+              onPressed: () => r.escolherIntensidade(null),
+              child: const Text('Deixar sem resposta'),
+            ),
+          ),
+        const SizedBox(height: MedidasTerae.espacoGrande),
+        _CampoDeTexto(
+          chave: const Key('campo-observacoes'),
+          pergunta: 'Quer deixar mais alguma observação?',
+          controlador: r.observacoes,
+          linhas: 3,
+        ),
+      ],
+    );
+  }
+}
+
+class _CampoDeTexto extends StatelessWidget {
+  const _CampoDeTexto({
+    required this.chave,
+    required this.pergunta,
+    required this.controlador,
+    required this.linhas,
+    this.ajuda,
+  });
+
+  final Key chave;
+  final String pergunta;
+  final String? ajuda;
+  final TextEditingController controlador;
+  final int linhas;
+
+  @override
+  Widget build(BuildContext context) {
+    final ajuda = this.ajuda;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        ExcludeSemantics(
+          child: Text.rich(
+            TextSpan(
+              text: pergunta,
+              children: const [
+                TextSpan(
+                  text: ' (opcional)',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w400,
+                    color: CoresTerae.neutro600,
+                  ),
+                ),
+              ],
+            ),
+            style: CamposDoDiario._pergunta,
+          ),
+        ),
+        if (ajuda != null) ...[
+          const SizedBox(height: 4),
+          ExcludeSemantics(
+            child: Text(
+              ajuda,
+              style: const TextStyle(fontSize: 14, color: CoresTerae.neutro600),
+            ),
           ),
         ],
-        const SizedBox(height: MedidasTerae.espacoGrande),
-        SeletorOpcoes<String>(
-          key: const Key('seletor-sintoma'),
-          rotulo: palavras.perguntaSintoma,
-          colunas: 2,
-          valor: sintoma,
-          aoMudar: aoMudarSintoma,
-          opcoes: [
-            for (final s in palavras.sintomas)
-              OpcaoSeletor(valor: s, rotulo: s),
-          ],
-        ),
-        const SizedBox(height: MedidasTerae.espacoGrande),
+        const SizedBox(height: MedidasTerae.espacoPequeno),
         TextField(
-          key: const Key('campo-observacao'),
-          controller: observacao,
-          minLines: 3,
-          maxLines: 6,
-          maxLength: 500,
+          key: chave,
+          controller: controlador,
+          minLines: linhas,
+          maxLines: linhas + 3,
+          maxLength: limiteDoTextoDoDiario,
           textCapitalization: TextCapitalization.sentences,
-          decoration: const InputDecoration(
-            labelText: 'Quer contar mais alguma coisa? (opcional)',
-            hintText: 'Escreva com suas palavras, se quiser.',
+          // A pergunta já está à vista acima; o rótulo do campo fica só
+          // para o leitor de tela (transparente e sem flutuar).
+          decoration: InputDecoration(
+            labelText: ajuda == null
+                ? '$pergunta (opcional)'
+                : '$pergunta (opcional). $ajuda',
+            floatingLabelBehavior: FloatingLabelBehavior.never,
+            labelStyle: const TextStyle(color: Colors.transparent),
             alignLabelWithHint: true,
           ),
         ),
@@ -245,16 +435,3 @@ class CamposDoDiario extends StatelessWidget {
     );
   }
 }
-
-IconData iconeDaAdesao(Adesao a) => switch (a) {
-  Adesao.total => Icons.check_circle_outline,
-  Adesao.parcial => Icons.remove_circle_outline,
-  Adesao.nenhuma => Icons.cancel_outlined,
-};
-
-IconData iconeDaIntensidade(Intensidade i) => switch (i) {
-  Intensidade.leve => Icons.sentiment_satisfied,
-  Intensidade.moderada => Icons.sentiment_neutral,
-  Intensidade.grave => Icons.sentiment_dissatisfied,
-  Intensidade.critica => Icons.warning_amber,
-};

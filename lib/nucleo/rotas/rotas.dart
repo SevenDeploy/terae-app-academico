@@ -24,7 +24,7 @@ abstract final class Rotas {
   /// TM02 Início (aba 1) — paciente.
   static const String pacienteInicio = '/paciente/inicio';
 
-  /// TM03 Diário (aba 2) — paciente.
+  /// TM03 Diário (aba 2) — paciente; a lista do diário (P3, quadro 18e).
   static const String pacienteDiario = '/paciente/diario';
 
   /// Segmentos das sub-rotas do diário (só o roteador usa).
@@ -38,16 +38,17 @@ abstract final class Rotas {
   /// TM05 Ajuda imediata — paciente; tela cheia, fora das abas.
   static const String pacienteDiarioAjuda = '$pacienteDiario/$segmentoAjuda';
 
-  /// TM13 Meus registros (Atividade 4) — paciente; lista e busca do diário,
-  /// empilhada sobre as abas.
-  static const String pacienteRegistros = '/paciente/registros';
+  /// TM13 Novo registro (P3, quadro 18e; antes "Meus registros", cuja lista
+  /// virou a TM03) — paciente; empilhada sobre as abas.
+  static const String pacienteNovoRegistro = '/paciente/registros/novo';
 
-  /// TM14 Registro (Atividade 4) — paciente; visualização de um registro,
+  /// TM14 Registro (Atividade 4; P3) — paciente; um registro com as versões,
   /// com o id na consulta: use [registro].
   static const String pacienteRegistro = '/paciente/registros/registro';
 
-  /// TM15 Corrigir registro (Atividade 4) — paciente; edição no mesmo dia
-  /// (D17), com o id na consulta: use [corrigirRegistro].
+  /// TM15 Corrigir registro (Atividade 4; P3, quadro 18f) — paciente; cria a
+  /// versão seguinte (D17 revista), com o id na consulta: use
+  /// [corrigirRegistro].
   static const String pacienteCorrigirRegistro = '/paciente/registros/corrigir';
 
   /// Caminho da TM14 para o registro [id].
@@ -143,7 +144,7 @@ abstract final class Rotas {
     pacienteJornada,
     pacienteCuidadores,
     pacienteConta,
-    pacienteRegistros,
+    pacienteNovoRegistro,
     pacienteRegistro,
     pacienteCorrigirRegistro,
   };
@@ -191,7 +192,7 @@ abstract final class Rotas {
     'TM08': cuidadorInicio,
     'TM11': cuidadorMedicacao,
     'TM12': cuidadorAgenda,
-    'TM13': pacienteRegistros,
+    'TM13': pacienteNovoRegistro,
     'TM14': pacienteRegistro,
     'TM15': pacienteCorrigirRegistro,
     'TM16': pacienteCasa,
