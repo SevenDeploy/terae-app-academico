@@ -56,3 +56,18 @@ Legenda: PASSOU · FALHOU (achado, corrigido ou registrado) · NÃO TESTÁVEL (e
   o texto é do `sessaoEncerrada`. No portal, o aviso não volta atrás; falta um texto próprio para o 409 depois do aviso.
 - O cuidador (Rosa) vê "Corrigir" na resposta que outra conta registrou; o portal só mostra "Registrado hoje por…".
 - A API limita 10 códigos de acesso por conta em 24 h e um a cada 60 s: rodadas seguidas de teste esgotam a cota.
+
+## Conferência na web da clínica (27/11/2026, noite)
+
+Feita depois dos testes no emulador, pela SPA da terapeuta (`http://[::1]:5201`, atalho de dev sem senha; o Vite escuta só
+em IPv6), olhando a tela, não só o banco:
+
+| Do app para a web | Resultado |
+|---|---|
+| Diário enviado, corrigido (versão 2, "Ver as versões anteriores") e retirado ("Retirado pela família: Enviei sem querer") | Caixa de entrada mostra cada um, "Alice", "pelo portal" |
+| Registro escrito sem internet ("Guardado offline Mariana") | Aparece uma vez só, "A revisar" |
+| "Confirmar presença" da sessão de 01/12 14:00 | Agenda mostra "Confirmada" e "Confirmada por Portal da família" |
+
+Ainda **sem comprovação na tela**: o caminho inverso (a terapeuta "Marcar como revisada" na web e o selo virar "Revisado"
+no app). Pede uma entrada no app com a Mariana, que só terá cota de código depois de 24 h do último pedido (teto de 10 por
+24 h). Os testes de unidade cobrem o selo "Revisado".
