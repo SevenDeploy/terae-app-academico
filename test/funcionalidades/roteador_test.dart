@@ -465,6 +465,11 @@ void main() {
       await tester.pumpAndSettle();
       // Empilhada (push): o caminho de base continua o do diário.
       _naTela('TM05');
+      // M1 (revisão da P4): sem registro, nada de "Envio pendente".
+      expect(find.text('Precisa de ajuda agora?'), findsOneWidget);
+      expect(find.byKey(const Key('ajuda-nao-avisa')), findsOneWidget);
+      expect(find.textContaining('Envio pendente'), findsNothing);
+      expect(find.byKey(const Key('situacao-aviso')), findsNothing);
       await _voltarDoAndroid(tester);
       expect(_local(roteador), Rotas.pacienteDiario);
       _naTela('TM03');
@@ -474,6 +479,12 @@ void main() {
       final roteador = await _abrir(tester, Sessao(), em: Rotas.ajuda);
       expect(_local(roteador), Rotas.ajuda);
       _naTela('TM05');
+      expect(find.textContaining('Envio pendente'), findsNothing);
+      // "Ciente" sem nada embaixo leva à TM00.
+      await tester.ensureVisible(find.byKey(const Key('ciente')));
+      await tester.tap(find.byKey(const Key('ciente')));
+      await tester.pumpAndSettle();
+      expect(_local(roteador), Rotas.boasVindas);
     });
 
     testWidgets('com um perfil só, o nome no topo não abre a folha', (

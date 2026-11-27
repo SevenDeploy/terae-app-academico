@@ -198,7 +198,7 @@ GoRouter criarRoteador({
       GoRoute(
         path: Rotas.ajuda,
         pageBuilder: (context, state) =>
-            _pagina(state, const AjudaImediataTela(envio: null)),
+            _pagina(state, const AjudaImediataTela.avulsa()),
       ),
       // A Jornada (marcos e metas) saiu da barra: empilha sobre as abas,
       // aberta pelo Em casa.

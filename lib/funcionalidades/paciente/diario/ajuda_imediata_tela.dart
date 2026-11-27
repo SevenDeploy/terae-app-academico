@@ -30,10 +30,18 @@ import 'resultado_provisorio.dart';
 /// mesmo efeito (roteador). A `Key('TM05')` no Scaffold raiz faz parte do
 /// contrato (testes de navegação).
 class AjudaImediataTela extends StatelessWidget {
-  const AjudaImediataTela({super.key, this.envio});
+  const AjudaImediataTela({super.key, this.envio}) : avulsa = false;
+
+  /// A ajuda do atalho "Ajuda" do topo (`/ajuda`, como `/portal/ajuda`):
+  /// só os números de emergência, sem registro nem envio (revisão da P4,
+  /// M1). "Ciente" volta para onde a pessoa estava.
+  const AjudaImediataTela.avulsa({super.key}) : envio = null, avulsa = true;
 
   /// Resultado do envio, vindo do diário por `extra`; nulo em link direto.
   final ResultadoEnvio? envio;
+
+  /// Aberta pelo atalho do topo, sem registro.
+  final bool avulsa;
 
   @override
   Widget build(BuildContext context) {
@@ -70,14 +78,18 @@ class AjudaImediataTela extends StatelessWidget {
                 Semantics(
                   header: true,
                   child: Text(
-                    'Procure ajuda agora',
+                    avulsa ? 'Precisa de ajuda agora?' : 'Procure ajuda agora',
                     textAlign: TextAlign.center,
                     style: textos.headlineMedium,
                   ),
                 ),
                 const SizedBox(height: MedidasTerae.espacoPequeno),
                 Text(
-                  'Você não está só. Fale agora com alguém que pode ajudar:',
+                  avulsa
+                      ? 'Estes são números de emergência, que funcionam em '
+                            'todo o Brasil.'
+                      : 'Você não está só. Fale agora com alguém que pode '
+                            'ajudar:',
                   textAlign: TextAlign.center,
                   style: textos.bodyLarge?.copyWith(
                     color: CoresTerae.neutro700,
@@ -86,37 +98,49 @@ class AjudaImediataTela extends StatelessWidget {
                 const SizedBox(height: MedidasTerae.espacoGrande),
                 const FaixaEmergencia(destaque: true),
                 const SizedBox(height: MedidasTerae.espacoGrande),
-                AcompanharEnvio(
-                  envio: envio,
-                  construtor: (context, envio, andamento, tentarDeNovo) =>
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          _SituacaoDoAviso(
-                            avisada: envio?.equipeAvisada ?? false,
-                            andamento: andamento,
-                            semEnvio: envio == null,
-                          ),
-                          if (tentarDeNovo != null) ...[
-                            const SizedBox(height: MedidasTerae.espaco),
-                            BotaoGrande(
-                              key: const Key('tentar-de-novo'),
-                              rotulo: 'Tentar de novo',
-                              icone: Icons.refresh,
-                              variante: VarianteBotao.secundario,
-                              aoTocar: tentarDeNovo,
+                if (avulsa)
+                  const _NaoAvisaAClinica()
+                else
+                  AcompanharEnvio(
+                    envio: envio,
+                    construtor: (context, envio, andamento, tentarDeNovo) =>
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            _SituacaoDoAviso(
+                              avisada: envio?.equipeAvisada ?? false,
+                              andamento: andamento,
+                              semEnvio: envio == null,
                             ),
+                            if (tentarDeNovo != null) ...[
+                              const SizedBox(height: MedidasTerae.espaco),
+                              BotaoGrande(
+                                key: const Key('tentar-de-novo'),
+                                rotulo: 'Tentar de novo',
+                                icone: Icons.refresh,
+                                variante: VarianteBotao.secundario,
+                                aoTocar: tentarDeNovo,
+                              ),
+                            ],
                           ],
-                        ],
-                      ),
-                ),
+                        ),
+                  ),
                 const SizedBox(height: MedidasTerae.espacoGrande),
                 BotaoGrande(
                   key: const Key('ciente'),
                   rotulo: 'Ciente',
                   icone: Icons.check,
                   variante: VarianteBotao.secundario,
-                  aoTocar: () => context.go(Rotas.pacienteInicio),
+                  aoTocar: () {
+                    final navegador = Navigator.of(context);
+                    if (avulsa && navegador.canPop()) {
+                      navegador.pop();
+                    } else {
+                      context.go(
+                        avulsa ? Rotas.boasVindas : Rotas.pacienteInicio,
+                      );
+                    }
+                  },
                 ),
               ],
             ),
@@ -247,6 +271,43 @@ class _SituacaoDoAvisoState extends State<_SituacaoDoAviso> {
                 ),
               ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// "Esta página não avisa a clínica." — a nota da ajuda avulsa do portal.
+class _NaoAvisaAClinica extends StatelessWidget {
+  const _NaoAvisaAClinica();
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      key: const Key('ajuda-nao-avisa'),
+      container: true,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: CoresTerae.atencaoFundo,
+          borderRadius: const BorderRadius.all(
+            Radius.circular(MedidasTerae.raioCartao),
+          ),
+          border: Border.all(color: CoresTerae.atencaoBorda),
+        ),
+        child: const Padding(
+          padding: EdgeInsets.all(MedidasTerae.espaco),
+          child: Text.rich(
+            TextSpan(
+              children: [
+                TextSpan(
+                  text: 'Esta página não avisa a clínica. ',
+                  style: TextStyle(fontWeight: FontWeight.w700),
+                ),
+                TextSpan(text: 'Ela só mostra para quem ligar.'),
+              ],
+            ),
+            style: TextStyle(fontSize: 15, color: CoresTerae.atencao),
           ),
         ),
       ),
