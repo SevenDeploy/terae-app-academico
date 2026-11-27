@@ -153,6 +153,51 @@ void main() {
       );
     });
 
+    for (final invalido in ['', 'abc', '--']) {
+      testWidgets('telefone do portal sem dígitos ("$invalido") não vira '
+          'tel: vazio nem o número fictício', (tester) async {
+        await abrirAppDoPaciente(
+          tester,
+          em: Rotas.pacienteSessoes,
+          sessao: _sessaoLocal(telefone: invalido),
+        );
+        expect(find.byKey(const Key('ligar-para-a-clinica')), findsNothing);
+        expect(find.textContaining('fictício'), findsNothing);
+      });
+    }
+
+    testWidgets('telefone do portal sem o nome da clínica continua do '
+        'portal: liga para ele, nunca o fictício', (tester) async {
+      final base = vinculosAna();
+      final ana = Paciente(
+        id: 'p-ana',
+        contaId: 'c-ana',
+        profissionalRefId: '',
+        nome: 'Ana Lúcia Martins',
+        ativo: true,
+        telefoneDaClinica: '+55 65 3000-0000',
+      );
+      final sessao = Sessao()
+        ..entrar(
+          VinculosDaConta(
+            conta: base.conta,
+            pacientes: [ana],
+            qualidades: base.qualidades,
+          ),
+        );
+      final app = await abrirAppDoPaciente(
+        tester,
+        em: Rotas.pacienteSessoes,
+        sessao: sessao,
+      );
+      expect(find.textContaining('fictício'), findsNothing);
+      expect(find.byKey(const Key('whatsapp-da-clinica')), findsNothing);
+      await tocar(tester, find.byKey(const Key('ligar-para-a-clinica')));
+      expect(app.lancador.abertos.map((u) => u.toString()), [
+        'tel:+556530000000',
+      ]);
+    });
+
     testWidgets('no Firebase continua o número fictício da demonstração', (
       tester,
     ) async {

@@ -747,3 +747,12 @@ marinho, relógio e ícones da barra de status ficavam escuros.
 Ficou para depois (anotado em `docs/paridade-com-portal.md`): a aba Em casa do cuidador no modo local, o Início do
 cuidador no desenho do portal, os botões de presença no cartão da próxima sessão e o telefone da clínica vindo do
 `/eu`. A Mariana (Alice) não entrou no emulador: a conta bateu o teto de 10 códigos em 24 h até as 21:41 UTC.
+
+## Registros da revisão das mudanças PV1–PV7 (27/11/2026, aprovada com registros)
+
+- Corrigidos: o telefone da clínica decide a fonte por `nomeDaClinica` **ou** `telefoneDaClinica` (não só pelo nome), e
+  só vale com pelo menos 8 dígitos (vazio, "abc" ou "--" não viram `tel:` vazio nem o número fictício).
+- Abertos (baixa gravidade): (a) depois da hora da sessão sem resposta, o selo diz "Falta confirmar a presença" e não há
+  botão (D27); (b) a escala do texto do topo para em 1,15× (troca consciente, restrição de acessibilidade); (c) "Ver a
+  Jornada" do programa encerrado não checa `capacidades.jornada` (inalcançável hoje no modo local); (d) falta teste do
+  topo a 360 dp com a fonte em 2×.

@@ -195,6 +195,14 @@ class _FalarComAClinica extends StatelessWidget {
 
   final Paciente paciente;
 
+  /// O telefone do portal só vale com pelo menos 8 dígitos (vazio, "abc" ou
+  /// "--" viram "sem número", nunca um `tel:` vazio).
+  static String? _telefoneValido(String? telefone) {
+    if (telefone == null) return null;
+    final digitos = telefone.replaceAll(RegExp(r'[^0-9]'), '');
+    return digitos.length >= 8 ? telefone : null;
+  }
+
   /// `tel:+556530000000` a partir de "+55 65 3000-0000".
   static Uri _tel(String telefone) =>
       Uri(scheme: 'tel', path: telefone.replaceAll(RegExp(r'[^0-9+]'), ''));
@@ -205,8 +213,9 @@ class _FalarComAClinica extends StatelessWidget {
     final lancador = context.read<LancadorExterno>();
     // O Terae local manda o nome e o telefone da clínica no /eu; o Firebase
     // não, e lá vale o número fictício da demonstração.
-    final doPortal = paciente.nomeDaClinica != null;
-    final telefone = paciente.telefoneDaClinica;
+    final doPortal =
+        paciente.nomeDaClinica != null || paciente.telefoneDaClinica != null;
+    final telefone = _telefoneValido(paciente.telefoneDaClinica);
     final semNumero = doPortal && telefone == null;
     return Cartao(
       key: const Key('falar-com-a-clinica'),
