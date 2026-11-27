@@ -124,6 +124,14 @@ class DiarioPersistente implements RepositorioDiario {
       return await _sinc.enviar(novo);
     } on RecusaDeRegra catch (r) {
       if (r.motivo == MotivoRecusa.acessoNegado) {
+        // A cópia local estava velha (revisado no servidor, ou a correção
+        // anterior chegou depois do prazo): traz a do servidor, para a lista
+        // mostrar o que vale, e diz que este registro não muda mais.
+        try {
+          await _sinc.buscarDoServidor();
+        } on RecusaDeRegra {
+          // Sem a busca, a lista se acerta na próxima sincronização.
+        }
         throw const RecusaDeRegra(MotivoRecusa.registroNaoMudaMais);
       }
       if (ehSemConexao(r)) {

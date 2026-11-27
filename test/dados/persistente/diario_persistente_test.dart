@@ -369,6 +369,40 @@ void main() {
       );
     });
 
+    test('o documento das A3–A5 com alerta continua "avisou a equipe" '
+        'depois da sincronização e não muda mais (revisão da P3)', () async {
+      final paciente = m.firestore.collection('pacientes').doc(_paciente);
+      const id = 'dd000000-0000-4000-8000-000000000077';
+      await paciente.collection('registros').doc(id).set({
+        'id': id,
+        'pacienteId': _paciente,
+        'registradoEm': '2026-10-01T00:40:00.000Z',
+        'adesao': 'total',
+        'intensidade': 'critica',
+        'sintomaPredominante': 'Tristeza',
+        'observacao': null,
+        'situacaoEnvio': 'enviado',
+        'atualizadoEm': null,
+        'excluidoEm': null,
+      });
+      final alerta = idDoAlertaDe(id);
+      await paciente.collection('alertas').doc(alerta).set({
+        'id': alerta,
+        'registroId': id,
+        'regraDisparada': 'intensidadeCritica',
+        'emitidoEm': '2026-10-01T00:40:00.000Z',
+        'cienteEm': null,
+      });
+      await m.persistencia.sincronizador.sincronizar();
+      final local = await diario.registro(id);
+      expect(local.sintomas, 'Tristeza');
+      expect(local.alertouAEquipe, isTrue);
+      await expectLater(
+        diario.corrigir(id, EntradaDoDiario(adesao: Adesao.parcial)),
+        _recusa(MotivoRecusa.registroNaoMudaMais),
+      );
+    });
+
     test(
       'o guardado neste aparelho ainda não muda; inexistente recusa',
       () async {

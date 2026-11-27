@@ -153,23 +153,50 @@ service cloud.firestore {
         allow read: if ehTitular(pid);
         allow create: if ehTitular(pid) && registroValido()
           && request.resource.data.versao == 1;
+        function podeMudar() {
+          return resource.data.get('revisadoEm', null) == null
+            && resource.data.get('retiradoEm', null) == null
+            && !resource.data.get('alertouAEquipe', false);
+        }
+
+        // O documento das A3–A5 (sem `versao`): o aparelho que atualizou o
+        // app reenvia a correção ou a exclusão que ainda estava na fila, já
+        // no formato novo (D39). A semente nova (`--reiniciar`) apaga esses
+        // documentos; isto cobre o Firebase antes dela.
+        function doFormatoAntigo() {
+          return !('versao' in resource.data);
+        }
+
+        // Corrigir: a versão seguinte, com as anteriores intactas e o mesmo
+        // primeiro recebimento (R04: nada se perde).
+        function versaoSeguinte() {
+          let d = request.resource.data;
+          let anteriores = resource.data.get('versoesAnteriores', []);
+          return d.versao == resource.data.get('versao', 1) + 1
+            && d.versoesAnteriores[0:anteriores.size()] == anteriores
+            && d.get('enviadoEm', null) == resource.data.get('enviadoEm', null)
+            && d.get('retiradoEm', null) == null;
+        }
+
         // O 409 do portal: o revisado, o retirado e o que avisou a equipe não
-        // mudam mais. Mudam: a versão seguinte (corrigir), a retirada com
-        // motivo, ou só o instante do envio (o reenvio da fila que já tinha
-        // chegado).
+        // mudam mais. Mudam: a versão seguinte (corrigir) e a retirada com
+        // motivo. O reenvio da fila que já tinha chegado (o lote que estourou
+        // o prazo e gravou depois) só muda o instante do envio e vale sempre,
+        // também no que avisou a equipe.
         allow update: if ehTitular(pid) && registroValido()
-          && resource.data.get('revisadoEm', null) == null
-          && resource.data.get('retiradoEm', null) == null
-          && !resource.data.get('alertouAEquipe', false)
           && request.resource.data.registradoEm == resource.data.registradoEm
           && (
-            (request.resource.data.versao == resource.data.get('versao', 1) + 1
-              && request.resource.data.get('retiradoEm', null) == null)
-            || (request.resource.data.versao == resource.data.get('versao', 1)
-              && soMudam(['retiradoEm', 'motivoDaRetirada'])
-              && retiradaValida())
-            || (request.resource.data.versao == resource.data.get('versao', 1)
+            (request.resource.data.versao == resource.data.get('versao', 1)
               && soMudam(['enviadoEm']))
+            || (podeMudar() && doFormatoAntigo()
+              && request.resource.data.versao == 1
+              && (request.resource.data.get('retiradoEm', null) == null
+                || retiradaValida()))
+            || (podeMudar() && !doFormatoAntigo() && (
+              versaoSeguinte()
+              || (request.resource.data.versao == resource.data.versao
+                && soMudam(['retiradoEm', 'motivoDaRetirada'])
+                && retiradaValida())))
           );
         allow delete: if false;
       }

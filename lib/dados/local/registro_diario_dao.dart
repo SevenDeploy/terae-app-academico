@@ -157,7 +157,9 @@ class RegistroDiarioDao {
 
   /// Junta o que veio do servidor: o registro novo que ainda está na fila
   /// vence (é a mudança mais nova do aparelho); o resto vira a do servidor
-  /// (a revisão da terapeuta chega assim).
+  /// (a revisão da terapeuta chega assim). O registro que tem alerta no
+  /// aparelho continua "avisou a equipe" mesmo que o documento não diga (o
+  /// das A3–A5 não tem `alertouAEquipe`): ele nunca volta a poder mudar.
   Future<void> mesclarDoServidor(List<RegistroDiario> remotos) async {
     await _banco.db.transaction((t) async {
       for (final remoto in remotos) {
@@ -171,9 +173,20 @@ class RegistroDiarioDao {
             local.isNotEmpty &&
             local.single['situacao_envio'] == SituacaoEnvio.naFila.name;
         if (naFila) continue;
+        final comAlerta = await t.query(
+          'alertas',
+          columns: ['id'],
+          where: 'registro_id = ?',
+          whereArgs: [remoto.id],
+        );
         await t.insert(
           'registros_diario',
-          paraLinha(remoto.copyWith(situacaoEnvio: SituacaoEnvio.enviado)),
+          paraLinha(
+            remoto.copyWith(
+              situacaoEnvio: SituacaoEnvio.enviado,
+              alertouAEquipe: comAlerta.isNotEmpty ? true : null,
+            ),
+          ),
           conflictAlgorithm: ConflictAlgorithm.replace,
         );
       }

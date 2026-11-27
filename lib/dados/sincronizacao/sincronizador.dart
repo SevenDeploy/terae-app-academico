@@ -187,7 +187,11 @@ class Sincronizador {
         saidas.add(await enviar(r));
       } on RecusaDeRegra catch (recusa) {
         if (recusa.motivo == MotivoRecusa.semConexao) return saidas;
-        rethrow;
+        // D33 também no diário (revisão da P3): o servidor recusou este
+        // registro. Ele continua na fila (o aviso conta), e os outros, as
+        // filas e a busca seguem — senão a revisão da terapeuta nunca mais
+        // chegaria ao aparelho.
+        debugPrint('Registro ${r.id} recusado: ${recusa.motivo}');
       }
     }
     for (final fila in _filas) {
@@ -211,16 +215,18 @@ class Sincronizador {
   /// Busca no servidor os registros e alertas dos pacientes acompanhados.
   Future<void> buscarDoServidor() async {
     for (final pid in _pacientes) {
+      // Os alertas antes dos registros: a mescla confere se o registro tem
+      // alerta (o documento das A3–A5 não traz `alertouAEquipe`).
+      final alertas = await _fonte.listar(_fonte.doPaciente(pid, 'alertas'));
+      for (final m in alertas) {
+        await _dao.salvarAlerta(Alerta.fromMap(m));
+      }
       final registros = await _fonte.listar(
         _fonte.doPaciente(pid, 'registros'),
       );
       await _dao.mesclarDoServidor([
         for (final m in registros) RegistroDiario.fromMap(m),
       ]);
-      final alertas = await _fonte.listar(_fonte.doPaciente(pid, 'alertas'));
-      for (final m in alertas) {
-        await _dao.salvarAlerta(Alerta.fromMap(m));
-      }
       for (final fila in _filas) {
         try {
           await fila.buscar(pid);

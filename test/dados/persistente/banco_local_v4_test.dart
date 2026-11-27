@@ -91,6 +91,27 @@ void main() {
         situacao: 'naFila',
       ),
     );
+    // Revisão da P3: o app antigo punha a correção e a exclusão na fila.
+    await v3.insert(
+      'registros_diario',
+      _linhaV3(
+        id: 'r5',
+        intensidade: 'grave',
+        sintoma: 'Dor',
+        situacao: 'naFila',
+        atualizadoEm: '2026-10-01T13:30:00.000Z',
+      ),
+    );
+    await v3.insert(
+      'registros_diario',
+      _linhaV3(
+        id: 'r6',
+        intensidade: 'leve',
+        sintoma: 'Sono ruim',
+        situacao: 'naFila',
+        excluidoEm: '2026-10-01T13:40:00.000Z',
+      ),
+    );
     await v3.insert('alertas', {
       'id': 'al1',
       'registro_id': 'r1',
@@ -136,7 +157,14 @@ void main() {
     final r4 = (await dao.porId('r4'))!;
     expect(r4.situacaoEnvio, SituacaoEnvio.naFila);
     expect(r4.enviadoEm, isNull, reason: 'ainda não chegou');
-    expect(await dao.pendentes(), [r4]);
+    // A correção e a exclusão que esperavam na fila continuam nela, como
+    // versão 1 no formato novo (as regras aceitam a troca de formato).
+    final r5 = (await dao.porId('r5'))!;
+    expect(r5.versao, 1);
+    expect(r5.atualizadoEm, DateTime.utc(2026, 10, 1, 13, 30));
+    final r6 = (await dao.porId('r6'))!;
+    expect(r6.retirado, isTrue);
+    expect(await dao.pendentes(), unorderedEquals([r4, r5, r6]));
 
     // A lista nova lê os enviados (o retirado também) e o alerta continua.
     final pagina = await dao.pagina(_ana);

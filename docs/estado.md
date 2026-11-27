@@ -19,7 +19,7 @@ do registro já nasce com os nomes do corpo da API. Nada de produção. Fonte da
 | D39 | **D8 revista.** O registro usa os nomes do corpo de `POST /portal/diario`: `adesao` (`total`, `parcial`, `nenhuma`), `sintomas` (texto), `intensidadeSintoma` (`leve`, `moderado`, `grave`, `critico`), `observacoes`, e o motivo da retirada com a grafia da API. O `registradoEm` é o `guardadoEm` da API quando o registro esperou na fila. A leitura ainda aceita a grafia antiga (`moderada`, `critica`, `sintomaPredominante`, `observacao`, `excluidoEm`), para o documento que ficou no Firebase antes da semente nova |
 | D40 | **D32 revista.** As 4 perguntas são as do portal, e só a primeira é obrigatória: "Aconteceu alguma coisa que você queira contar?" (texto), "O quanto isso atrapalhou o dia?" (4 cartões e "Deixar sem resposta") e "Quer deixar mais alguma observação?". A primeira muda pela linha de cuidado: com TO, "Vocês conseguiram fazer as atividades em casa?"; só com acompanhamento clínico, "Você conseguiu seguir o tratamento combinado?". A voz segue a D24 ("Fizemos parte" / "Fiz parte"), e quem lê é "a terapeuta" com TO e "a equipe" sem ela. A lista fechada de sintomas sai: o sintoma escolhido das A3–A5 vira o texto contado |
 | D41 | Como no portal, **corrigir e retirar pedem a internet na hora** (sem rede, o botão fica travado com o motivo, e o repositório recusa `semConexao` sem mudar nada). Só o registro novo vai para a fila: "Guardar e enviar depois" aparece sem internet, e a TM04 diz "Registro guardado neste aparelho.", com o SAMU e o CVV quando a resposta foi "Bastante" ou "Muito". O guardado aparece em "Guardados neste aparelho", no alto da lista, com "Enviar agora", e não se corrige até chegar. O "Descartar" do portal não entra: o app não apaga o que a família escreveu (§23) |
-| D42 | O alerta continua o do §7.1: "Muito" sempre, e "Bastante" depois de "Bastante" (a "regra da clínica" do portal); sem resposta, nunca. O registro leva `alertouAEquipe` no mesmo lote do alerta (D18), e a lista diz "A equipe foi avisada". As `firestore.rules` negam a mudança de registro revisado, retirado ou que avisou a equipe, e aceitam só três atualizações: a versão seguinte, a retirada com motivo, e o reenvio da fila que só muda o `enviadoEm` |
+| D42 | O alerta continua o do §7.1: "Muito" sempre, e "Bastante" depois de "Bastante" (a "regra da clínica" do portal); sem resposta, nunca. O registro leva `alertouAEquipe` no mesmo lote do alerta (D18), e a lista diz "A equipe foi avisada". As `firestore.rules` negam a mudança de registro revisado, retirado ou que avisou a equipe, e aceitam só estas atualizações: a versão seguinte (com as anteriores intactas e o mesmo `enviadoEm`), a retirada com motivo, a troca de formato do documento das A3–A5 (sem `versao`) e o reenvio da fila que só muda o `enviadoEm`, que vale sempre, também no que avisou a equipe |
 | D43 | Navegação: a aba Diário (TM03) passa a ser a lista, 30 por vez. A TM13 deixa de ser "Meus registros" e vira o "Novo registro" (`/paciente/registros/novo`), e o atalho do Início abre ela. A TM14 é o registro com as versões, e a TM15 é a correção. A TM04 é o recibo do 18f e deixou de voltar sozinha ao Início em 3 s, porque o portal mostra "Corrigir agora" ao lado de "Voltar ao início". A D10 perde o objeto. A busca e o filtro da antiga TM13 saem, porque o portal não os tem |
 
 ### O que entrou
@@ -45,6 +45,24 @@ do registro já nasce com os nomes do corpo da API. Nada de produção. Fonte da
   - TM04 "Registro enviado." / "Correção enviada." / "Registro guardado neste aparelho." com o recibo;
   - TM05 com "A equipe da clínica foi avisada.";
   - widget `GrupoDeCartoes` (o `CartaoDeOpcao` do portal), com ícones lucide e tokens `CoresTerae`.
+
+### O que a revisão em contexto limpo achou (corrigido, com teste que falha sem a correção)
+
+1. **Bloqueante — a correção ou exclusão das A3–A5 que esperava na fila travaria a sincronização para sempre.** A
+   migração a mantém na fila como versão 1, e nenhuma regra aceitava trocar o documento antigo pelo formato novo. A
+   recusa abortava o `sincronizar()` antes da busca: a revisão da terapeuta nunca chegaria. Agora as regras aceitam a
+   troca de formato (documento sem `versao`), e o teste da migração cobre a fila com `atualizado_em` e `excluido_em`.
+2. **Bloqueante — o reenvio de um registro que avisou a equipe era recusado.** O lote que estoura o prazo ainda grava
+   depois, e o reenvio mudava só o `enviadoEm`. Agora esse reenvio vale sempre. Além disso, a D33 passou a valer
+   também no diário: um registro recusado fica na fila, e as filas e a busca seguem (`sincronizador_filas_test`).
+3. **Importante — o documento das A3–A5 com alerta voltava a poder mudar**, porque a mescla não sabia do alerta. A
+   busca agora grava os alertas antes e a mescla mantém `alertouAEquipe` quando há alerta no aparelho
+   (`diario_persistente_test`).
+4. **Menor — a correção podia reescrever as versões anteriores e o `enviadoEm`.** As regras agora conferem os dois.
+   Quando o servidor recusa uma correção, o app traz a cópia do servidor antes de dizer "não pode mais mudar".
+
+Limitação declarada: as regras não conseguem conferir o alerta de um documento das A3–A5 (o id do alerta é um hash).
+A semente com `--reiniciar` apaga esses documentos, e depois dela todo registro leva `alertouAEquipe`.
 
 ### Pendências da P3
 
