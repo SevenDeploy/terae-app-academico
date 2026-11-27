@@ -704,3 +704,14 @@ Da revisão:
    - "Tomei uma parte" quebra em 3 linhas a 360 dp;
    - a demonstração não tem consulta cancelada futura, então esse aviso da TM12 não aparece.
 5. Prazo e formato de entrega da Atividade 3 dependem do enunciado, que não está no disco.
+
+## Pendências da revisão da `portal-paridade` (27/11/2026, aprovada com registros)
+
+1. Teste do Início do cuidador depois de trocar de paciente (hoje só a Agenda tem teste do B3).
+2. Item da fila do diário local sem dona (formato anterior, só em aparelho de desenvolvimento) vale para qualquer conta:
+   descartar ou exigir a dona.
+3. Fila do diário local sem prazo: passado o prazo da `Idempotency-Key` da API, o reenvio pode duplicar o registro e o
+   alerta. Descartar ou avisar quando o item passar da validade, como a fila do portal web.
+4. Teste das `firestore.rules` no emulador do Firestore antes de publicar as regras e a semente da P3 (pede ok do dono).
+5. Registro marcado como recebido pelo 409 de chave em uso fica com o id do aparelho e sem recibo (só formato antigo).
+6. Repetir a fumaça do diário contra o Terae local depois de 1 h (o teto de 5 códigos por hora da persona da Alice).
