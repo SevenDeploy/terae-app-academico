@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:terae_app/dados/repositorios/autenticacao_repositorio.dart';
 import 'package:terae_app/dados/repositorios/falhas.dart';
+import 'package:terae_app/funcionalidades/autenticacao/widgets_cadastro.dart';
 import 'package:terae_app/nucleo/rotas/rotas.dart';
 import 'package:terae_app/nucleo/sessao/sessao.dart';
 
@@ -70,7 +71,12 @@ bool _habilitado(WidgetTester tester, Finder botao) => tester
 void _noPasso(int passo) {
   expect(find.byKey(const Key('TM10')), findsOneWidget);
   expect(
-    find.textContaining('Passo $passo de 4'),
+    find.textContaining('Etapa ${etapaDoPasso(passo)} de 3'),
+    findsOneWidget,
+    reason: 'esperava a etapa do passo $passo',
+  );
+  expect(
+    find.byKey(Key('passo-$passo')),
     findsOneWidget,
     reason: 'esperava o passo $passo',
   );

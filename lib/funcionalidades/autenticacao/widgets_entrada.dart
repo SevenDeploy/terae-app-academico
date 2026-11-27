@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../nucleo/tema/cores.dart';
 import '../../nucleo/tema/tema.dart';
@@ -18,24 +19,24 @@ class AvisoDeRecusa extends StatelessWidget {
       child: DecoratedBox(
         key: const Key('aviso-recusa'),
         decoration: BoxDecoration(
-          color: CoresTerae.negativo50,
+          color: CoresTerae.erroFundo,
           borderRadius: const BorderRadius.all(
             Radius.circular(MedidasTerae.raioBotao),
           ),
-          border: Border.all(color: CoresTerae.negativo700),
+          border: Border.all(color: CoresTerae.erroBorda),
         ),
         child: Padding(
           padding: const EdgeInsets.all(12),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Icon(Icons.error_outline, color: CoresTerae.negativo700),
+              const Icon(LucideIcons.circleAlert, color: CoresTerae.erro),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
                   mensagem,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: CoresTerae.negativo700,
+                    color: CoresTerae.erro,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -145,7 +146,7 @@ class _CampoDeSenhaState extends State<CampoDeSenha> {
         errorText: widget.erro,
         suffixIcon: IconButton(
           tooltip: _visivel ? 'Ocultar senha' : 'Mostrar senha',
-          icon: Icon(_visivel ? Icons.visibility_off : Icons.visibility),
+          icon: Icon(_visivel ? LucideIcons.eyeOff : LucideIcons.eye),
           onPressed: () => setState(() => _visivel = !_visivel),
         ),
       ),

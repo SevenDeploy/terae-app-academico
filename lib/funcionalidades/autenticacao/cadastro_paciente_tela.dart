@@ -45,11 +45,12 @@ class CadastroPacienteTela extends StatelessWidget {
   }
 }
 
+/// O rótulo da etapa de cada passo (1 a 4; ver `etapaDoPasso`).
 const List<String> _nomesDosPassos = [
-  'Código da clínica',
-  'Quem vai usar',
+  'Confirmação',
+  'Confirmação',
   'Termo de consentimento',
-  'Seu acesso',
+  'Senha',
 ];
 
 /// Termo de consentimento, versão [versaoTermoConsentimento]. Mudou o texto,
