@@ -82,6 +82,43 @@ void main() {
     );
   });
 
+  testWidgets('cuidadora de dois pacientes: trocar pela folha sem sair do '
+      'Início relê o Início do paciente novo (pendência 1 da revisão)', (
+    tester,
+  ) async {
+    final visao = VisaoCuidadorFake();
+    final sessao = Sessao()
+      ..entrar(
+        VinculosDaConta(
+          conta: contaDe('c-regina', 'Regina Souza'),
+          acompanhados: [
+            pacienteDe('p-ana', 'Ana Lúcia Martins'),
+            pacienteDe('p-bento', 'Bento Lima'),
+          ],
+        ),
+      );
+    sessao.escolherPerfil(
+      sessao.perfis.firstWhere((p) => p.paciente.id == 'p-ana'),
+    );
+    await _abrir(tester, sessao: sessao, visao: visao);
+    expect(find.byKey(const Key('TM08')), findsOneWidget);
+    expect(visao.chamadas, isNotEmpty);
+    expect(visao.chamadas.every((c) => c == 'c-regina|p-ana'), isTrue);
+
+    visao.chamadas.clear();
+    await _tocar(tester, find.byKey(const Key('seletor-de-paciente')));
+    await _tocar(tester, find.text('Bento Lima').last);
+    // Continua no Início: o controlador tem de ser outro, do Bento.
+    expect(find.byKey(const Key('TM08')), findsOneWidget);
+    expect(visao.chamadas, isNotEmpty, reason: 'o Início não releu');
+    expect(
+      visao.chamadas.every((c) => c == 'c-regina|p-bento'),
+      isTrue,
+      reason: '${visao.chamadas}',
+    );
+    expect(find.text('Você acompanha Bento Lima'), findsOneWidget);
+  });
+
   testWidgets('paciente só de TO: sem o atalho "Medicação" e sem o próximo '
       'remédio, mesmo com receita no repositório (D21; pendência 3 da F1)', (
     tester,
