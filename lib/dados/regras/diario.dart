@@ -40,3 +40,9 @@ bool esperouNaFila(RegistroDiario registro) {
   return enviado != null &&
       enviado.difference(registro.registradoEm) > esperaQueAparece;
 }
+
+/// Quantos dias um registro guardado sem internet ainda sai: o
+/// `VALIDADE_DO_ENVIO_GUARDADO_DIAS` de `packages/domain` do terae (a chave
+/// de idempotência da API vale um dia a mais). Passado isso, a fonte Terae
+/// local não o envia mais (TL8).
+const int validadeDoEnvioGuardadoDias = 7;

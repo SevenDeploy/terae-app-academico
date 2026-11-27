@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:terae_app/dados/enums/adesao.dart';
 import 'package:terae_app/dados/enums/intensidade.dart';
 import 'package:terae_app/dados/enums/situacao_envio.dart';
+import 'package:terae_app/dados/modelos/registro_diario.dart';
 import 'package:terae_app/funcionalidades/paciente/registros/correcao_tela.dart';
 import 'package:terae_app/funcionalidades/paciente/registros/novo_registro_controlador.dart';
 import 'package:terae_app/nucleo/rotas/rotas.dart';
@@ -649,7 +650,59 @@ void main() {
       expect(await tester.binding.handlePopRoute(), isFalse);
     });
   });
+
+  group('TM03: "Não deu para enviar" (TL8)', () {
+    testWidgets('o guardado vencido aparece com o motivo, não conta como '
+        'pendente, e "Descartar" o tira', (tester) async {
+      final diario = _DiarioComVencido(
+        registroEnviado(
+          'vencido-1',
+          em: agoraDeTeste.subtract(const Duration(days: 9)),
+        ).copyWith(situacaoEnvio: SituacaoEnvio.naFila),
+      );
+      await abrirAppDoPaciente(
+        tester,
+        em: Rotas.pacienteDiario,
+        diario: diario,
+      );
+      expect(find.byKey(const Key('vencidos-do-diario')), findsOneWidget);
+      expect(find.text('Não será enviado'), findsOneWidget);
+      expect(
+        find.textContaining('Ficou guardado por mais de 7 dias'),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('pendentes-do-diario')), findsNothing);
+      expect(find.byKey(const Key('diario-vazio')), findsNothing);
+
+      final descartar = find.byKey(const ValueKey('descartar-vencido-1'));
+      await tester.ensureVisible(descartar);
+      await tester.pumpAndSettle();
+      await tester.tap(descartar);
+      await tester.pumpAndSettle();
+      expect(diario.descartados, ['vencido-1']);
+      expect(find.byKey(const Key('vencidos-do-diario')), findsNothing);
+      expect(find.byKey(const Key('diario-vazio')), findsOneWidget);
+    });
+  });
 }
 
 Finder _filledDe(Finder botao) =>
     find.descendant(of: botao, matching: find.byType(FilledButton));
+
+/// Diário com um guardado vencido (TL8), que só sai pelo "Descartar".
+class _DiarioComVencido extends DiarioControlavel {
+  _DiarioComVencido(RegistroDiario vencido) : _vencidos = [vencido];
+
+  final List<RegistroDiario> _vencidos;
+  final List<String> descartados = [];
+
+  @override
+  Future<List<RegistroDiario>> vencidos(String pacienteId) async =>
+      List.unmodifiable(_vencidos);
+
+  @override
+  Future<void> descartarVencido(String registroId) async {
+    descartados.add(registroId);
+    _vencidos.removeWhere((r) => r.id == registroId);
+  }
+}

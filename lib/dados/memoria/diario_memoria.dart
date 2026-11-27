@@ -77,6 +77,14 @@ class DiarioMemoria implements RepositorioDiario {
     );
   }
 
+  /// Esta fonte não tem validade na fila (só o Terae local tem).
+  @override
+  Future<List<RegistroDiario>> vencidos(String pacienteId) async => const [];
+
+  @override
+  Future<void> descartarVencido(String registroId) async =>
+      throw const RecusaDeRegra(MotivoRecusa.registroInexistente);
+
   @override
   Future<List<RegistroDiario>> pendentes(String pacienteId) async {
     await _memoria.esperar();

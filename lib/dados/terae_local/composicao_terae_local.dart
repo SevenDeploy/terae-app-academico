@@ -71,6 +71,7 @@ Future<TeraeLocalMontado> montarTeraeLocal({
   final diario = DiarioTeraeLocal(
     contexto,
     fila: GuardaDaFilaEmPreferencias(prefs),
+    relogio: relogio,
   );
   final lembretesDaFonte =
       lembretes ??

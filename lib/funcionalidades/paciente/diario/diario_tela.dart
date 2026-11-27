@@ -144,6 +144,10 @@ class _Lista extends StatelessWidget {
           ),
           const SizedBox(height: MedidasTerae.espaco),
         ],
+        if (c.vencidos.isNotEmpty) ...[
+          _Vencidos(agora: agora),
+          const SizedBox(height: MedidasTerae.espacoGrande),
+        ],
         if (c.pendentes.isNotEmpty) ...[
           _Pendentes(palavras: palavras, agora: agora),
           const SizedBox(height: MedidasTerae.espacoGrande),
@@ -155,7 +159,9 @@ class _Lista extends StatelessWidget {
             mensagem: erro,
             aoTentarDeNovo: () => unawaited(c.carregar()),
           )
-        else if (c.registros.isEmpty && c.pendentes.isEmpty)
+        else if (c.registros.isEmpty &&
+            c.pendentes.isEmpty &&
+            c.vencidos.isEmpty)
           Cartao(
             key: const Key('diario-vazio'),
             padding: EdgeInsets.zero,
@@ -317,6 +323,79 @@ class _Pendentes extends StatelessWidget {
           ],
         ],
       ),
+    );
+  }
+}
+
+/// "Não deu para enviar" (TL8): os guardados que passaram da validade, com o
+/// motivo do portal e o "Descartar". Nunca saem sozinhos.
+class _Vencidos extends StatelessWidget {
+  const _Vencidos({required this.agora});
+
+  final DateTime agora;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.watch<DiarioControlador>();
+    return Column(
+      key: const Key('vencidos-do-diario'),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Semantics(
+          header: true,
+          child: const Text(
+            'Não deu para enviar',
+            style: TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.w600,
+              color: CoresTerae.neutro900,
+            ),
+          ),
+        ),
+        for (final r in c.vencidos) ...[
+          const SizedBox(height: 12),
+          Cartao(
+            key: ValueKey('vencido-${r.id}'),
+            padding: const EdgeInsets.all(MedidasTerae.espaco),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Align(
+                  alignment: Alignment.centerLeft,
+                  child: Selo(
+                    texto: 'Não será enviado',
+                    tom: TomDoSelo.erro,
+                    icone: LucideIcons.circleAlert,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Guardado em ${formatarMomentoDoRegistro(r.registradoEm, agora)}',
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: CoresTerae.neutro600,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                const Text(
+                  'Ficou guardado por mais de ${regra.validadeDoEnvioGuardadoDias} '
+                  'dias e não será enviado. Escreva o registro de novo, se '
+                  'ainda fizer sentido, e descarte este.',
+                  style: TextStyle(fontSize: 15, color: CoresTerae.neutro800),
+                ),
+                const SizedBox(height: 12),
+                BotaoGrande(
+                  key: ValueKey('descartar-${r.id}'),
+                  rotulo: 'Descartar',
+                  icone: LucideIcons.trash2,
+                  variante: VarianteBotao.secundario,
+                  aoTocar: () => unawaited(c.descartarVencido(r.id)),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ],
     );
   }
 }

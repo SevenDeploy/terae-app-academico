@@ -19,6 +19,7 @@ class DiarioControlador extends ChangeNotifier {
 
   List<RegistroDiario> _registros = const [];
   List<RegistroDiario> _pendentes = const [];
+  List<RegistroDiario> _vencidos = const [];
   bool _haMais = false;
   bool _carregando = true;
   bool _carregandoMais = false;
@@ -34,6 +35,9 @@ class DiarioControlador extends ChangeNotifier {
   /// "Guardados neste aparelho", do mais antigo ao mais novo.
   List<RegistroDiario> get pendentes => _pendentes;
 
+  /// "Não deu para enviar": guardados que passaram da validade (TL8).
+  List<RegistroDiario> get vencidos => _vencidos;
+
   /// Liga o "Ver registros mais antigos".
   bool get haMais => _haMais;
   bool get carregando => _carregando;
@@ -47,12 +51,13 @@ class DiarioControlador extends ChangeNotifier {
 
   /// Lê a primeira página e os pendentes (de novo, depois de uma mudança).
   Future<void> carregar() async {
-    _carregando = _registros.isEmpty && _pendentes.isEmpty;
+    _carregando = _registros.isEmpty && _pendentes.isEmpty && _vencidos.isEmpty;
     _erro = null;
     _avisar();
     try {
       final pagina = await repositorio.pagina(pacienteId);
       _pendentes = await repositorio.pendentes(pacienteId);
+      _vencidos = await repositorio.vencidos(pacienteId);
       _registros = pagina.registros;
       _haMais = pagina.haMais;
     } on RecusaDeRegra catch (recusa) {
@@ -97,6 +102,16 @@ class DiarioControlador extends ChangeNotifier {
       // O que não saiu continua guardado; a lista diz isso.
     }
     _enviandoPendentes = false;
+    await carregar();
+  }
+
+  /// "Descartar" um guardado vencido, que nunca chegou à clínica, e relê.
+  Future<void> descartarVencido(String registroId) async {
+    try {
+      await repositorio.descartarVencido(registroId);
+    } on RecusaDeRegra {
+      // Já não estava lá: a releitura mostra o que ficou.
+    }
     await carregar();
   }
 

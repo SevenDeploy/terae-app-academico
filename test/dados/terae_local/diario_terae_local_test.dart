@@ -240,7 +240,7 @@ void main() {
     );
     addTearDown(semRede.fechar);
     final offline = DiarioTeraeLocal(
-      ContextoDoPortal(cliente: semRede),
+      (ContextoDoPortal(cliente: semRede)..lembrarEu(contexto.eu!)),
       fila: fila,
     );
     final guardado = await offline.enviar(_novo(_idLocal1));
@@ -272,7 +272,7 @@ void main() {
     );
     addTearDown(semRede.fechar);
     await DiarioTeraeLocal(
-      ContextoDoPortal(cliente: semRede),
+      (ContextoDoPortal(cliente: semRede)..lembrarEu(contexto.eu!)),
       fila: fila,
     ).enviar(_novo(_idLocal2));
     final pagina = await diario.pagina(idAlice);
@@ -306,7 +306,10 @@ void main() {
         tempoLimite: const Duration(seconds: 2),
       );
       addTearDown(semRede.fechar);
-      return DiarioTeraeLocal(ContextoDoPortal(cliente: semRede), fila: fila);
+      return DiarioTeraeLocal(
+        (ContextoDoPortal(cliente: semRede)..lembrarEu(contexto.eu!)),
+        fila: fila,
+      );
     }
 
     test('B1: a sessão acabada (401) não apaga a fila; ao entrar de novo, os '
@@ -393,6 +396,115 @@ void main() {
       await diario.esquecer();
       expect(fila.texto, contains('outra-conta'));
       expect(await diario.pendentes(idAlice), isEmpty);
+    });
+
+    group('TL8 (pendências 2 e 3 da revisão)', () {
+      int postsDoDiario() => servidor.pedidos
+          .where((p) => p.metodo == 'POST' && p.caminho.endsWith('/diario'))
+          .length;
+
+      test('item sem dona (formato anterior) é descartado ao ler: não sai nem '
+          'aparece para nenhuma conta', () async {
+        // O registro direto (o formato mais antigo) e um item sem 'dono'.
+        await fila.gravar(
+          jsonEncode([
+            _novo(_idLocal1).toMap(),
+            {'registro': _novo(_idLocal2).toMap()},
+          ]),
+        );
+        final antes = postsDoDiario();
+        expect(await diario.pendentes(idAlice), isEmpty);
+        expect(await diario.reenviarFila(), isEmpty);
+        expect(postsDoDiario(), antes);
+        await expectLater(
+          diario.registro(_idLocal1),
+          throwsA(isA<RecusaDeRegra>()),
+        );
+      });
+
+      test(
+        'sem conta conhecida e sem rede, não guarda sem dona: recusa',
+        () async {
+          final desligado = await ServidorFalso.iniciar();
+          final url = desligado.url;
+          await desligado.parar();
+          final semRede = ClienteDoPortal(
+            url: url,
+            dispositivo: GuardaEmMemoria(),
+            relogio: relogio,
+            tempoLimite: const Duration(seconds: 2),
+          );
+          addTearDown(semRede.fechar);
+          final semConta = DiarioTeraeLocal(
+            ContextoDoPortal(cliente: semRede),
+            fila: fila,
+          );
+          await expectLater(
+            semConta.enviar(_novo(_idLocal1)),
+            throwsA(isA<RecusaDeRegra>()),
+          );
+          expect(fila.texto, isNull);
+        },
+      );
+
+      test('passou da validade (relógio 8 dias à frente): não sai, vai para '
+          '"Não deu para enviar" e só sai da fila pelo descartar', () async {
+        final offline = await semRede();
+        await offline.enviar(_novo(_idLocal1));
+        await offline.enviar(_novo(_idLocal2));
+        final adiantado = DiarioTeraeLocal(
+          contexto,
+          fila: fila,
+          relogio: RelogioFixo(
+            DateTime.utc(2026, 11, 26, 17).add(const Duration(days: 8)),
+          ),
+        );
+        final antes = postsDoDiario();
+        expect(await adiantado.pendentes(idAlice), isEmpty);
+        expect((await adiantado.vencidos(idAlice)).map((r) => r.id), [
+          _idLocal1,
+          _idLocal2,
+        ]);
+        expect(await adiantado.reenviarFila(), isEmpty);
+        final deNovo = await adiantado.enviar(_novo(_idLocal1));
+        expect(deNovo.registro.situacaoEnvio, SituacaoEnvio.naFila);
+        expect(postsDoDiario(), antes, reason: 'vencido nunca vai à API');
+
+        await adiantado.descartarVencido(_idLocal1);
+        expect((await adiantado.vencidos(idAlice)).map((r) => r.id), [
+          _idLocal2,
+        ]);
+        await expectLater(
+          adiantado.descartarVencido(_idLocal1),
+          _recusa(MotivoRecusa.registroInexistente),
+        );
+      });
+
+      test('dentro da validade (6 dias) sai; carimbo do futuro além da folga '
+          'não sai', () async {
+        final offline = await semRede();
+        await offline.enviar(_novo(_idLocal1));
+        final seisDias = DiarioTeraeLocal(
+          contexto,
+          fila: fila,
+          relogio: RelogioFixo(
+            DateTime.utc(2026, 11, 26, 17).add(const Duration(days: 6)),
+          ),
+        );
+        expect(await seisDias.vencidos(idAlice), isEmpty);
+        expect(await seisDias.reenviarFila(), hasLength(1));
+
+        await (await semRede()).enviar(_novo(_idLocal2));
+        final atrasado = DiarioTeraeLocal(
+          contexto,
+          fila: fila,
+          relogio: RelogioFixo(DateTime.utc(2026, 11, 26, 16, 50)),
+        );
+        expect((await atrasado.vencidos(idAlice)).map((r) => r.id), [
+          _idLocal2,
+        ]);
+        expect(await atrasado.pendentes(idAlice), isEmpty);
+      });
     });
   });
 }

@@ -22,6 +22,7 @@ import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../nucleo/tempo/relogio.dart';
 import '../conversao_mapa.dart';
 import '../enums/adesao.dart';
 import '../enums/intensidade.dart';
@@ -30,6 +31,7 @@ import '../enums/regra_alerta.dart';
 import '../enums/situacao_envio.dart';
 import '../modelos/alerta.dart';
 import '../modelos/registro_diario.dart';
+import '../regras/diario.dart' show validadeDoEnvioGuardadoDias;
 import '../repositorios/diario_repositorio.dart';
 import '../repositorios/falhas.dart';
 import 'cliente_do_portal.dart';
@@ -80,11 +82,18 @@ const String codigoDaChaveEmUso = 'chave_de_idempotencia_em_uso';
 /// achar um registro que ainda não passou pela lista deste aparelho.
 const int _paginasParaAchar = 10;
 
+/// A folga do relógio: um carimbo mais à frente que isto é de relógio errado.
+const Duration _folgaDoRelogio = Duration(minutes: 5);
+
 /// O diário da família sobre a API do portal do Terae local.
 class DiarioTeraeLocal implements RepositorioDiario {
-  DiarioTeraeLocal(this._contexto, {required this.fila});
+  DiarioTeraeLocal(this._contexto, {required this.fila, Relogio? relogio})
+    : relogio = relogio ?? const RelogioSistema();
 
   final ContextoDoPortal _contexto;
+
+  /// O "agora" da validade da fila (TL8).
+  final Relogio relogio;
 
   /// Onde fica o registro que não saiu por falta de rede.
   final GuardaDaFilaDoDiario fila;
@@ -106,9 +115,11 @@ class DiarioTeraeLocal implements RepositorioDiario {
     if (texto == null || texto.isEmpty) return const [];
     final bruto = jsonDecode(texto);
     if (bruto is! List) return const [];
+    // TL8: o item sem dona (formato anterior, só de aparelho de
+    // desenvolvimento) é descartado ao ler, como o `lerEnvio` do portal.
     return [
       for (final item in bruto)
-        if (item is Map<String, Object?>) _ItemDaFila.ler(item),
+        if (item is Map<String, Object?>) ?_ItemDaFila.ler(item),
     ];
   }
 
@@ -116,15 +127,24 @@ class DiarioTeraeLocal implements RepositorioDiario {
     itens.isEmpty ? null : jsonEncode([for (final i in itens) i.escrever()]),
   );
 
-  /// A conta que está no portal agora (`null` antes do `/eu`).
-  String? get _contaAtual => _contexto.eu?.idUsuario;
+  /// A última conta que o `/eu` trouxe neste aparelho. Um 401 esquece o
+  /// `/eu` (B1), mas o que se escreve até entrar de novo ainda é dessa conta;
+  /// só o "Sair" a esquece. Outra conta que entrar passa a ser a lembrada.
+  String? _ultimaConta;
 
-  /// Da conta atual: o item sem dono (formato antigo) vale para qualquer uma.
+  /// A conta dona do que se guarda e se lê na fila agora.
+  String? get _contaAtual {
+    final agora = _contexto.eu?.idUsuario;
+    if (agora != null) _ultimaConta = agora;
+    return _ultimaConta;
+  }
+
+  /// Só da conta atual; sem conta conhecida, de ninguém (TL8).
   bool _daConta(_ItemDaFila item, String? conta) =>
-      item.dono == null || conta == null || item.dono == conta;
+      conta != null && item.dono == conta;
 
-  /// A fila desta conta, do mais antigo ao mais novo guardado.
-  Future<List<RegistroDiario>> _lerFila() async {
+  /// Tudo o que esta conta guardou, vencido ou não.
+  Future<List<RegistroDiario>> _lerDaConta() async {
     final conta = _contaAtual;
     return [
       for (final i in await _lerTudo())
@@ -132,11 +152,29 @@ class DiarioTeraeLocal implements RepositorioDiario {
     ];
   }
 
+  /// TL8 — passou da validade da fila (a do portal,
+  /// [validadeDoEnvioGuardadoDias]), ou o carimbo é de um relógio errado (à
+  /// frente mais que a folga): não sai mais, porque a `Idempotency-Key` da
+  /// API já pode ter expirado e o reenvio duplicaria o registro e o alerta.
+  bool _venceu(RegistroDiario r) {
+    final agora = relogio.agora();
+    return agora.difference(r.registradoEm) >
+            const Duration(days: validadeDoEnvioGuardadoDias) ||
+        r.registradoEm.difference(agora) > _folgaDoRelogio;
+  }
+
+  /// A fila desta conta que ainda pode sair, do mais antigo ao mais novo.
+  Future<List<RegistroDiario>> _lerFila() async => [
+    for (final r in await _lerDaConta())
+      if (!_venceu(r)) r,
+  ];
+
   /// D20 — "Sair" esquece a fila desta conta e o que foi visto neste
   /// aparelho. Sem saber a conta, esquece a fila inteira. Fim de sessão por
   /// 401 NÃO passa por aqui (revisão da P4, B1).
   Future<void> esquecer() async {
     final conta = _contaAtual;
+    _ultimaConta = null;
     _vistos.clear();
     _saidos.clear();
     if (conta == null) {
@@ -145,11 +183,11 @@ class DiarioTeraeLocal implements RepositorioDiario {
     }
     await _gravarTudo([
       for (final i in await _lerTudo())
-        if (i.dono != null && i.dono != conta) i,
+        if (i.dono != conta) i,
     ]);
   }
 
-  Future<void> _guardar(RegistroDiario registro, String? dono) async {
+  Future<void> _guardar(RegistroDiario registro, String dono) async {
     final tudo = await _lerTudo();
     if (tudo.any((i) => i.registro.id == registro.id)) return;
     await _gravarTudo([...tudo, _ItemDaFila(registro, dono)]);
@@ -172,7 +210,15 @@ class DiarioTeraeLocal implements RepositorioDiario {
     if (_saidos[registro.id] case final pronto?) return pronto;
     // A conta antes da chamada: um 401 esquece o `/eu` (B1).
     final dono = _contaAtual;
-    final naFila = (await _lerFila()).any((r) => r.id == registro.id);
+    final daConta = await _lerDaConta();
+    final naFila = daConta.any((r) => r.id == registro.id);
+    // O guardado vencido não sai mais (TL8): continua em "Não deu para
+    // enviar" até a pessoa descartar.
+    if (naFila && _venceu(registro)) {
+      return ResultadoEnvio(
+        registro: registro.copyWith(situacaoEnvio: SituacaoEnvio.naFila),
+      );
+    }
     try {
       final resultado = await _enviarAoServidor(registro);
       if (naFila) await _tirar({registro.id});
@@ -184,6 +230,9 @@ class DiarioTeraeLocal implements RepositorioDiario {
           recusa.motivo != MotivoRecusa.sessaoTerminou) {
         rethrow;
       }
+      // Sem saber de quem é (antes do `/eu`), não guarda: um item sem dona
+      // valeria para qualquer conta (TL8). A tela mostra a recusa.
+      if (dono == null) rethrow;
       final guardado = registro.copyWith(situacaoEnvio: SituacaoEnvio.naFila);
       // Com a sessão acabada, o contexto já levou de volta à entrada; a tela
       // diz "guardado neste aparelho" até lá.
@@ -271,9 +320,26 @@ class DiarioTeraeLocal implements RepositorioDiario {
   ]..sort((a, b) => a.registradoEm.compareTo(b.registradoEm));
 
   @override
+  Future<List<RegistroDiario>> vencidos(String pacienteId) async => [
+    for (final r in await _lerDaConta())
+      if (r.pacienteId == pacienteId && _venceu(r)) r,
+  ]..sort((a, b) => a.registradoEm.compareTo(b.registradoEm));
+
+  @override
+  Future<void> descartarVencido(String registroId) async {
+    final vencido = (await _lerDaConta()).any(
+      (r) => r.id == registroId && _venceu(r),
+    );
+    if (!vencido) {
+      throw const RecusaDeRegra(MotivoRecusa.registroInexistente);
+    }
+    await _tirar({registroId});
+  }
+
+  @override
   Future<RegistroDiario> registro(String registroId) async {
     if (_vistos[registroId] case final visto?) return visto;
-    for (final r in await _lerFila()) {
+    for (final r in await _lerDaConta()) {
       if (r.id == registroId) return r;
     }
     final pacienteId = _contexto.eu?.idPacienteAtual;
@@ -625,28 +691,26 @@ T _ler<T>(T Function() leitura) {
 }
 
 /// Um registro guardado na fila e a conta que o guardou ([dono], o
-/// `idUsuario` do portal; `null` no formato antigo, sem dono).
+/// `idUsuario` do portal).
 class _ItemDaFila {
   const _ItemDaFila(this.registro, this.dono);
 
-  factory _ItemDaFila.ler(Map<String, Object?> mapa) {
+  /// O item lido, ou `null` se não tiver dona (o formato anterior, só de
+  /// aparelho de desenvolvimento): esse é descartado (TL8).
+  static _ItemDaFila? ler(Map<String, Object?> mapa) {
     final registro = mapa['registro'];
-    if (registro is Map<String, Object?>) {
-      final dono = mapa['dono'];
-      return _ItemDaFila(
-        RegistroDiario.fromMap(registro),
-        dono is String ? dono : null,
-      );
+    final dono = mapa['dono'];
+    if (registro is! Map<String, Object?> || dono is! String || dono.isEmpty) {
+      return null;
     }
-    // Formato antigo: o registro direto, sem dono.
-    return _ItemDaFila(RegistroDiario.fromMap(mapa), null);
+    return _ItemDaFila(RegistroDiario.fromMap(registro), dono);
   }
 
   final RegistroDiario registro;
-  final String? dono;
+  final String dono;
 
   Map<String, Object?> escrever() => {
     'registro': registro.toMap(),
-    'dono': ?dono,
+    'dono': dono,
   };
 }

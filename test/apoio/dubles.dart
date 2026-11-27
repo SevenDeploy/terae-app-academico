@@ -116,6 +116,12 @@ class DiarioDuble implements RepositorioDiario {
   Future<List<RegistroDiario>> pendentes(String pacienteId) async => const [];
 
   @override
+  Future<List<RegistroDiario>> vencidos(String pacienteId) async => const [];
+
+  @override
+  Future<void> descartarVencido(String registroId) => _naoUsado();
+
+  @override
   Future<RegistroDiario> registro(String registroId) => _naoUsado();
 
   @override

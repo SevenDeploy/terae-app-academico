@@ -65,6 +65,15 @@ abstract interface class RepositorioDiario {
   /// ao mais novo.
   Future<List<RegistroDiario>> pendentes(String pacienteId);
 
+  /// TM03 — "Não deu para enviar": os guardados que passaram da validade da
+  /// fila e não saem mais (como o envio vencido da fila do portal). Só a
+  /// fonte Terae local tem validade; as outras devolvem vazio.
+  Future<List<RegistroDiario>> vencidos(String pacienteId);
+
+  /// Descarta um guardado vencido, que nunca chegou ao servidor. Recusa
+  /// `registroInexistente` se não for um vencido desta conta.
+  Future<void> descartarVencido(String registroId);
+
   /// TM14 — o registro pelo id, com as versões; recusa `registroInexistente`.
   Future<RegistroDiario> registro(String registroId);
 

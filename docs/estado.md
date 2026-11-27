@@ -100,6 +100,7 @@ acadêmico (A5).
 | TL5 | O que a API do portal não tem volta vazio de forma explícita e a tela esconde pela `CapacidadesDaFonte` (`Repositorios.capacidades`, provida pelo `TeraeApp`): diário (aba "indisponível" até a P3), Jornada com metas e marcos, faixa dos 14 dias e "Esta semana", "Desfazer", ocupação da atividade, cuidadores (chave `CUIDADOR_PELO_PORTAL`), primeiro acesso por código do app e painel de demonstração. Medicação e alertas somem sozinhos: todo paciente do Terae local é só TO (D21) |
 | TL6 | O portal só mostra o primeiro nome e a especialidade de quem atende: o `ProfissionalSaude` sai com id sintético (`portal:Nome|especialidade`) e sem registro no conselho. O `respondidaEm` da presença é o instante do recibo deste aparelho (ou o da leitura): o portal não o devolve |
 | TL7 | Diário do Terae local (`DiarioTeraeLocal`, 27/11/2026, branch `portal-diario-local`) sobre `/api/portal/diario`. **Exceção à TL4, por fidelidade ao portal:** o registro que não sai por falta de rede fica guardado neste aparelho (`SharedPreferences`, `terae_local.fila_do_diario`; a fila do portal web é o IndexedDB, PMC-516) e volta com a **mesma** `Idempotency-Key` (o `id` gerado no aparelho) e o `guardadoEm` (PMC-558); abrir a lista e "Enviar agora" tentam a fila, e "Sair" a apaga (D20). Corrigir e retirar pedem internet na hora. O servidor dá o próprio id: depois do envio, o registro do app é o do servidor. A API não tem `GET /diario/:id`: a TM14/TM15 leem do que este aparelho viu ou procuram nas páginas (até 10); versão > 1 busca `GET /diario/:id/versoes`. O portal só diz que o registro avisou a equipe (`ajudaImediata`/`alertouAEquipe`): o `Alerta` do app nasce daí, com a regra pela intensidade. 409 → `registroNaoMudaMais` (revisado, crítico ou retirado). **Revisão da P4:** (B1) o 401 encerra a sessão por `Sessao.encerrarPorFimDeSessao` e **não** apaga a fila; o envio recusado por sessão acabada também fica guardado; cada item da fila tem dono (o `idUsuario`), e o "Sair" escolhido apaga só a fila da conta; (B2) o corpo é o mesmo em toda tentativa (`guardadoEm` sempre), e a resposta 409 `chave_de_idempotencia_em_uso` no reenvio tira o registro da fila (o servidor já recebeu um envio com esse id) em vez de prendê-lo |
+| TL8 | Fila do diário do Terae local, depois da revisão da `portal-paridade` (pendências 2 e 3): (a) **todo item tem dona**. O item sem `dono` (formato anterior, só de aparelho de desenvolvimento) é descartado ao ler, como o `lerEnvio` do portal web descarta envio sem `idUsuario`; sem conta conhecida, o envio sem rede recusa em vez de guardar sem dona. A conta dona é a do último `/eu` deste aparelho: um 401 não a esquece (o que se escreve até entrar de novo é dela), só o "Sair". (b) **Validade da fila**, igual à do portal: `validadeDoEnvioGuardadoDias` = 7 (`VALIDADE_DO_ENVIO_GUARDADO_DIAS` de `packages/domain`; a chave de idempotência da API vale 8 dias) contados do `registradoEm` pelo `Relogio`, e um carimbo mais de 5 min à frente é de relógio errado. O vencido nunca vai à API (nem pelo "Enviar agora"): aparece em "Não deu para enviar", com o motivo do portal, e só sai pelo "Descartar" (`RepositorioDiario.vencidos`/`descartarVencido`; as outras fontes não têm validade e devolvem vazio) |
 
 **Diário:** ligado na TL7 (`DiarioTeraeLocal`, `CapacidadesDaFonte.teraeLocal.diario = true`). A tela
 `DiarioIndisponivelTela` continua para uma fonte sem diário.
@@ -707,11 +708,11 @@ Da revisão:
 
 ## Pendências da revisão da `portal-paridade` (27/11/2026, aprovada com registros)
 
-1. Teste do Início do cuidador depois de trocar de paciente (hoje só a Agenda tem teste do B3).
-2. Item da fila do diário local sem dona (formato anterior, só em aparelho de desenvolvimento) vale para qualquer conta:
-   descartar ou exigir a dona.
-3. Fila do diário local sem prazo: passado o prazo da `Idempotency-Key` da API, o reenvio pode duplicar o registro e o
-   alerta. Descartar ou avisar quando o item passar da validade, como a fila do portal web.
+1. ~~Teste do Início do cuidador depois de trocar de paciente.~~ Resolvida em `4985f2f` (o teste falha sem a
+   `ValueKey` do provider).
+2. ~~Item da fila do diário local sem dona vale para qualquer conta.~~ Resolvida pela TL8 (a): descartado ao ler.
+3. ~~Fila do diário local sem prazo.~~ Resolvida pela TL8 (b): validade de 7 dias, "Não deu para enviar" e
+   "Descartar".
 4. Teste das `firestore.rules` no emulador do Firestore antes de publicar as regras e a semente da P3 (pede ok do dono).
 5. Registro marcado como recebido pelo 409 de chave em uso fica com o id do aparelho e sem recibo (só formato antigo).
 6. Repetir a fumaça do diário contra o Terae local depois de 1 h (o teto de 5 códigos por hora da persona da Alice).
