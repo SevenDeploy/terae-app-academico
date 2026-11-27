@@ -62,7 +62,9 @@ do registro já nasce com os nomes do corpo da API. Nada de produção. Fonte da
    Quando o servidor recusa uma correção, o app traz a cópia do servidor antes de dizer "não pode mais mudar".
 
 Limitação declarada: as regras não conseguem conferir o alerta de um documento das A3–A5 (o id do alerta é um hash).
-A semente com `--reiniciar` apaga esses documentos, e depois dela todo registro leva `alertouAEquipe`.
+Por isso (revisão da P4, M3) o documento antigo com `intensidade` "grave" ou "critica", o que podia ter alertado (D18),
+não muda mais nas regras (`antigoQuePodeTerAlertado`), mesmo que não tenha alertado de fato. A semente com
+`--reiniciar` apaga esses documentos, e depois dela todo registro leva `alertouAEquipe`.
 
 ### Pendências da P3
 
@@ -71,11 +73,17 @@ A semente com `--reiniciar` apaga esses documentos, e depois dela todo registro 
    Comandos, na pasta do app:
    - `firebase deploy --only firestore:rules`
    - `node ferramentas/semear-firebase.mjs --reiniciar`
+   **Antes de publicar** (revisão da P4, M3): as `firestore.rules` mudaram muito e não têm teste executável
+   (`regras_test.dart` testa as funções Dart). Rodar um teste das regras no emulador do Firestore cobrindo: criar
+   (versão 1), versão seguinte, retirada com motivo, o reenvio que só muda `enviadoEm`, o caminho `doFormatoAntigo`
+   (inclusive o documento antigo "grave"/"critica" recusado por `antigoQuePodeTerAlertado`), o cuidador sem leitura do
+   diário e o alerta só de registro grave ou crítico.
 2. O roteiro no emulador da P3 não foi feito: ele depende do item 1.
 3. O rascunho guardado no aparelho enquanto se escreve (o `useRascunho` do portal) não entrou. O texto do novo
    registro vive enquanto a tela estiver aberta.
-4. Para a P4: o mapeador da fonte Terae local manda `guardadoEm` = `registradoEm` só no registro que saiu da fila, e
-   a `Idempotency-Key` = `id`.
+4. Para a P4: a `Idempotency-Key` é o `id` do aparelho. Desde a revisão da P4 (B2), o `guardadoEm` = `registradoEm`
+   vai em **toda** tentativa (corpo estável por chave; a API só mostra o "escrito em" quando passa de 5 min da
+   chegada).
 
 ## Fonte "Terae local" — P4 (27/11/2026, branch `portal-terae-local`)
 
@@ -91,7 +99,7 @@ acadêmico (A5).
 | TL4 | Sem cópia local nem fila no modo local: o portal é online como o web. Sem rede, a escrita recusa `semConexao`. Presença: "Sim, vamos" → `/confirmacao`, "Não vamos" → `/ausencia` (vale também depois de confirmar); voltar a confirmar depois do aviso é 409 → `sessaoEncerrada`. Programa: um registro por orientação e dia, corrige o próprio; o de outra conta é 409 → `registroDeOutraConta` |
 | TL5 | O que a API do portal não tem volta vazio de forma explícita e a tela esconde pela `CapacidadesDaFonte` (`Repositorios.capacidades`, provida pelo `TeraeApp`): diário (aba "indisponível" até a P3), Jornada com metas e marcos, faixa dos 14 dias e "Esta semana", "Desfazer", ocupação da atividade, cuidadores (chave `CUIDADOR_PELO_PORTAL`), primeiro acesso por código do app e painel de demonstração. Medicação e alertas somem sozinhos: todo paciente do Terae local é só TO (D21) |
 | TL6 | O portal só mostra o primeiro nome e a especialidade de quem atende: o `ProfissionalSaude` sai com id sintético (`portal:Nome|especialidade`) e sem registro no conselho. O `respondidaEm` da presença é o instante do recibo deste aparelho (ou o da leitura): o portal não o devolve |
-| TL7 | Diário do Terae local (`DiarioTeraeLocal`, 27/11/2026, branch `portal-diario-local`) sobre `/api/portal/diario`. **Exceção à TL4, por fidelidade ao portal:** o registro que não sai por falta de rede fica guardado neste aparelho (`SharedPreferences`, `terae_local.fila_do_diario`; a fila do portal web é o IndexedDB, PMC-516) e volta com a **mesma** `Idempotency-Key` (o `id` gerado no aparelho) e o `guardadoEm` (PMC-558); abrir a lista e "Enviar agora" tentam a fila, e "Sair" a apaga (D20). Corrigir e retirar pedem internet na hora. O servidor dá o próprio id: depois do envio, o registro do app é o do servidor. A API não tem `GET /diario/:id`: a TM14/TM15 leem do que este aparelho viu ou procuram nas páginas (até 10); versão > 1 busca `GET /diario/:id/versoes`. O portal só diz que o registro avisou a equipe (`ajudaImediata`/`alertouAEquipe`): o `Alerta` do app nasce daí, com a regra pela intensidade. 409 → `registroNaoMudaMais` (revisado, crítico ou retirado) |
+| TL7 | Diário do Terae local (`DiarioTeraeLocal`, 27/11/2026, branch `portal-diario-local`) sobre `/api/portal/diario`. **Exceção à TL4, por fidelidade ao portal:** o registro que não sai por falta de rede fica guardado neste aparelho (`SharedPreferences`, `terae_local.fila_do_diario`; a fila do portal web é o IndexedDB, PMC-516) e volta com a **mesma** `Idempotency-Key` (o `id` gerado no aparelho) e o `guardadoEm` (PMC-558); abrir a lista e "Enviar agora" tentam a fila, e "Sair" a apaga (D20). Corrigir e retirar pedem internet na hora. O servidor dá o próprio id: depois do envio, o registro do app é o do servidor. A API não tem `GET /diario/:id`: a TM14/TM15 leem do que este aparelho viu ou procuram nas páginas (até 10); versão > 1 busca `GET /diario/:id/versoes`. O portal só diz que o registro avisou a equipe (`ajudaImediata`/`alertouAEquipe`): o `Alerta` do app nasce daí, com a regra pela intensidade. 409 → `registroNaoMudaMais` (revisado, crítico ou retirado). **Revisão da P4:** (B1) o 401 encerra a sessão por `Sessao.encerrarPorFimDeSessao` e **não** apaga a fila; o envio recusado por sessão acabada também fica guardado; cada item da fila tem dono (o `idUsuario`), e o "Sair" escolhido apaga só a fila da conta; (B2) o corpo é o mesmo em toda tentativa (`guardadoEm` sempre), e a resposta 409 `chave_de_idempotencia_em_uso` no reenvio tira o registro da fila (o servidor já recebeu um envio com esse id) em vez de prendê-lo |
 
 **Diário:** ligado na TL7 (`DiarioTeraeLocal`, `CapacidadesDaFonte.teraeLocal.diario = true`). A tela
 `DiarioIndisponivelTela` continua para uma fonte sem diário.

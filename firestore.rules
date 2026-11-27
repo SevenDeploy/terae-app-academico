@@ -167,6 +167,13 @@ service cloud.firestore {
           return !('versao' in resource.data);
         }
 
+        // Revisão da P4 (M3): o documento antigo não tem `alertouAEquipe`;
+        // o alerta dele (D18) nascia de "grave" ou "critica" no campo antigo
+        // `intensidade`. Por segurança, esse não muda mais (como o 409).
+        function antigoQuePodeTerAlertado() {
+          return resource.data.get('intensidade', '') in ['grave', 'critica'];
+        }
+
         // Corrigir: a versão seguinte, com as anteriores intactas e o mesmo
         // primeiro recebimento (R04: nada se perde).
         function versaoSeguinte() {
@@ -188,7 +195,7 @@ service cloud.firestore {
           && (
             (request.resource.data.versao == resource.data.get('versao', 1)
               && soMudam(['enviadoEm']))
-            || (podeMudar() && doFormatoAntigo()
+            || (podeMudar() && doFormatoAntigo() && !antigoQuePodeTerAlertado()
               && request.resource.data.versao == 1
               && (request.resource.data.get('retiradoEm', null) == null
                 || retiradaValida()))
