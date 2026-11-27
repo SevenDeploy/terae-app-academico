@@ -7,6 +7,7 @@ import 'package:flutter/widgets.dart';
 import 'app.dart';
 import 'dados/memoria/memoria_demonstracao.dart';
 import 'dados/persistente/composicao.dart';
+import 'dados/terae_local/composicao_terae_local.dart';
 import 'dados/terae_local/configuracao_terae_local.dart';
 import 'firebase_options.dart';
 import 'nucleo/sessao/sessao.dart';
@@ -21,17 +22,31 @@ import 'nucleo/tempo/relogio.dart';
 ///   ao fechar o app; o perfil ativo vem das preferências.
 /// - Web, ou sem `firebase_options.dart` configurado: a memória de
 ///   demonstração, como na Atividade 3 (D19).
+/// - `--dart-define=TERAE_FONTE=local`: a API do portal da família de um
+///   Terae web que roda nesta máquina (`TERAE_LOCAL_URL`, padrão
+///   `http://10.0.2.2:3000`), sem Firebase. A trava recusa qualquer endereço
+///   que não seja local antes de montar qualquer coisa.
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // Trava na partida (26/11): TERAE_LOCAL_URL só aponta para esta máquina.
   final terae = ConfiguracaoTeraeLocal.doAmbiente();
-  if (terae.fonte == FonteDeDados.local) {
-    throw const ConfiguracaoInvalida(
-      'TERAE_FONTE=local ainda só tem o transporte (lib/dados/terae_local/); '
-      'os repositórios do Terae local vêm depois.',
-    );
-  }
   const relogio = RelogioSistema();
+  if (terae.fonte == FonteDeDados.local) {
+    // Decisão do dono de 26/11/2026: o Terae web LOCAL, nunca a produção.
+    // O Firebase nem inicializa.
+    final local = await montarTeraeLocal(configuracao: terae, relogio: relogio);
+    final sessao = Sessao(aoSair: local.aoSair);
+    // 401 fora da entrada: a sessão acabou no servidor; volta à TM01.
+    local.contexto.aoSessaoAcabar = sessao.sair;
+    runApp(
+      TeraeApp(
+        repositorios: local.repositorios,
+        sessao: sessao,
+        relogio: relogio,
+      ),
+    );
+    return;
+  }
   final opcoes = _opcoesDoFirebase();
   if (opcoes == null) {
     final memoria = await MemoriaDemonstracao.carregar(relogio: relogio);

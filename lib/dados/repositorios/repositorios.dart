@@ -41,7 +41,13 @@ class Repositorios {
     this.lembretes = const _LembretesDesligados(),
     this.metas = const _SemMetas(),
     this.conexao = const _SempreOnline(),
+    this.capacidades = CapacidadesDaFonte.completa,
   });
+
+  /// O que a fonte de dados sabe fazer. O Firebase e a memória fazem tudo; o
+  /// Terae local só o que a API do portal da família tem, e a tela esconde o
+  /// resto (sem botão morto).
+  final CapacidadesDaFonte capacidades;
 
   final RepositorioAutenticacao autenticacao;
   final RepositorioPaciente paciente;
@@ -69,6 +75,77 @@ class Repositorios {
 
   /// Situação da conexão e da fila do diário (D16), para o aviso das telas.
   final ValueListenable<SituacaoSincronizacao> conexao;
+}
+
+/// O que a fonte de dados oferece além do básico (paciente, agenda,
+/// presença e programa em casa). Cada `false` some da tela por inteiro.
+@immutable
+class CapacidadesDaFonte {
+  const CapacidadesDaFonte({
+    required this.diario,
+    required this.jornada,
+    required this.faixaDosDias,
+    required this.desfazerEmCasa,
+    required this.cuidadores,
+    required this.primeiroAcesso,
+    required this.ocupacaoDaAtividade,
+    required this.demonstracao,
+  });
+
+  /// Firebase acadêmico e memória de demonstração.
+  static const CapacidadesDaFonte completa = CapacidadesDaFonte(
+    diario: true,
+    jornada: true,
+    faixaDosDias: true,
+    desfazerEmCasa: true,
+    cuidadores: true,
+    primeiroAcesso: true,
+    ocupacaoDaAtividade: true,
+    demonstracao: true,
+  );
+
+  /// Terae local (API `/api/portal/*`): sem metas nem marcos (Jornada), sem a
+  /// faixa dos 14 dias (o programa só traz o registro de hoje), sem a
+  /// ocupação da atividade, sem
+  /// "Desfazer" no Em casa, sem cuidadores (chave `CUIDADOR_PELO_PORTAL`
+  /// desligada) e sem o primeiro acesso por código do app. O diário chega
+  /// depois da P3 (outra branch refaz o modelo).
+  static const CapacidadesDaFonte teraeLocal = CapacidadesDaFonte(
+    diario: false,
+    jornada: false,
+    faixaDosDias: false,
+    desfazerEmCasa: false,
+    cuidadores: false,
+    primeiroAcesso: false,
+    ocupacaoDaAtividade: false,
+    demonstracao: false,
+  );
+
+  /// Diário entre consultas (TM03–TM05, TM13, TM14).
+  final bool diario;
+
+  /// Jornada com marcos e metas (TM06, TM20) e os cartões que levam a ela.
+  final bool jornada;
+
+  /// "Últimos 14 dias" no Em casa e na atividade (TM16, TM17).
+  final bool faixaDosDias;
+
+  /// "Desfazer" o registro de hoje da atividade (D26).
+  final bool desfazerEmCasa;
+
+  /// Cuidadores autorizados (TM07).
+  final bool cuidadores;
+
+  /// Primeiro acesso por código de convite (TM09, TM10).
+  final bool primeiroAcesso;
+
+  /// A ocupação de cada atividade de casa (a etiqueta "Autocuidado" etc.). A
+  /// orientação do portal não traz ocupação.
+  final bool ocupacaoDaAtividade;
+
+  /// O painel de demonstração da TM00 (D11: simular sem conexão, reiniciar
+  /// as personas). No Terae local não há o que simular nem reiniciar.
+  final bool demonstracao;
 }
 
 /// Conexão sempre ligada e fila vazia (dublês de teste que não a usam).
