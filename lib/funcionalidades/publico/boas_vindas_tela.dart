@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
@@ -35,105 +36,109 @@ class BoasVindasTela extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final capacidades = capacidadesDaFonte(context);
-    return Scaffold(
-      key: const Key('TM00'),
-      backgroundColor: CoresTerae.marinho900,
-      // A Column dá altura livre à faixa: no slot do rodapé a altura é
-      // limitada à tela, e o `Center` de cada contato ocuparia tudo.
-      bottomNavigationBar: const Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [FaixaEmergencia()],
-      ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Row(
-                children: [
-                  const Expanded(child: MarcaDoPortal(grande: true)),
-                  if (modoDepuracao && capacidades.demonstracao)
-                    IconButton(
-                      key: const Key('abrir-painel-demonstracao'),
-                      tooltip: 'Painel de demonstração',
-                      icon: const Icon(
-                        LucideIcons.slidersHorizontal,
-                        color: CoresTerae.marinho200,
+    // Fundo marinho: relógio e ícones da barra de status em claro.
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light,
+      child: Scaffold(
+        key: const Key('TM00'),
+        backgroundColor: CoresTerae.marinho900,
+        // A Column dá altura livre à faixa: no slot do rodapé a altura é
+        // limitada à tela, e o `Center` de cada contato ocuparia tudo.
+        bottomNavigationBar: const Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [FaixaEmergencia()],
+        ),
+        body: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    const Expanded(child: MarcaDoPortal(grande: true)),
+                    if (modoDepuracao && capacidades.demonstracao)
+                      IconButton(
+                        key: const Key('abrir-painel-demonstracao'),
+                        tooltip: 'Painel de demonstração',
+                        icon: const Icon(
+                          LucideIcons.slidersHorizontal,
+                          color: CoresTerae.marinho200,
+                        ),
+                        onPressed: () =>
+                            unawaited(abrirPainelDemonstracao(context)),
                       ),
-                      onPressed: () =>
-                          unawaited(abrirPainelDemonstracao(context)),
+                  ],
+                ),
+                const SizedBox(height: 40),
+                Semantics(
+                  header: true,
+                  child: const Text(
+                    'O acompanhamento continua em casa.',
+                    style: TextStyle(
+                      fontFamily: 'Lexend',
+                      fontSize: 30,
+                      height: 38 / 30,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: -0.75,
+                      color: CoresTerae.branco,
                     ),
-                ],
-              ),
-              const SizedBox(height: 40),
-              Semantics(
-                header: true,
-                child: const Text(
-                  'O acompanhamento continua em casa.',
-                  style: TextStyle(
-                    fontFamily: 'Lexend',
-                    fontSize: 30,
-                    height: 38 / 30,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: -0.75,
-                    color: CoresTerae.branco,
                   ),
                 ),
-              ),
-              const SizedBox(height: 12),
-              const Text(
-                'As orientações das terapeutas, o diário e as próximas '
-                'sessões num lugar só.',
-                style: TextStyle(
-                  fontSize: 16,
-                  height: 26 / 16,
-                  color: CoresTerae.marinho200,
-                ),
-              ),
-              const SizedBox(height: 28),
-              for (final (icone, titulo, texto) in _fatos) ...[
-                _Fato(icone: icone, titulo: titulo, texto: texto),
-                const SizedBox(height: 16),
-              ],
-              const SizedBox(height: 16),
-              BotaoGrande(
-                key: const Key('ir-entrar'),
-                rotulo: 'Entrar',
-                icone: LucideIcons.logIn,
-                aoTocar: () => unawaited(context.push(Rotas.entrar)),
-              ),
-              if (capacidades.primeiroAcesso) ...[
                 const SizedBox(height: 12),
+                const Text(
+                  'As orientações das terapeutas, o diário e as próximas '
+                  'sessões num lugar só.',
+                  style: TextStyle(
+                    fontSize: 16,
+                    height: 26 / 16,
+                    color: CoresTerae.marinho200,
+                  ),
+                ),
+                const SizedBox(height: 28),
+                for (final (icone, titulo, texto) in _fatos) ...[
+                  _Fato(icone: icone, titulo: titulo, texto: texto),
+                  const SizedBox(height: 16),
+                ],
+                const SizedBox(height: 16),
                 BotaoGrande(
-                  key: const Key('ir-primeiro-acesso'),
-                  rotulo: 'Primeiro acesso',
-                  icone: LucideIcons.keyRound,
-                  variante: VarianteBotao.secundario,
-                  aoTocar: () => unawaited(abrirPrimeiroAcesso(context)),
+                  key: const Key('ir-entrar'),
+                  rotulo: 'Entrar',
+                  icone: LucideIcons.logIn,
+                  aoTocar: () => unawaited(context.push(Rotas.entrar)),
+                ),
+                if (capacidades.primeiroAcesso) ...[
+                  const SizedBox(height: 12),
+                  BotaoGrande(
+                    key: const Key('ir-primeiro-acesso'),
+                    rotulo: 'Primeiro acesso',
+                    icone: LucideIcons.keyRound,
+                    variante: VarianteBotao.secundario,
+                    aoTocar: () => unawaited(abrirPrimeiroAcesso(context)),
+                  ),
+                ],
+                const SizedBox(height: MedidasTerae.espaco),
+                Center(
+                  child: TextButton(
+                    key: const Key('politica-privacidade'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: CoresTerae.branco,
+                    ),
+                    onPressed: () =>
+                        unawaited(abrirPoliticaDePrivacidade(context)),
+                    child: const Text('Política de privacidade'),
+                  ),
+                ),
+                const SizedBox(height: MedidasTerae.espaco),
+                const Center(child: SeloAcademico()),
+                const SizedBox(height: 12),
+                const Text(
+                  'A conta nasce pelo convite da clínica · LGPD',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 14, color: CoresTerae.marinho200),
                 ),
               ],
-              const SizedBox(height: MedidasTerae.espaco),
-              Center(
-                child: TextButton(
-                  key: const Key('politica-privacidade'),
-                  style: TextButton.styleFrom(
-                    foregroundColor: CoresTerae.branco,
-                  ),
-                  onPressed: () =>
-                      unawaited(abrirPoliticaDePrivacidade(context)),
-                  child: const Text('Política de privacidade'),
-                ),
-              ),
-              const SizedBox(height: MedidasTerae.espaco),
-              const Center(child: SeloAcademico()),
-              const SizedBox(height: 12),
-              const Text(
-                'A conta nasce pelo convite da clínica · LGPD',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 14, color: CoresTerae.marinho200),
-              ),
-            ],
+            ),
           ),
         ),
       ),

@@ -112,7 +112,10 @@ class MolduraDoPortal extends StatelessWidget {
               selectedIndex: selecionada < 0 ? 0 : selecionada,
               onDestinationSelected: (indice) {
                 final ramo = ramos.indexOf(visiveis[indice]);
-                navigationShell.goBranch(ramo, initialLocation: ramo == atual);
+                // Sempre a raiz da aba: o ramo do Diário guardava o local da
+                // TM04 (`/paciente/diario/enviado`) depois de "Voltar ao
+                // início", e a aba abria com a lista velha, sem reler.
+                navigationShell.goBranch(ramo, initialLocation: true);
               },
               destinations: [
                 for (final aba in visiveis)

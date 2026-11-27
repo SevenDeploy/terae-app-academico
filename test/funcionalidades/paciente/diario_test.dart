@@ -112,6 +112,22 @@ void main() {
       );
     });
 
+    testWidgets('depois de enviar, "Voltar ao início" e a aba Diário mostram o '
+        'registro novo (a lista relê ao voltar)', (tester) async {
+      await abrirAppDoPaciente(tester);
+      final toques = ContadorDeToques(tester);
+      await toques.tocar(find.byKey(const Key('aba-diario')));
+      expect(find.textContaining('Registro de emulador'), findsNothing);
+      await toques.tocar(find.byKey(const Key('novo-registro')));
+      await preencherDiario(toques, sintomas: 'Registro de emulador');
+      await toques.tocar(botaoEnviar);
+      await toques.tocar(find.byKey(const Key('voltar-ao-inicio')));
+      _naTela('TM02');
+      await toques.tocar(find.byKey(const Key('aba-diario')));
+      expect(localDe(tester), Rotas.pacienteDiario);
+      expect(find.textContaining('Registro de emulador'), findsOneWidget);
+    });
+
     testWidgets('só a primeira pergunta é obrigatória: sem ela, a tela '
         'explica e nada é enviado', (tester) async {
       final app = await _abrirNovo(tester);
