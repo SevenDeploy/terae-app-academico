@@ -117,6 +117,21 @@ gravaram `registro_programa_domiciliar`; "Sair" revogou a sessão (`sessao_auten
 **Testes:** servidor HTTP falso em loopback (`test/dados/terae_local/portal_falso.dart`) para os repositórios, a
 composição por fonte e a trava; telas da etapa do código e das seções escondidas com `CapacidadesDaFonte.teraeLocal`.
 
+## Paridade com o portal — divergências visuais fechadas (27/11/2026, `portal-paridade`)
+
+Delegação do dono ("faz as ações recomendadas e prossiga"): fechar as divergências visuais que o roteiro do emulador
+achou (`docs/paridade-com-portal.md`). Decisões PV1–PV7.
+
+| # | Decisão |
+|---|---|
+| PV1 | O `Paciente` leva `nomeDaClinica` e `telefoneDaClinica` e o `Agendamento` leva `duracaoMinutos` (fim − início), **só do portal do Terae local**. Entram no mapa só quando existem: o mapa do Firebase e do SQLite não muda |
+| PV2 | Cartão da sessão do portal (`componentes_sessao.dart`: `BlocoDaData`, `ResumoDaSessao`, `SeloDaPresenca`, `RespostasDaSessao`) no Início e na Agenda. Os botões passam a ser "Confirmar presença" e "Avisar que não vamos" (iguais para todos, como no portal); "Avisar" pergunta antes ("Avisar que vocês não vêm?": a sessão continua marcada, a recepção liga, as outras não mudam). "Mudar a resposta" (D27) continua. O rótulo na primeira pessoa (D24) vira o texto do selo ("Avisou que não vai") |
+| PV3 | Agenda por semana (`dados/regras/agenda.dart`, `agruparPorSemana`): "Esta semana", "Próxima semana" e "Semana de dd/mm", de segunda a domingo no dia civil da clínica. Mesma regra do `agenda.ts` do portal, inclusive a sessão de semana passada que também se chama "Esta semana" |
+| PV4 | "Falar com a clínica" usa o telefone do `/eu` quando a fonte o tem (Ligar para ele, sem WhatsApp: o portal não diz se atende por WhatsApp). Do portal sem telefone: só o convite a falar com a clínica. Firebase: o número fictício e o WhatsApp de sempre |
+| PV5 | Topo: só o primeiro nome do paciente (o inteiro na folha e na Conta) e "Ajuda imediata". O botão tem no máximo 176 dp (rótulo em `FittedBox`) e o topo para a escala do texto em 1,15×; o nó de semântica cobre avatar e nome (o teste de contraste media só o avatar) |
+| PV6 | Cuidador no Terae local (`CapacidadesDaFonte.programaDoCuidador`): o Início é o da família (programa de hoje primeiro com "Registrar o de hoje", sessão sem botões de presença, diário bloqueado com a frase do portal) e a moldura ganha a aba Em casa em `/cuidador/casa` e `/cuidador/casa/atividade`. A guarda recusa essas rotas sem a capacidade ou sem TO, e o cuidador continua sem alcançar o diário. Rotas pelo papel: `Rotas.inicioDe`, `casaDe`, `agendaDe`, `atividadeDe` |
+| PV7 | Entrar no modo local: "Etapa 1 de 2", botão "Continuar" e a frase "Depois da senha, enviamos um código para o seu e-mail.". No Firebase fica uma etapa. Sem "Esqueci a senha" (não existe no app) |
+
 ## Atividade 5 — finalização do MVP e testes (26/11/2026, branch `atividade-5`)
 
 Decisão do dono: o MVP final é a main da F3 (`389b7b8`). A F4 fica como evolução, e nenhuma funcionalidade nova

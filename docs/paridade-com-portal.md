@@ -65,27 +65,23 @@ recibos, instalar como PWA, rascunho do diário guardado enquanto se escreve, av
 
 Conferidas em 27/11/2026 com o app no emulador contra o Terae local e o quadro 18d do portal (Design/telas), mais a
 tela de entrada do portal rodando em `portal.localhost:5175`. Evidências em
-[`evidencias-terae-local/paridade/`](evidencias-terae-local/paridade/LEIA-ME.md).
+[`evidencias-terae-local/paridade/`](evidencias-terae-local/paridade/LEIA-ME.md). Na mesma noite (decisões PV1–PV7 em
+`estado.md`) fecharam: o cartão da próxima sessão do Início, a Agenda por semana, o telefone da clínica, o topo, o Início
+e a aba Em casa do cuidador no Terae local e a "Etapa 1 de 2" do Entrar. O que ficou:
 
-- **Entrar (modo local):** o portal tem "Etapa 1 de 2", o link "Esqueci a senha", o botão "Continuar →" e a frase
-  "Depois da senha, enviamos um código para o seu e-mail." O app mostra "Entrar" sem o indicador na primeira etapa (a
-  "Etapa 2 de 2" só aparece com o código) e não tem "Esqueci a senha".
-- **Topo:** o portal mostra só o primeiro nome do paciente e o botão "Ajuda imediata"; o app mostra o nome completo e
-  "Ajuda". A marca do portal é o símbolo do Terae em minúsculas ("terae"); o app usa um ícone lucide.
-- **Início, próxima sessão:** o portal tem o bloco de data (QUI 12 NOV), "14:00 · 50 minutos", "Com Ana · terapia
-  ocupacional", a sala e os botões "Confirmar presença" e "Avisar que não vamos" no próprio cartão; o app mostra o nome,
-  a especialidade, a data por extenso e as etiquetas, e responde pela aba Agenda. O portal também põe a clínica ao lado
-  da data ("Terça, 10 de novembro · Clínica Raízes").
-- **Cuidador (Início):** continua o desenho antigo da TM08 ("Olá, Rosa!", "Ver mais", "Conteúdo clínico bloqueado"); o
-  portal usa o mesmo Início da família ("Bom dia, Rosa."), com o programa primeiro e o diário bloqueado.
-- **Cuidador (programa):** a API local entrega o programa em casa à cuidadora e o portal o mostra, mas a moldura do
-  cuidador no app não tem a aba Em casa (só Início, Agenda e Conta).
-- **Agenda, "Falar com a clínica":** o telefone ainda é o número fictício fixo do app; o portal usa
-  `telefoneDaClinica` do `GET /portal/eu`.
-
-- **Agenda:** o visual é o do portal, mas ainda não agrupa as sessões em "Esta semana" e "Próxima semana".
+- **Esqueci a senha:** não existe no app (nem no Firebase acadêmico nem na entrada local); o portal tem o link e a
+  redefinição por e-mail.
+- **Marca:** o portal usa o símbolo do Terae em minúsculas; o app usa o ícone lucide `heartPulse`.
+- **Sala da sessão:** o portal mostra o local ("Sala 2"); o `Agendamento` do app não tem local.
+- **Agenda do cuidador:** a aba Agenda do cuidador ainda é a TM12 "Agenda e avisos" (D29, com os avisos à equipe); no
+  portal é a mesma Agenda da família, sem botões.
+- **Presença:** o app mantém "Mudar a resposta" (D27); o portal só deixa "Avisar que não vamos" na sessão já confirmada.
+  No Terae local, "Confirmar presença" depois do aviso volta recusado pela API (409 → `sessaoEncerrada`).
 - **Primeiro acesso:** o termo vem antes da senha (no portal é o contrário), para não mexer na regra do consentimento.
-- **Rótulos da barra:** ficam em 14 (D10), não nos 12 do portal. A escala do texto da barra para em 1,15×, para "Em casa" caber
-  em 72 dp.
-- **Entrada:** a marca usa um ícone lucide no lugar do símbolo do Terae.
+- **Rótulos da barra:** ficam em 14 (D10), não nos 12 do portal. A escala do texto da barra e a do topo param em 1,15×,
+  para "Em casa" caber em 72 dp e "Ajuda imediata" não tirar o lugar do nome (o botão do topo tem no máximo 176 dp e o
+  rótulo encolhe antes).
+- **Cuidador no Firebase:** continua a TM08 (agenda, avisos e medicação, D29), sem aba Em casa: no Firebase o cuidador
+  não tem o programa. A aba só existe com a capacidade `programaDoCuidador` (Terae local).
 - **Fonte Terae local:** sem cópia local. O que a API do portal não tem some pela `CapacidadesDaFonte` (TL5 em `estado.md`).
+- **Computador:** o portal tem o layout de duas colunas a partir de 768 px; o app só tem o do telefone.
