@@ -43,20 +43,42 @@ void main() {
         findsOneWidget,
       );
       expect(
-        find.descendant(of: cartao, matching: find.text('Vocês vão? Responda')),
+        find.descendant(
+          of: cartao,
+          matching: find.text('Falta confirmar a presença'),
+        ),
         findsOneWidget,
       );
-      await tocar(tester, cartao);
-      expect(find.byKey(const Key('TM18')), findsOneWidget);
-      expect(find.text('Vocês vão?'), findsOneWidget);
-      expect(find.text('Sessão de terapia ocupacional'), findsWidgets);
-
+      // Os botões do portal estão no próprio cartão do Início.
       await tocar(tester, find.byKey(Key('vamos-$_sessaoMiguel')));
-      expect(find.text('A clínica recebeu sua resposta.'), findsOneWidget);
+      expect(
+        find.descendant(of: cartao, matching: find.text('Presença confirmada')),
+        findsOneWidget,
+      );
+      await tocar(tester, find.byKey(const Key('abrir-a-agenda')));
+      expect(find.byKey(const Key('TM18')), findsOneWidget);
+      expect(find.text('Presença confirmada'), findsOneWidget);
+      expect(
+        find.textContaining('A clínica recebeu a resposta'),
+        findsOneWidget,
+      );
+
+      // Avisar que não vamos pergunta antes: o aviso não cancela a sessão.
       await tocar(tester, find.byKey(Key('mudar-$_sessaoMiguel')));
       await tocar(tester, find.byKey(Key('nao-vamos-$_sessaoMiguel')));
+      expect(find.text('Avisar que vocês não vêm?'), findsOneWidget);
+      expect(find.text('• A sessão continua marcada.'), findsOneWidget);
+      await tocar(tester, find.byKey(const Key('avisar-voltar')));
+      expect(find.text('Avisar que vocês não vêm?'), findsNothing);
+      expect(find.text('Obrigado por avisar.'), findsNothing);
+      await tocar(tester, find.byKey(Key('nao-vamos-$_sessaoMiguel')));
+      await tocar(tester, find.byKey(const Key('avisar-a-clinica')));
       expect(
-        find.textContaining('A clínica foi avisada. A sessão continua marcada'),
+        find.textContaining('Obrigado por avisar. A recepção vai ligar'),
+        findsOneWidget,
+      );
+      expect(
+        find.textContaining('A sessão continua marcada até lá'),
         findsOneWidget,
       );
 
@@ -73,8 +95,8 @@ void main() {
       );
     });
 
-    testWidgets('o titular lê "Você vai?" e "Sim, vou"; sem conexão, a '
-        'resposta fica guardada', (tester) async {
+    testWidgets('o titular vê "Falta confirmar" e depois "Presença '
+        'confirmada"; sem conexão, a resposta fica guardada', (tester) async {
       final m = await abrirComMemoria(
         tester,
         persona: Persona.antonio,
@@ -82,10 +104,10 @@ void main() {
         preparar: (m) =>
             m.repositorios.demonstracao.definirSemConexao(semConexao: true),
       );
-      expect(find.text('Você vai?'), findsOneWidget);
+      expect(find.text('Falta confirmar'), findsOneWidget);
       expect(find.text('Sua agenda'), findsOneWidget);
       await tocar(tester, find.byKey(Key('vamos-$_sessaoAntonio')));
-      expect(find.text('Sim, vou'), findsOneWidget);
+      expect(find.text('Presença confirmada'), findsOneWidget);
       expect(
         find.textContaining('Guardado no aparelho. Vai para a clínica'),
         findsOneWidget,
@@ -216,7 +238,7 @@ void main() {
     });
 
     testWidgets('o Início relê a presença quando a sincronização termina '
-        '(A5: logo depois de entrar, mostrava "Você vai? Responda")', (
+        '(A5: logo depois de entrar, mostrava "Falta confirmar")', (
       tester,
     ) async {
       final conexao = ValueNotifier(const SituacaoSincronizacao());
@@ -229,7 +251,10 @@ void main() {
       );
       final cartao = find.byKey(const Key('proxima-consulta'));
       expect(
-        find.descendant(of: cartao, matching: find.text('Você vai? Responda')),
+        find.descendant(
+          of: cartao,
+          matching: find.text('Falta confirmar a presença'),
+        ),
         findsOneWidget,
       );
 

@@ -5,6 +5,7 @@ import '../../../dados/enums/situacao_agendamento.dart';
 import '../../../dados/modelos/agendamento.dart';
 import '../../../dados/modelos/confirmacao_de_presenca.dart';
 import '../../../dados/modelos/profissional_saude.dart';
+import '../../../dados/regras/agenda.dart';
 import '../../../dados/regras/presenca.dart';
 import '../../../dados/repositorios/falhas.dart';
 import '../../../dados/repositorios/paciente_repositorio.dart';
@@ -48,6 +49,10 @@ class SessoesControlador extends ChangeNotifier {
           !a.dataHora.isBefore(relogio.agora()))
         a,
   ];
+
+  /// As [proximas] agrupadas por semana, como a Agenda do portal.
+  List<SemanaDaAgenda> get semanas =>
+      agruparPorSemana(proximas, relogio.agora());
 
   /// As que já passaram ou foram canceladas, da mais recente à mais antiga.
   List<Agendamento> get anteriores => [

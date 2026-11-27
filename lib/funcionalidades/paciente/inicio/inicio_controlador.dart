@@ -2,10 +2,13 @@ import 'package:flutter/foundation.dart';
 
 import '../../../dados/enums/resposta_presenca.dart';
 import '../../../dados/modelos/agendamento.dart';
+import '../../../dados/modelos/confirmacao_de_presenca.dart';
 import '../../../dados/modelos/item_medicacao.dart';
 import '../../../dados/modelos/profissional_saude.dart';
 import '../../../dados/modelos/receita_uso_continuo.dart';
+import '../../../dados/regras/presenca.dart';
 import '../../../dados/regras/programa_em_casa.dart';
+import '../../../dados/repositorios/falhas.dart';
 import '../../../dados/repositorios/paciente_repositorio.dart';
 import '../../../dados/repositorios/presenca_repositorio.dart';
 import '../../../dados/repositorios/programa_em_casa_repositorio.dart';
@@ -47,7 +50,10 @@ class InicioControlador extends ChangeNotifier {
   ReceitaUsoContinuo? _receita;
   List<ItemMedicacao> _itens = const [];
   ({int registradas, int total})? _emCasa;
-  RespostaPresenca? _respostaDaProxima;
+  ConfirmacaoDePresenca? _confirmacaoDaProxima;
+  bool _mudando = false;
+  bool _respondendo = false;
+  String? _erroDaResposta;
   bool _descartado = false;
 
   bool get carregando => _carregando;
@@ -62,7 +68,62 @@ class InicioControlador extends ChangeNotifier {
   ({int registradas, int total})? get emCasa => _emCasa;
 
   /// F2 — a resposta de presença da próxima consulta ou sessão, se houver.
-  RespostaPresenca? get respostaDaProxima => _respostaDaProxima;
+  RespostaPresenca? get respostaDaProxima => _confirmacaoDaProxima?.resposta;
+
+  /// A confirmação inteira (com a situação de envio), para o recado.
+  ConfirmacaoDePresenca? get confirmacaoDaProxima => _confirmacaoDaProxima;
+
+  /// O Início responde a presença no próprio cartão (18d), como a Agenda.
+  bool get temPresenca => presenca != null && _proximaConsulta != null;
+
+  /// Mostra os botões: dá para responder e ainda não há resposta, ou "Mudar a
+  /// resposta" foi tocado.
+  bool get perguntando =>
+      podeResponderNaProxima && (_confirmacaoDaProxima == null || _mudando);
+
+  bool get podeMudar =>
+      podeResponderNaProxima && _confirmacaoDaProxima != null && !_mudando;
+
+  /// Só até a sessão começar (D27); `relogio` ausente (dublê antigo) vale
+  /// como "dá".
+  bool get podeResponderNaProxima {
+    final consulta = _proximaConsulta;
+    if (!temPresenca || consulta == null) return false;
+    final agora = relogio?.agora();
+    return agora == null || podeResponder(consulta, agora);
+  }
+
+  bool get respondendo => _respondendo;
+  String? get erroDaResposta => _erroDaResposta;
+
+  void mudarResposta() {
+    _mudando = true;
+    _avisar();
+  }
+
+  /// Responde a presença da próxima sessão. Falha vira [erroDaResposta].
+  Future<void> responder(RespostaPresenca resposta) async {
+    final consulta = _proximaConsulta;
+    final presenca = this.presenca;
+    if (consulta == null || presenca == null || _respondendo) return;
+    _respondendo = true;
+    _erroDaResposta = null;
+    _avisar();
+    try {
+      _confirmacaoDaProxima = await presenca.responder(
+        pacienteId: pacienteId,
+        agendamentoId: consulta.id,
+        resposta: resposta,
+      );
+      _mudando = false;
+    } on RecusaDeRegra catch (r) {
+      _erroDaResposta = r.motivo.mensagem;
+    } on Object {
+      _erroDaResposta = 'Não foi possível responder agora. Tente de novo.';
+    }
+    _respondendo = false;
+    _avisar();
+  }
 
   /// Lê tudo do repositório. Na primeira vez não avisa no início (a tela já
   /// nasce carregando); em "Tentar de novo", mostra o indicador.
@@ -85,9 +146,10 @@ class InicioControlador extends ChangeNotifier {
       _profissionalDaConsulta = profissional;
       _receita = receita;
       _itens = List.unmodifiable(itens);
-      _respostaDaProxima = consulta == null || presenca == null
+      _confirmacaoDaProxima = consulta == null || presenca == null
           ? null
-          : (await presenca!.respostas(pacienteId))[consulta.id]?.resposta;
+          : (await presenca!.respostas(pacienteId))[consulta.id];
+      _mudando = false;
       _falhou = false;
     } catch (_) {
       // Dublê sem dado, recusa ou falha de leitura: a tela oferece de novo.

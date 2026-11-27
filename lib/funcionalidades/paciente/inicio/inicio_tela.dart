@@ -3,7 +3,6 @@ import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 
-import '../../../dados/enums/resposta_presenca.dart';
 import '../../../dados/modelos/item_medicacao.dart';
 import '../../../dados/modelos/receita_uso_continuo.dart';
 import '../../../dados/repositorios/paciente_repositorio.dart';
@@ -22,6 +21,7 @@ import '../../../nucleo/widgets/cartao.dart';
 import '../../capacidades.dart';
 import '../componentes_paciente.dart';
 import '../registros/componentes_registros.dart';
+import '../sessoes/componentes_sessao.dart';
 import 'inicio_controlador.dart';
 
 /// TM02 — Início. RFM02. Aba 1: saudação, atalho grande ao diário (um toque
@@ -90,7 +90,8 @@ class _ConteudoInicio extends StatelessWidget {
           children: [
             const AvisoDeConexao(),
             Text(
-              formatarDiaPorExtenso(relogio.agora()),
+              '${formatarDiaPorExtenso(relogio.agora())}'
+              '${paciente.nomeDaClinica == null ? '' : ' · ${paciente.nomeDaClinica}'}',
               style: textos.bodySmall?.copyWith(color: CoresTerae.neutro600),
             ),
             const SizedBox(height: 4),
@@ -424,12 +425,9 @@ class _ProximaConsulta extends StatelessWidget {
     final textos = Theme.of(context).textTheme;
     final consulta = controlador.proximaConsulta;
     final profissional = controlador.profissionalDaConsulta;
-    final resposta = controlador.respostaDaProxima;
     final deOutro = perfil.falaDeOutraPessoa;
     return Cartao(
       key: const Key('proxima-consulta'),
-      // A agenda é uma aba; o Início relê tudo quando volta a ser a atual.
-      aoTocar: () => context.go(Rotas.pacienteSessoes),
       sobre: _titulo(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -441,27 +439,31 @@ class _ProximaConsulta extends StatelessWidget {
               style: textos.bodyMedium,
             )
           else ...[
-            if (profissional != null) ...[
-              Text(profissional.nome, style: textos.titleMedium),
-              Text(
-                profissional.especialidade,
-                style: textos.bodySmall?.copyWith(
-                  color: CoresTerae.textoSecundario,
-                ),
-              ),
-              const SizedBox(height: 4),
-            ],
-            Text(
-              '${formatarDiaPorExtenso(consulta.dataHora)} às '
-              '${formatarHora(consulta.dataHora)}',
-              style: textos.bodyMedium,
+            ResumoDaSessao(
+              agendamento: consulta,
+              profissional: profissional,
+              prefixoDoTerapeuta: 'Com ',
             ),
-            const SizedBox(height: MedidasTerae.espacoPequeno),
-            Wrap(
-              spacing: MedidasTerae.espacoPequeno,
-              runSpacing: MedidasTerae.espacoPequeno,
-              children: [
-                Etiqueta(
+            const SizedBox(height: 12),
+            if (controlador.temPresenca)
+              RespostasDaSessao(
+                agendamento: consulta,
+                profissional: profissional,
+                resposta: controlador.confirmacaoDaProxima,
+                perguntando: controlador.perguntando,
+                podeMudar: controlador.podeMudar,
+                ocupado: controlador.respondendo,
+                erro: controlador.erroDaResposta,
+                deOutro: deOutro,
+                aoResponder: controlador.responder,
+                aoMudar: controlador.mudarResposta,
+                chaveDoSelo: const Key('presenca-da-proxima'),
+                noInicio: true,
+              )
+            else
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Etiqueta(
                   texto: _maiuscula(
                     descricaoRelativa(
                       DataCivil.doInstante(consulta.dataHora),
@@ -469,37 +471,16 @@ class _ProximaConsulta extends StatelessWidget {
                     ),
                   ),
                 ),
-                Etiqueta(
-                  key: const Key('presenca-da-proxima'),
-                  icone: switch (resposta) {
-                    RespostaPresenca.vamos => Icons.check_circle_outline,
-                    RespostaPresenca.naoVamos => Icons.event_busy,
-                    null => Icons.help_outline,
-                  },
-                  texto: switch (resposta) {
-                    RespostaPresenca.vamos => 'Presença confirmada',
-                    RespostaPresenca.naoVamos =>
-                      deOutro ? 'Avisaram que não vão' : 'Avisou que não vai',
-                    null =>
-                      deOutro ? 'Vocês vão? Responda' : 'Você vai? Responda',
-                  },
-                  cores: switch (resposta) {
-                    RespostaPresenca.vamos => const ParDeCores(
-                      CoresTerae.clinico700,
-                      CoresTerae.clinico50,
-                    ),
-                    RespostaPresenca.naoVamos => const ParDeCores(
-                      CoresTerae.aviso900,
-                      CoresTerae.aviso50,
-                    ),
-                    null => const ParDeCores(
-                      CoresTerae.primaria700,
-                      CoresTerae.primaria50,
-                    ),
-                  },
-                ),
-              ],
-            ),
+              ),
+            if (!controlador.perguntando) ...[
+              const SizedBox(height: 12),
+              BotaoGrande(
+                key: const Key('abrir-a-agenda'),
+                rotulo: 'Abrir a agenda',
+                variante: VarianteBotao.secundario,
+                aoTocar: () => context.go(Rotas.pacienteSessoes),
+              ),
+            ],
           ],
         ],
       ),

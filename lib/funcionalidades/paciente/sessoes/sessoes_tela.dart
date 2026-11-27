@@ -1,18 +1,17 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 
-import '../../../dados/enums/resposta_presenca.dart';
 import '../../../dados/enums/situacao_agendamento.dart';
-import '../../../dados/enums/situacao_envio.dart';
 import '../../../dados/modelos/agendamento.dart';
+import '../../../dados/modelos/paciente.dart';
 import '../../../dados/repositorios/paciente_repositorio.dart';
 import '../../../dados/repositorios/presenca_repositorio.dart';
 import '../../../nucleo/sessao/sessao.dart';
 import '../../../nucleo/tema/cores.dart';
 import '../../../nucleo/tema/tema.dart';
-import '../../../nucleo/tempo/data_civil.dart';
 import '../../../nucleo/tempo/relogio.dart';
 import '../../../nucleo/textos/encontros.dart';
 import '../../../nucleo/widgets/aviso_de_conexao.dart';
@@ -20,6 +19,7 @@ import '../../../nucleo/widgets/cartao.dart';
 import '../../../nucleo/widgets/faixa_emergencia.dart';
 import '../componentes_paciente.dart';
 import '../registros/componentes_registros.dart';
+import 'componentes_sessao.dart';
 import 'sessoes_controlador.dart';
 
 /// Contato da clínica da demonstração (F2). **Número fictício**: começa com
@@ -99,8 +99,6 @@ class _ConteudoDasSessoes extends StatelessWidget {
               aoTentarDeNovo: c.carregar,
             )
           else ...[
-            const RotuloDeSecao('Próximas', icone: Icons.event),
-            const SizedBox(height: MedidasTerae.espaco),
             if (c.proximas.isEmpty)
               Cartao(
                 key: const Key('sem-proximas'),
@@ -111,12 +109,26 @@ class _ConteudoDasSessoes extends StatelessWidget {
                 ),
               )
             else
-              for (final a in c.proximas) ...[
-                _CartaoDaProxima(agendamento: a, c: c, deOutro: deOutro),
-                const SizedBox(height: MedidasTerae.espaco),
+              for (final semana in c.semanas) ...[
+                Semantics(
+                  header: true,
+                  child: Text(
+                    semana.titulo,
+                    key: Key('semana-${semana.segunda.paraIso()}'),
+                    style: textos.titleSmall?.copyWith(
+                      color: CoresTerae.neutro800,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: MedidasTerae.espacoPequeno),
+                for (final a in semana.sessoes) ...[
+                  _CartaoDaProxima(agendamento: a, c: c, deOutro: deOutro),
+                  const SizedBox(height: MedidasTerae.espacoPequeno),
+                ],
+                const SizedBox(height: MedidasTerae.espacoPequeno),
               ],
-            const SizedBox(height: MedidasTerae.espaco),
-            const _FalarComAClinica(),
+            const SizedBox(height: MedidasTerae.espacoPequeno),
+            _FalarComAClinica(paciente: paciente),
             if (c.anteriores.isNotEmpty) ...[
               const SizedBox(height: MedidasTerae.espacoGrande),
               const RotuloDeSecao(
@@ -148,141 +160,30 @@ class _CartaoDaProxima extends StatelessWidget {
   final SessoesControlador c;
   final bool deOutro;
 
-  String _rotulo(RespostaPresenca r) =>
-      deOutro ? r.rotulo : r.rotuloNaPrimeiraPessoa;
-
   @override
   Widget build(BuildContext context) {
-    final textos = Theme.of(context).textTheme;
     final a = agendamento;
     final profissional = c.profissionalDe(a);
-    final resposta = c.respostaDe(a);
-    final hoje = DataCivil.hoje(c.relogio);
-    final ocupado = c.respondendo == a.id;
     return Cartao(
       key: Key('sessao-${a.id}'),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(nomeDoEncontro(profissional), style: textos.titleMedium),
-          if (profissional != null)
-            Text(
-              'com ${profissional.nome}',
-              style: textos.bodyMedium?.copyWith(
-                color: CoresTerae.textoSecundario,
-              ),
-            ),
-          const SizedBox(height: 4),
-          Text(
-            '${formatarDiaPorExtenso(a.dataHora)} às '
-            '${formatarHora(a.dataHora)}',
-            style: textos.bodyMedium,
+          ResumoDaSessao(agendamento: a, profissional: profissional),
+          const SizedBox(height: 12),
+          RespostasDaSessao(
+            agendamento: a,
+            profissional: profissional,
+            resposta: c.respostaDe(a),
+            perguntando: c.perguntando(a),
+            podeMudar: c.podeMudar(a),
+            ocupado: c.respondendo == a.id,
+            erro: c.erroDe(a),
+            deOutro: deOutro,
+            aoResponder: (r) => c.responder(a, r),
+            aoMudar: () => c.mudarResposta(a),
+            chaveDoSelo: Key('resposta-${a.id}'),
           ),
-          const SizedBox(height: MedidasTerae.espacoPequeno),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: Etiqueta(
-              texto: _maiuscula(
-                descricaoRelativa(DataCivil.doInstante(a.dataHora), hoje: hoje),
-              ),
-            ),
-          ),
-          const Divider(height: MedidasTerae.espacoGrande),
-          if (c.perguntando(a)) ...[
-            Text(
-              deOutro ? 'Vocês vão?' : 'Você vai?',
-              style: textos.titleSmall,
-            ),
-            const SizedBox(height: MedidasTerae.espacoPequeno),
-            Wrap(
-              spacing: MedidasTerae.espacoPequeno,
-              runSpacing: MedidasTerae.espacoPequeno,
-              children: [
-                FilledButton.icon(
-                  key: Key('vamos-${a.id}'),
-                  onPressed: ocupado
-                      ? null
-                      : () => unawaited(c.responder(a, RespostaPresenca.vamos)),
-                  icon: const Icon(Icons.check),
-                  label: Text(_rotulo(RespostaPresenca.vamos)),
-                ),
-                OutlinedButton.icon(
-                  key: Key('nao-vamos-${a.id}'),
-                  onPressed: ocupado
-                      ? null
-                      : () => unawaited(
-                          c.responder(a, RespostaPresenca.naoVamos),
-                        ),
-                  icon: const Icon(Icons.close),
-                  label: Text(_rotulo(RespostaPresenca.naoVamos)),
-                ),
-              ],
-            ),
-          ] else if (resposta != null) ...[
-            Semantics(
-              liveRegion: true,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: Etiqueta(
-                      key: Key('resposta-${a.id}'),
-                      icone: resposta.resposta == RespostaPresenca.vamos
-                          ? Icons.check_circle_outline
-                          : Icons.event_busy,
-                      texto: _rotulo(resposta.resposta),
-                      cores: resposta.resposta == RespostaPresenca.vamos
-                          ? const ParDeCores(
-                              CoresTerae.clinico700,
-                              CoresTerae.clinico50,
-                            )
-                          : const ParDeCores(
-                              CoresTerae.aviso900,
-                              CoresTerae.aviso50,
-                            ),
-                    ),
-                  ),
-                  const SizedBox(height: MedidasTerae.espacoPequeno),
-                  Text(
-                    resposta.situacaoEnvio == SituacaoEnvio.naFila
-                        ? 'Guardado no aparelho. Vai para a clínica quando a '
-                              'conexão voltar.'
-                        : resposta.resposta == RespostaPresenca.vamos
-                        ? 'A clínica recebeu sua resposta.'
-                        : 'A clínica foi avisada. A '
-                              '${palavraDoEncontro(profissional)} continua '
-                              'marcada até vocês combinarem outra data.',
-                    style: textos.bodyMedium,
-                  ),
-                ],
-              ),
-            ),
-            if (c.podeMudar(a)) ...[
-              const SizedBox(height: MedidasTerae.espacoPequeno),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: TextButton.icon(
-                  key: Key('mudar-${a.id}'),
-                  onPressed: () => c.mudarResposta(a),
-                  icon: const Icon(Icons.edit_outlined),
-                  label: const Text('Mudar a resposta'),
-                ),
-              ),
-            ],
-          ],
-          if (c.erroDe(a) case final erro?) ...[
-            const SizedBox(height: MedidasTerae.espacoPequeno),
-            Semantics(
-              liveRegion: true,
-              child: Text(
-                erro,
-                style: textos.bodyMedium?.copyWith(
-                  color: CoresTerae.negativo700,
-                ),
-              ),
-            ),
-          ],
         ],
       ),
     );
@@ -290,54 +191,78 @@ class _CartaoDaProxima extends StatelessWidget {
 }
 
 class _FalarComAClinica extends StatelessWidget {
-  const _FalarComAClinica();
+  const _FalarComAClinica({required this.paciente});
+
+  final Paciente paciente;
+
+  /// `tel:+556530000000` a partir de "+55 65 3000-0000".
+  static Uri _tel(String telefone) =>
+      Uri(scheme: 'tel', path: telefone.replaceAll(RegExp(r'[^0-9+]'), ''));
 
   @override
   Widget build(BuildContext context) {
     final textos = Theme.of(context).textTheme;
     final lancador = context.read<LancadorExterno>();
+    // O Terae local manda o nome e o telefone da clínica no /eu; o Firebase
+    // não, e lá vale o número fictício da demonstração.
+    final doPortal = paciente.nomeDaClinica != null;
+    final telefone = paciente.telefoneDaClinica;
+    final semNumero = doPortal && telefone == null;
     return Cartao(
       key: const Key('falar-com-a-clinica'),
+      titulo: 'Falar com a clínica',
+      icone: LucideIcons.building2,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const RotuloDeSecao(
-            'Falar com a clínica',
-            icone: Icons.support_agent,
-          ),
-          const SizedBox(height: MedidasTerae.espacoPequeno),
           Text(
-            'Para remarcar, tirar uma dúvida ou avisar um imprevisto.',
+            semNumero
+                ? 'Para remarcar ou tirar dúvidas, fale com a clínica.'
+                : 'Para remarcar, tirar uma dúvida ou avisar um imprevisto.',
             style: textos.bodyMedium,
           ),
-          const SizedBox(height: MedidasTerae.espaco),
-          Wrap(
-            spacing: MedidasTerae.espacoPequeno,
-            runSpacing: MedidasTerae.espacoPequeno,
-            children: [
-              OutlinedButton.icon(
-                key: const Key('ligar-para-a-clinica'),
-                onPressed: () =>
-                    unawaited(lancador.abrir(ContatoDaClinica.telefone)),
-                icon: const Icon(Icons.call_outlined),
-                label: const Text('Ligar'),
-              ),
-              OutlinedButton.icon(
-                key: const Key('whatsapp-da-clinica'),
-                onPressed: () =>
-                    unawaited(lancador.abrir(ContatoDaClinica.whatsapp)),
-                icon: const Icon(Icons.chat_outlined),
-                label: const Text('WhatsApp'),
-              ),
-            ],
-          ),
-          const SizedBox(height: MedidasTerae.espacoPequeno),
-          Text(
-            '${ContatoDaClinica.exibido} · número fictício da demonstração',
-            style: textos.bodySmall?.copyWith(
-              color: CoresTerae.textoSecundario,
+          if (!semNumero) ...[
+            const SizedBox(height: MedidasTerae.espaco),
+            Wrap(
+              spacing: MedidasTerae.espacoPequeno,
+              runSpacing: MedidasTerae.espacoPequeno,
+              children: [
+                OutlinedButton.icon(
+                  key: const Key('ligar-para-a-clinica'),
+                  onPressed: () => unawaited(
+                    lancador.abrir(
+                      telefone == null
+                          ? ContatoDaClinica.telefone
+                          : _tel(telefone),
+                    ),
+                  ),
+                  icon: const Icon(LucideIcons.phone, size: 18),
+                  label: const Text('Ligar'),
+                ),
+                // O portal não diz se o número atende por WhatsApp: só a
+                // demonstração do Firebase oferece.
+                if (!doPortal)
+                  OutlinedButton.icon(
+                    key: const Key('whatsapp-da-clinica'),
+                    onPressed: () =>
+                        unawaited(lancador.abrir(ContatoDaClinica.whatsapp)),
+                    icon: const Icon(LucideIcons.messageCircle, size: 18),
+                    label: const Text('WhatsApp'),
+                  ),
+              ],
             ),
-          ),
+            const SizedBox(height: MedidasTerae.espacoPequeno),
+            Text(
+              doPortal
+                  ? telefone!
+                  : '${ContatoDaClinica.exibido} · número fictício da '
+                        'demonstração',
+              key: const Key('telefone-da-clinica'),
+              style: textos.bodySmall?.copyWith(
+                color: CoresTerae.textoSecundario,
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -396,6 +321,3 @@ class _LinhaDaAnterior extends StatelessWidget {
     );
   }
 }
-
-String _maiuscula(String texto) =>
-    texto.isEmpty ? texto : texto[0].toUpperCase() + texto.substring(1);

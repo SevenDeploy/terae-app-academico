@@ -46,17 +46,32 @@ void main() {
       expect(find.byKey(const Key('atalho-diario')), findsOneWidget);
 
       final consulta = find.byKey(const Key('proxima-consulta'));
-      for (final texto in [
-        'Dra. Helena Prado',
-        'Quarta-feira, 7 de outubro às 14:00',
-        'Em 5 dias',
-      ]) {
+      // O cartão do portal: o bloco da data (Qua 7 out), a hora, "Com ..." e
+      // o selo da presença. Sem duração: o Firebase não a tem.
+      for (final texto in ['Qua', '7', 'out', '14:00']) {
         expect(
           find.descendant(of: consulta, matching: find.text(texto)),
           findsOneWidget,
           reason: texto,
         );
       }
+      expect(
+        find.descendant(
+          of: consulta,
+          matching: find.text('Com Dra. Helena Prado · Psiquiatria'),
+        ),
+        findsOneWidget,
+      );
+      // O dublê não tem resposta de presença: os botões do portal aparecem.
+      expect(
+        find.descendant(
+          of: consulta,
+          matching: find.text('Falta confirmar a presença'),
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('Confirmar presença'), findsOneWidget);
+      expect(find.text('Avisar que não vamos'), findsOneWidget);
 
       final receita = find.byKey(const Key('orientacao-vigente'));
       for (final texto in [
@@ -107,7 +122,7 @@ void main() {
       paciente.falhar = false;
       await tester.tap(find.text('Tentar de novo'));
       await tester.pumpAndSettle();
-      expect(find.text('Dra. Helena Prado'), findsOneWidget);
+      expect(find.text('Com Dra. Helena Prado · Psiquiatria'), findsOneWidget);
     });
 
     testWidgets('o atalho abre o novo registro com um toque (P3)', (
