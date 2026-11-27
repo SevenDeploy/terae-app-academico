@@ -73,7 +73,7 @@ class _ConteudoEmCasa extends StatelessWidget {
     // F3 (revisão): relê também ao voltar à aba, porque a TM17 abre pela
     // TM20 (Jornada), e um registro com conexão não muda os pendentes.
     return RecarregaAoVoltar(
-      rota: Rotas.pacienteCasa,
+      rota: Rotas.casaDe(perfil.papel),
       aoVoltar: () => c.carregar(emSilencio: true),
       child: RecarregaAoSincronizar(
         aoMudar: () => c.carregar(emSilencio: true),
@@ -301,7 +301,12 @@ class _CartaoDaAtividade extends StatelessWidget {
         // os pendentes não mudam, e a recarga pela sincronização não vem).
         // A volta pela aba (TM17 aberta pela TM20) fica com o
         // `RecarregaAoVoltar`.
-        await context.push<void>(Rotas.atividade(a.id));
+        await context.push<void>(
+          Rotas.atividadeDe(
+            context.read<Sessao>().perfilAtivo?.papel ?? Papel.pacienteFamilia,
+            a.id,
+          ),
+        );
         await controlador.carregar(emSilencio: true);
       },
       child: Column(

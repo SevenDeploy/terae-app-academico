@@ -56,6 +56,7 @@ class _TeraeAppState extends State<TeraeApp> {
   late final GoRouter _roteador = criarRoteador(
     sessao: widget.sessao,
     localInicial: widget.localInicial,
+    programaDoCuidador: widget.repositorios.capacidades.programaDoCuidador,
   );
 
   @override

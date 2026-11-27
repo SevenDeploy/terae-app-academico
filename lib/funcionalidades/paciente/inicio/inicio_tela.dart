@@ -52,7 +52,11 @@ class InicioTela extends StatelessWidget {
                     ? context.read<RepositorioProgramaEmCasa>()
                     : null,
                 relogio: context.read<Relogio>(),
-                presenca: context.read<RepositorioPresenca>(),
+                // O cuidador vê a sessão, mas não responde por ela (a API
+                // põe `podeResponder` falso): sem presença, sem botões.
+                presenca: perfil.papel == Papel.cuidador
+                    ? null
+                    : context.read<RepositorioPresenca>(),
               )..carregar(),
               child: _ConteudoInicio(perfil: perfil),
             ),
@@ -75,6 +79,7 @@ class _ConteudoInicio extends StatelessWidget {
     final capacidades = capacidadesDaFonte(context);
 
     final paciente = perfil.paciente;
+    final cuidador = perfil.papel == Papel.cuidador;
     final primeiroNome = (conta ?? paciente.nome).split(' ').first;
     final mostrarPerfil = variosPerfis || primeiroNome != paciente.primeiroNome;
 
@@ -82,7 +87,7 @@ class _ConteudoInicio extends StatelessWidget {
     // de entrar, a cópia local ainda não tem a presença já respondida nem os
     // registros de casa do servidor, e o cartão dizia "Você vai? Responda".
     return RecarregaAoVoltar(
-      rota: Rotas.pacienteInicio,
+      rota: Rotas.inicioDe(perfil.papel),
       aoVoltar: () => controlador.carregar(emSilencio: true),
       child: RecarregaAoSincronizar(
         aoMudar: () => controlador.carregar(emSilencio: true),
@@ -124,7 +129,10 @@ class _ConteudoInicio extends StatelessWidget {
               )
             else ...[
               // A ordem do 18d: o que é do dia (a sessão e o programa),
-              // depois o diário, os avisos e os cartões fixos.
+              // depois o diário, os avisos e os cartões fixos. No cuidador
+              // (18j) o programa vem primeiro.
+              if (cuidador)
+                ..._programaDeHoje(controlador, perfil.papel, cuidador: true),
               _ProximaConsulta(
                 controlador: controlador,
                 relogio: relogio,
@@ -132,14 +140,14 @@ class _ConteudoInicio extends StatelessWidget {
               ),
               const SizedBox(height: MedidasTerae.espacoCartao),
               // F1 — o programa em casa de hoje, para quem tem TO.
-              if (controlador.emCasa case (:final registradas, :final total)
-                  when total > 0) ...[
-                _AtalhoEmCasa(registradas: registradas, total: total),
-                const SizedBox(height: MedidasTerae.espacoCartao),
-              ],
+              if (!cuidador)
+                ..._programaDeHoje(controlador, perfil.papel, cuidador: false),
             ],
-            // Terae local: o diário chega depois da P3 (CapacidadesDaFonte).
-            if (capacidades.diario) ...[
+            // O cuidador não tem o diário (18j): o cartão diz o porquê.
+            if (cuidador) ...[
+              const _DiarioForaDoAcessoDoCuidador(),
+              const SizedBox(height: MedidasTerae.espacoCartao),
+            ] else if (capacidades.diario) ...[
               _AtalhoDoDiario(perfil: perfil),
               const SizedBox(height: MedidasTerae.espacoCartao),
             ],
@@ -158,7 +166,7 @@ class _ConteudoInicio extends StatelessWidget {
               ),
               const SizedBox(height: MedidasTerae.espacoCartao),
             ],
-            if (capacidades.jornada) ...[
+            if (!cuidador && capacidades.jornada) ...[
               Cartao(
                 key: const Key('cartao-jornada'),
                 aoTocar: () async {
@@ -292,13 +300,42 @@ class _AtalhoDoDiario extends StatelessWidget {
   }
 }
 
+/// "Programa em casa · hoje" (18d) e o espaço depois dele, ou nada sem
+/// atividades. Para o cuidador (18j) o botão é "Registrar o de hoje".
+List<Widget> _programaDeHoje(
+  InicioControlador controlador,
+  Papel papel, {
+  required bool cuidador,
+}) {
+  if (controlador.emCasa case (:final registradas, :final total)
+      when total > 0) {
+    return [
+      _AtalhoEmCasa(
+        registradas: registradas,
+        total: total,
+        papel: papel,
+        cuidador: cuidador,
+      ),
+      const SizedBox(height: MedidasTerae.espacoCartao),
+    ];
+  }
+  return const [];
+}
+
 /// "Programa em casa · hoje" (18d): quantas atividades já têm o registro de
 /// hoje, a barra de progresso e o caminho à aba Em casa.
 class _AtalhoEmCasa extends StatelessWidget {
-  const _AtalhoEmCasa({required this.registradas, required this.total});
+  const _AtalhoEmCasa({
+    required this.registradas,
+    required this.total,
+    required this.papel,
+    required this.cuidador,
+  });
 
   final int registradas;
   final int total;
+  final Papel papel;
+  final bool cuidador;
 
   @override
   Widget build(BuildContext context) {
@@ -315,11 +352,39 @@ class _AtalhoEmCasa extends StatelessWidget {
           const SizedBox(height: 12),
           BotaoGrande(
             key: const Key('abrir-programa-em-casa'),
-            rotulo: 'Abrir o programa em casa',
-            variante: VarianteBotao.secundario,
-            aoTocar: () => context.go(Rotas.pacienteCasa),
+            rotulo: cuidador
+                ? 'Registrar o de hoje'
+                : 'Abrir o programa em casa',
+            variante: cuidador
+                ? VarianteBotao.primario
+                : VarianteBotao.secundario,
+            aoTocar: () => context.go(Rotas.casaDe(papel)),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// O cuidador não vê o diário nem as informações da terapia (18j): o cartão
+/// diz isso com a frase do portal (`DIARIO_FORA_DO_ACESSO_DO_CUIDADOR`).
+class _DiarioForaDoAcessoDoCuidador extends StatelessWidget {
+  const _DiarioForaDoAcessoDoCuidador();
+
+  /// A mesma frase do portal, no Início e na rota direta.
+  static const String frase =
+      'Não fazem parte do acesso de cuidador. Quem acompanha essa parte são '
+      'os responsáveis legais. Para mudar o seu acesso, fale com a clínica.';
+
+  @override
+  Widget build(BuildContext context) {
+    return const Cartao(
+      key: Key('diario-fora-do-acesso'),
+      titulo: 'Diário e informações da terapia',
+      icone: LucideIcons.lock,
+      child: Text(
+        frase,
+        style: TextStyle(fontSize: 15, color: CoresTerae.neutro700),
       ),
     );
   }
@@ -478,7 +543,7 @@ class _ProximaConsulta extends StatelessWidget {
                 key: const Key('abrir-a-agenda'),
                 rotulo: 'Abrir a agenda',
                 variante: VarianteBotao.secundario,
-                aoTocar: () => context.go(Rotas.pacienteSessoes),
+                aoTocar: () => context.go(Rotas.agendaDe(perfil.papel)),
               ),
             ],
           ],

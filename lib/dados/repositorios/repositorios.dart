@@ -90,6 +90,7 @@ class CapacidadesDaFonte {
     required this.primeiroAcesso,
     required this.ocupacaoDaAtividade,
     required this.demonstracao,
+    this.programaDoCuidador = false,
   });
 
   /// Firebase acadêmico e memória de demonstração.
@@ -102,6 +103,7 @@ class CapacidadesDaFonte {
     primeiroAcesso: true,
     ocupacaoDaAtividade: true,
     demonstracao: true,
+    programaDoCuidador: false,
   );
 
   /// Terae local (API `/api/portal/*`): sem metas nem marcos (Jornada), sem a
@@ -119,7 +121,15 @@ class CapacidadesDaFonte {
     primeiroAcesso: false,
     ocupacaoDaAtividade: false,
     demonstracao: false,
+    programaDoCuidador: true,
   );
+
+  /// O cuidador vê o programa em casa e registra o dia, como no portal
+  /// (`MATRIZ_DO_PORTAL`: o cuidador lê e cria em `portal_programa`). No
+  /// Firebase o cuidador só tem a agenda e os avisos (D29), então fica
+  /// desligado lá; o Início do cuidador passa a ser o da família e a moldura
+  /// ganha a aba "Em casa".
+  final bool programaDoCuidador;
 
   /// Diário entre consultas (TM03–TM05, TM13, TM14).
   final bool diario;

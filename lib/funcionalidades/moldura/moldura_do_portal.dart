@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../../nucleo/rotas/rotas.dart';
 import '../../nucleo/sessao/sessao.dart';
 import '../../nucleo/tema/cores.dart';
+import '../capacidades.dart';
 
 /// As áreas da moldura, na ordem da barra de baixo do portal da família
 /// (`apps/portal/src/componentes/MolduraDoPortal.tsx`, quadro 18d): Início,
@@ -36,9 +37,11 @@ const List<AbaDoPortal> ramosDoPaciente = [
   AbaDoPortal.conta,
 ];
 
-/// Ramos do cuidador: como no portal, sem o Diário (o cuidador não o vê).
+/// Ramos do cuidador: como no portal, sem o Diário (o cuidador não o vê). O
+/// "Em casa" só aparece quando a fonte entrega o programa a ele.
 const List<AbaDoPortal> ramosDoCuidador = [
   AbaDoPortal.inicio,
+  AbaDoPortal.casa,
   AbaDoPortal.agenda,
   AbaDoPortal.conta,
 ];
@@ -74,10 +77,11 @@ class MolduraDoPortal extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final perfil = context.select<Sessao, Perfil?>((s) => s.perfilAtivo);
-    final visiveis = abasVisiveis(
-      ramos,
-      temTerapiaOcupacional: perfil?.paciente.temTerapiaOcupacional ?? false,
-    );
+    final programaDoCuidador = capacidadesDaFonte(context).programaDoCuidador;
+    final temCasa =
+        (perfil?.paciente.temTerapiaOcupacional ?? false) &&
+        (perfil?.papel != Papel.cuidador || programaDoCuidador);
+    final visiveis = abasVisiveis(ramos, temTerapiaOcupacional: temCasa);
     final atual = navigationShell.currentIndex;
     final inicio = ramos.indexOf(AbaDoPortal.inicio);
     final selecionada = visiveis.indexWhere(

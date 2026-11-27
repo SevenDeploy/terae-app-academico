@@ -5,6 +5,7 @@ import 'dados/repositorios/diario_repositorio.dart';
 import 'funcionalidades/autenticacao/cadastro_cuidador_tela.dart';
 import 'funcionalidades/autenticacao/cadastro_paciente_tela.dart';
 import 'funcionalidades/autenticacao/entrar_tela.dart';
+import 'funcionalidades/capacidades.dart';
 import 'funcionalidades/conta/conta_tela.dart';
 import 'funcionalidades/cuidador/agenda_avisos_tela.dart';
 import 'funcionalidades/cuidador/inicio_cuidador_tela.dart';
@@ -48,7 +49,11 @@ String inicioDoPapel(Papel papel) => switch (papel) {
 ///   sem terapia ocupacional) leva ao início, como as de outro papel;
 /// - caminho desconhecido segue a mesma regra (cai no início ou na TM00);
 /// - a ajuda imediata do topo ([Rotas.livres]) abre sempre, como no portal.
-String? guardaDePerfil(Sessao sessao, String caminho) {
+String? guardaDePerfil(
+  Sessao sessao,
+  String caminho, {
+  bool programaDoCuidador = false,
+}) {
   if (Rotas.livres.contains(caminho)) return null;
   if (!sessao.autenticada) {
     return Rotas.publicas.contains(caminho) ? null : Rotas.boasVindas;
@@ -66,7 +71,10 @@ String? guardaDePerfil(Sessao sessao, String caminho) {
           !ativo.paciente.temTerapiaOcupacional) ||
       (Rotas.doAcompanhamentoClinico.contains(caminho) &&
           !ativo.paciente.temAcompanhamentoClinico);
-  return permitidas.contains(caminho) && !foraDaLinha
+  // O programa em casa do cuidador só existe quando a fonte o entrega.
+  final semProgramaDoCuidador =
+      Rotas.doProgramaDoCuidador.contains(caminho) && !programaDoCuidador;
+  return permitidas.contains(caminho) && !foraDaLinha && !semProgramaDoCuidador
       ? null
       : inicioDoPapel(ativo.papel);
 }
@@ -82,13 +90,18 @@ String? guardaDePerfil(Sessao sessao, String caminho) {
 GoRouter criarRoteador({
   required Sessao sessao,
   String localInicial = Rotas.boasVindas,
+  bool programaDoCuidador = false,
 }) {
   final raiz = GlobalKey<NavigatorState>(debugLabel: 'raiz');
   return GoRouter(
     navigatorKey: raiz,
     initialLocation: localInicial,
     refreshListenable: sessao,
-    redirect: (context, state) => guardaDePerfil(sessao, state.uri.path),
+    redirect: (context, state) => guardaDePerfil(
+      sessao,
+      state.uri.path,
+      programaDoCuidador: programaDoCuidador,
+    ),
     routes: [
       GoRoute(
         path: Rotas.boasVindas,
@@ -265,7 +278,16 @@ GoRouter criarRoteador({
               GoRoute(
                 path: Rotas.cuidadorInicio,
                 pageBuilder: (context, state) =>
-                    _pagina(state, const InicioCuidadorTela()),
+                    _pagina(state, const _InicioDoCuidador()),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: Rotas.cuidadorCasa,
+                pageBuilder: (context, state) =>
+                    _pagina(state, const EmCasaTela()),
               ),
             ],
           ),
@@ -289,6 +311,12 @@ GoRouter criarRoteador({
           ),
         ],
       ),
+      // A TM17 do cuidador (só com o programa dele): empilha sobre as abas.
+      GoRoute(
+        path: Rotas.cuidadorAtividade,
+        pageBuilder: (context, state) =>
+            _pagina(state, AtividadeTela(atividadeId: _id(state))),
+      ),
       GoRoute(
         path: Rotas.cuidadorMedicacao,
         pageBuilder: (context, state) => _pagina(
@@ -301,6 +329,19 @@ GoRouter criarRoteador({
       ),
     ],
   );
+}
+
+/// O Início do cuidador: o da família (programa de hoje primeiro, diário
+/// bloqueado) quando a fonte entrega o programa a ele; senão, a TM08 de
+/// sempre (D29: agenda, avisos e medicação).
+class _InicioDoCuidador extends StatelessWidget {
+  const _InicioDoCuidador();
+
+  @override
+  Widget build(BuildContext context) =>
+      capacidadesDaFonte(context).programaDoCuidador
+      ? const InicioTela()
+      : const InicioCuidadorTela();
 }
 
 /// Página Material (o go_router 18 só reconhece o `MaterialApp` do pacote

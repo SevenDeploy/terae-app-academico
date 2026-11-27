@@ -99,9 +99,13 @@ void main() {
               : Rotas.pacienteInicio,
           reason: 'paciente em $rota',
         );
+        // O programa em casa do cuidador só abre com a capacidade da fonte
+        // (e com TO): sem ela, volta ao Início.
         expect(
           guardaDePerfil(cuidador, rota),
-          Rotas.doCuidador.contains(rota) || livre
+          (Rotas.doCuidador.contains(rota) &&
+                      !Rotas.doProgramaDoCuidador.contains(rota)) ||
+                  livre
               ? isNull
               : Rotas.cuidadorInicio,
           reason: 'cuidador em $rota',

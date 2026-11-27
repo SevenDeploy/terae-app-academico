@@ -53,7 +53,7 @@ class AtividadeTela extends StatelessWidget {
             if (navegador.canPop()) {
               navegador.pop();
             } else {
-              context.go(Rotas.pacienteCasa);
+              context.go(Rotas.casaDe(perfil?.papel ?? Papel.pacienteFamilia));
             }
           },
         ),

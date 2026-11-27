@@ -1,3 +1,5 @@
+import '../sessao/sessao.dart';
+
 /// Caminhos de todas as rotas do app (§21). Nenhum outro arquivo escreve
 /// caminho de rota à mão (§24; conferido por `test/arquitetura_test.dart`).
 ///
@@ -106,6 +108,49 @@ abstract final class Rotas {
   /// TM21 Conta — cuidador.
   static const String cuidadorConta = '/cuidador/conta';
 
+  /// TM16 Em casa — cuidador, só quando a fonte entrega o programa a ele
+  /// (`CapacidadesDaFonte.programaDoCuidador`, o Terae local): a aba "Em casa"
+  /// da moldura do cuidador, com "Registrar o de hoje".
+  static const String cuidadorCasa = '/cuidador/casa';
+
+  /// TM17 Atividade — cuidador (mesma condição da [cuidadorCasa]); empilhada
+  /// sobre as abas, com o id na consulta: use [atividadeDe].
+  static const String cuidadorAtividade = '/cuidador/casa/atividade';
+
+  /// Só existem para o cuidador quando a fonte tem o programa dele; o
+  /// roteador recusa para os demais, mesmo por link direto.
+  static const Set<String> doProgramaDoCuidador = {
+    cuidadorCasa,
+    cuidadorAtividade,
+  };
+
+  /// O Início do [papel]: TM02 ou TM08.
+  static String inicioDe(Papel papel) => switch (papel) {
+    Papel.pacienteFamilia => pacienteInicio,
+    Papel.cuidador => cuidadorInicio,
+  };
+
+  /// A aba Em casa do [papel].
+  static String casaDe(Papel papel) => switch (papel) {
+    Papel.pacienteFamilia => pacienteCasa,
+    Papel.cuidador => cuidadorCasa,
+  };
+
+  /// A aba Agenda do [papel].
+  static String agendaDe(Papel papel) => switch (papel) {
+    Papel.pacienteFamilia => pacienteSessoes,
+    Papel.cuidador => cuidadorAgenda,
+  };
+
+  /// A TM17 da atividade [id], na rota do [papel].
+  static String atividadeDe(Papel papel, String id) => switch (papel) {
+    Papel.pacienteFamilia => atividade(id),
+    Papel.cuidador => Uri(
+      path: cuidadorAtividade,
+      queryParameters: {'id': id},
+    ).toString(),
+  };
+
   /// TM05 Ajuda imediata sem registro (o atalho "Ajuda" do topo, como o
   /// `/portal/ajuda`): abre com ou sem sessão, para qualquer perfil.
   static const String ajuda = '/ajuda';
@@ -159,6 +204,8 @@ abstract final class Rotas {
     pacienteCasa,
     pacienteAtividade,
     pacienteMeta,
+    cuidadorCasa,
+    cuidadorAtividade,
   };
 
   /// Só o papel cuidador alcança.
@@ -167,6 +214,7 @@ abstract final class Rotas {
     cuidadorMedicacao,
     cuidadorAgenda,
     cuidadorConta,
+    ...doProgramaDoCuidador,
   };
 
   static const Set<String> todas = {
