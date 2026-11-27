@@ -1,0 +1,13 @@
+{
+  "name": "terae-app-regras-firestore",
+  "private": true,
+  "description": "Teste das firestore.rules do terae_app no emulador local do Firestore (projeto demo-*, nunca o real).",
+  "type": "module",
+  "scripts": {
+    "testar": "firebase emulators:exec --only firestore --project demo-terae-app-academico --config ../../firebase.json \"node --test regras.test.mjs\""
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "6.0.0",
+    "firebase": "13.2.0"
+  }
+}
