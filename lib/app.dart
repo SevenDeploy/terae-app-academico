@@ -28,7 +28,8 @@ import 'roteador.dart';
 /// disponibiliza por provider, acima do roteador, para qualquer tela:
 /// cada contrato de [Repositorios] pelo próprio tipo, a situação da conexão
 /// (`ConexaoDoApp`, Atividade 4), [Relogio],
-/// [LancadorExterno] e a [Sessao] (`ChangeNotifierProvider`).
+/// [LancadorExterno], as [CapacidadesDaFonte] e a [Sessao]
+/// (`ChangeNotifierProvider`).
 class TeraeApp extends StatefulWidget {
   const TeraeApp({
     super.key,
@@ -74,6 +75,7 @@ class _TeraeAppState extends State<TeraeApp> {
         Provider<RepositorioCuidadores>.value(value: r.cuidadores),
         Provider<RepositorioVisaoCuidador>.value(value: r.visaoCuidador),
         Provider<ControleDemonstracao>.value(value: r.demonstracao),
+        Provider<CapacidadesDaFonte>.value(value: r.capacidades),
         Provider<RepositorioProgramaEmCasa>.value(value: r.programaEmCasa),
         Provider<RepositorioPresenca>.value(value: r.presenca),
         Provider<RepositorioLembretes>.value(value: r.lembretes),

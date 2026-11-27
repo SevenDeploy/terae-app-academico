@@ -19,6 +19,7 @@ import '../../../nucleo/textos/encontros.dart';
 import '../../../nucleo/widgets/aviso_de_conexao.dart';
 import '../../../nucleo/widgets/botao_grande.dart';
 import '../../../nucleo/widgets/cartao.dart';
+import '../../capacidades.dart';
 import '../componentes_paciente.dart';
 import '../registros/componentes_registros.dart';
 import 'inicio_controlador.dart';
@@ -71,6 +72,7 @@ class _ConteudoInicio extends StatelessWidget {
     final conta = context.select<Sessao, String?>((s) => s.conta?.nomeExibicao);
     final variosPerfis = context.select<Sessao, bool>((s) => s.temVariosPerfis);
     final textos = Theme.of(context).textTheme;
+    final capacidades = capacidadesDaFonte(context);
 
     final paciente = perfil.paciente;
     final primeiroNome = (conta ?? paciente.nome).split(' ').first;
@@ -135,8 +137,11 @@ class _ConteudoInicio extends StatelessWidget {
                 const SizedBox(height: MedidasTerae.espacoCartao),
               ],
             ],
-            _AtalhoDoDiario(perfil: perfil),
-            const SizedBox(height: MedidasTerae.espacoCartao),
+            // Terae local: o diário chega depois da P3 (CapacidadesDaFonte).
+            if (capacidades.diario) ...[
+              _AtalhoDoDiario(perfil: perfil),
+              const SizedBox(height: MedidasTerae.espacoCartao),
+            ],
             if (!controlador.carregando &&
                 !controlador.falhou &&
                 // D21 — receita e remédios só no acompanhamento clínico.
@@ -152,49 +157,51 @@ class _ConteudoInicio extends StatelessWidget {
               ),
               const SizedBox(height: MedidasTerae.espacoCartao),
             ],
-            Cartao(
-              key: const Key('cartao-jornada'),
-              aoTocar: () async {
-                await context.push<void>(Rotas.pacienteJornada);
-                await controlador.carregar(emSilencio: true);
-              },
-              child: Row(
-                children: [
-                  const Icon(
-                    LucideIcons.flag,
-                    size: 22,
-                    color: CoresTerae.primaria700,
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          perfil.falaDeOutraPessoa
-                              ? 'A jornada de ${paciente.primeiroNome}'
-                              : 'A sua jornada',
-                          style: textos.titleSmall,
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          'O que vem pela frente e os marcos até aqui',
-                          style: textos.bodySmall?.copyWith(
-                            color: CoresTerae.textoSecundario,
-                          ),
-                        ),
-                      ],
+            if (capacidades.jornada) ...[
+              Cartao(
+                key: const Key('cartao-jornada'),
+                aoTocar: () async {
+                  await context.push<void>(Rotas.pacienteJornada);
+                  await controlador.carregar(emSilencio: true);
+                },
+                child: Row(
+                  children: [
+                    const Icon(
+                      LucideIcons.flag,
+                      size: 22,
+                      color: CoresTerae.primaria700,
                     ),
-                  ),
-                  const Icon(
-                    LucideIcons.chevronRight,
-                    size: 20,
-                    color: CoresTerae.neutro600,
-                  ),
-                ],
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            perfil.falaDeOutraPessoa
+                                ? 'A jornada de ${paciente.primeiroNome}'
+                                : 'A sua jornada',
+                            style: textos.titleSmall,
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'O que vem pela frente e os marcos até aqui',
+                            style: textos.bodySmall?.copyWith(
+                              color: CoresTerae.textoSecundario,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Icon(
+                      LucideIcons.chevronRight,
+                      size: 20,
+                      color: CoresTerae.neutro600,
+                    ),
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(height: MedidasTerae.espacoCartao),
+              const SizedBox(height: MedidasTerae.espacoCartao),
+            ],
             const CartaoDeAjudaAgora(),
           ],
         ),

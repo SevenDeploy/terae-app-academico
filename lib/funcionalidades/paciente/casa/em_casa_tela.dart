@@ -17,6 +17,7 @@ import '../../../nucleo/tempo/relogio.dart';
 import '../../../nucleo/widgets/aviso_de_conexao.dart';
 import '../../../nucleo/widgets/botao_grande.dart';
 import '../../../nucleo/widgets/cartao.dart';
+import '../../capacidades.dart';
 import '../componentes_paciente.dart';
 import '../metas/componentes_metas.dart';
 import '../registros/componentes_registros.dart';
@@ -66,6 +67,7 @@ class _ConteudoEmCasa extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.watch<EmCasaControlador>();
+    final capacidades = capacidadesDaFonte(context);
     final nome = perfil.paciente.primeiroNome;
     final deOutro = perfil.falaDeOutraPessoa;
     // F3 (revisão): relê também ao voltar à aba, porque a TM17 abre pela
@@ -96,8 +98,10 @@ class _ConteudoEmCasa extends StatelessWidget {
             else if (c.programaEncerradoEm case final alta?) ...[
               // D36 — com alta, o programa está encerrado: só leitura.
               _ProgramaEncerrado(alta: alta, nome: nome, deOutro: deOutro),
-              const SizedBox(height: MedidasTerae.espacoGrande),
-              _UltimosDias(controlador: c),
+              if (capacidades.faixaDosDias) ...[
+                const SizedBox(height: MedidasTerae.espacoGrande),
+                _UltimosDias(controlador: c),
+              ],
             ] else if (c.atividades.isEmpty)
               _SemAtividades(nome: nome, deOutro: deOutro)
             else ...[
@@ -110,10 +114,13 @@ class _ConteudoEmCasa extends StatelessWidget {
                 _CartaoDaAtividade(atividade: a, controlador: c),
                 const SizedBox(height: MedidasTerae.espaco),
               ],
-              const SizedBox(height: MedidasTerae.espacoPequeno),
-              _UltimosDias(controlador: c),
+              if (capacidades.faixaDosDias) ...[
+                const SizedBox(height: MedidasTerae.espacoPequeno),
+                _UltimosDias(controlador: c),
+              ],
             ],
-            if (!c.carregando && !c.falhou) ...[
+            // Terae local: sem metas nem Jornada (CapacidadesDaFonte).
+            if (!c.carregando && !c.falhou && capacidades.jornada) ...[
               if (c.nossasMetas.isNotEmpty) ...[
                 const SizedBox(height: MedidasTerae.espacoGrande),
                 NossasMetas(
@@ -312,7 +319,8 @@ class _CartaoDaAtividade extends StatelessWidget {
             spacing: MedidasTerae.espacoPequeno,
             runSpacing: MedidasTerae.espacoPequeno,
             children: [
-              Etiqueta(texto: a.ocupacao.rotulo),
+              if (capacidadesDaFonte(context).ocupacaoDaAtividade)
+                Etiqueta(texto: a.ocupacao.rotulo),
               Etiqueta(
                 icone: Icons.repeat,
                 texto: descreverFrequencia(a.vezesPorSemana),

@@ -8,9 +8,12 @@ import '../../dados/repositorios/autenticacao_repositorio.dart';
 import '../../nucleo/sessao/sessao.dart';
 import '../../nucleo/tema/cores.dart';
 import '../../nucleo/tema/tema.dart';
+import '../../nucleo/tempo/relogio.dart';
 import '../../nucleo/widgets/botao_grande.dart';
 import '../../nucleo/widgets/cartao.dart';
+import '../capacidades.dart';
 import '../moldura/moldura_do_portal.dart';
+import 'codigo_de_acesso.dart';
 import 'entrar_controlador.dart';
 import 'moldura_de_entrada.dart';
 import 'primeiro_acesso.dart';
@@ -19,7 +22,9 @@ import 'widgets_entrada.dart';
 /// TM01 — Entrar (RFM01), na [MolduraDeEntrada] e com os textos do "Entrar
 /// no portal" do portal da família (18a). Em `/entrar` (pública): e-mail e
 /// senha (D14), com a recusa em linguagem simples; aviso de que a senha não
-/// fica no celular (RNFM04); o bloco "Primeiro acesso?".
+/// fica no celular (RNFM04); o bloco "Primeiro acesso?". Na fonte Terae
+/// local, a senha certa leva à etapa 2 do portal ([EtapaDoCodigo]) e o
+/// "Primeiro acesso?" some (o convite do portal é por link do e-mail).
 ///
 /// Em `/entrar/perfil` ([selecaoDePerfil], exige sessão): a lista de
 /// `Sessao.perfis`, com papel e nome do paciente; tocar chama
@@ -37,6 +42,7 @@ class EntrarTela extends StatelessWidget {
       create: (contexto) => EntrarControlador(
         autenticacao: contexto.read<RepositorioAutenticacao>(),
         sessao: contexto.read<Sessao>(),
+        relogio: contexto.read<Relogio>(),
       ),
       child: const _Entrar(),
     );
@@ -69,6 +75,10 @@ class _EntrarState extends State<_Entrar> {
   @override
   Widget build(BuildContext context) {
     final controlador = context.watch<EntrarControlador>();
+    // Fonte Terae local: a senha conferiu e o código foi pedido (etapa 2).
+    if (controlador.etapaDoCodigo case final etapa?) {
+      return EtapaDoCodigo(etapa: etapa);
+    }
     final mensagem = controlador.mensagem;
     return MolduraDeEntrada(
       chaveDaTela: const Key('TM01'),
@@ -132,8 +142,10 @@ class _EntrarState extends State<_Entrar> {
             ),
           ],
         ),
-        const SizedBox(height: MedidasTerae.espacoGrande),
-        const _PrimeiroAcessoNaEntrada(),
+        if (capacidadesDaFonte(context).primeiroAcesso) ...[
+          const SizedBox(height: MedidasTerae.espacoGrande),
+          const _PrimeiroAcessoNaEntrada(),
+        ],
       ],
     );
   }

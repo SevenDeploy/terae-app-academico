@@ -27,6 +27,7 @@ Widget montarApp({
   ControleDemonstracao? demonstracao,
   LancadorExterno? lancador,
   Relogio? relogio,
+  CapacidadesDaFonte capacidades = CapacidadesDaFonte.completa,
 }) => TeraeApp(
   repositorios: Repositorios(
     autenticacao: autenticacao ?? AutenticacaoDuble(),
@@ -35,6 +36,7 @@ Widget montarApp({
     cuidadores: CuidadoresDuble(),
     visaoCuidador: visaoCuidador ?? VisaoCuidadorDuble(),
     demonstracao: demonstracao ?? DemonstracaoDuble(),
+    capacidades: capacidades,
   ),
   sessao: sessao,
   relogio: relogio ?? RelogioFixo(agoraDeTeste),

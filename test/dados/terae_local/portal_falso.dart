@@ -159,7 +159,7 @@ class PortalFalso {
       case 'DELETE sessoes':
         completa = false;
         pacienteAtual = null;
-        return RespostaFalsa(
+        return const RespostaFalsa(
           200,
           json: {'sessoesRevogadas': 1},
           setCookies: ['$_familia=; Path=/; Max-Age=0'],

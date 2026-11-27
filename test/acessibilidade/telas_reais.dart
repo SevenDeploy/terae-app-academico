@@ -57,6 +57,7 @@ Future<MemoriaDemonstracao> abrirComMemoria(
   required String em,
   Future<void> Function(MemoriaDemonstracao memoria)? preparar,
   ValueListenable<SituacaoSincronizacao>? conexao,
+  CapacidadesDaFonte? capacidades,
 }) async {
   final memoria = memoriaDeTeste();
   await preparar?.call(memoria);
@@ -72,7 +73,8 @@ Future<MemoriaDemonstracao> abrirComMemoria(
     TeraeApp(
       // Com [conexao], a mesma memória com a situação da sincronização
       // controlada pelo teste (releitura ao fim da sincronização).
-      repositorios: conexao == null
+      // Com [capacidades], as telas como a fonte Terae local as mostra.
+      repositorios: conexao == null && capacidades == null
           ? r
           : Repositorios(
               autenticacao: r.autenticacao,
@@ -85,7 +87,8 @@ Future<MemoriaDemonstracao> abrirComMemoria(
               presenca: r.presenca,
               lembretes: r.lembretes,
               metas: r.metas,
-              conexao: conexao,
+              conexao: conexao ?? r.conexao,
+              capacidades: capacidades ?? r.capacidades,
             ),
       sessao: sessao,
       relogio: memoria.relogio,

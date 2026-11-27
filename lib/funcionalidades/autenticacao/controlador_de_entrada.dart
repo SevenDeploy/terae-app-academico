@@ -59,6 +59,10 @@ abstract class ControladorDeEntrada extends ChangeNotifier {
   @protected
   void limparMensagem() => _mensagem = null;
 
+  /// Mostra [texto] como recado (a volta à senha da etapa do código).
+  @protected
+  void definirMensagem(String texto) => _mensagem = texto;
+
   /// `notifyListeners` que não falha se a tela já saiu (o roteador troca de
   /// tela assim que a sessão abre).
   @protected
