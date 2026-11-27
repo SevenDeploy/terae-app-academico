@@ -20,6 +20,8 @@ library;
 
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
+
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../nucleo/tempo/relogio.dart';
@@ -222,7 +224,7 @@ class DiarioTeraeLocal implements RepositorioDiario {
     try {
       final resultado = await _enviarAoServidor(registro);
       if (naFila) await _tirar({registro.id});
-      return resultado ?? _jaRecebido(registro);
+      return resultado ?? await _jaRecebido(registro);
     } on RecusaDeRegra catch (recusa) {
       // Sem rede ou com a sessão acabada (401), nada se perde: o registro
       // fica guardado e sai quando der (B1).
@@ -250,7 +252,7 @@ class DiarioTeraeLocal implements RepositorioDiario {
       try {
         final resultado = await _enviarAoServidor(r);
         sairam.add(r.id);
-        if (resultado != null) saidos.add(resultado);
+        saidos.add(resultado ?? await _jaRecebido(r));
       } on RecusaDeRegra catch (recusa) {
         // Sem rede ou sessão acabada: para aqui, o resto espera.
         if (recusa.motivo == MotivoRecusa.semConexao ||
@@ -266,11 +268,57 @@ class DiarioTeraeLocal implements RepositorioDiario {
   }
 
   /// A chave já foi usada com outro corpo (`chave_de_idempotencia_em_uso`):
-  /// o servidor já recebeu um envio com este id. Sai da fila, e a lista do
-  /// servidor mostra o que chegou (B2).
-  ResultadoEnvio _jaRecebido(RegistroDiario registro) => ResultadoEnvio(
-    registro: registro.copyWith(situacaoEnvio: SituacaoEnvio.enviado),
-  );
+  /// o servidor já recebeu um envio com este id (B2), mas o 409 não traz o
+  /// recibo. Procura na primeira página da lista o que chegou e adota o
+  /// registro do servidor (id, situação, alerta); a TM14 aberta pelo id do
+  /// aparelho chega nele. Sem achar (lista fora do ar, ou já corrigido), o
+  /// registro fica visto como enviado pelo id do aparelho: a tela nunca diz
+  /// "inexistente" de um registro que saiu (pendência 5 da revisão).
+  Future<ResultadoEnvio> _jaRecebido(RegistroDiario registro) async {
+    RegistroDiario? achado;
+    try {
+      final pagina = await _pagina(registro.pacienteId, tentarFila: false);
+      achado = oQueChegou(registro, pagina.registros);
+    } on Exception {
+      achado = null;
+    }
+    final recebido =
+        achado ?? registro.copyWith(situacaoEnvio: SituacaoEnvio.enviado);
+    _vistos[registro.id] = recebido;
+    final resultado = ResultadoEnvio(
+      registro: recebido,
+      alerta: recebido.alertouAEquipe ? _alertaDe(recebido) : null,
+    );
+    _saidos[registro.id] = resultado;
+    return resultado;
+  }
+
+  /// O registro da [lista] do servidor que é o [guardado] já recebido: a
+  /// versão 1, não retirada, com as mesmas respostas e chegada depois de
+  /// escrito (com a folga do relógio). Havendo mais de um, o mais próximo.
+  @visibleForTesting
+  static RegistroDiario? oQueChegou(
+    RegistroDiario guardado,
+    List<RegistroDiario> lista,
+  ) {
+    final desde = guardado.registradoEm.subtract(_folgaDoRelogio);
+    final candidatos = [
+      for (final s in lista)
+        if (s.versao == 1 &&
+            s.retiradoEm == null &&
+            s.adesao == guardado.adesao &&
+            s.sintomas == guardado.sintomas &&
+            s.intensidadeSintoma == guardado.intensidadeSintoma &&
+            s.observacoes == guardado.observacoes &&
+            !(s.enviadoEm ?? s.registradoEm).isBefore(desde))
+          s,
+    ];
+    if (candidatos.isEmpty) return null;
+    Duration distancia(RegistroDiario s) =>
+        (s.enviadoEm ?? s.registradoEm).difference(guardado.registradoEm).abs();
+    candidatos.sort((a, b) => distancia(a).compareTo(distancia(b)));
+    return candidatos.first;
+  }
 
   @override
   Future<PaginaDoDiario> pagina(String pacienteId, {DateTime? antes}) =>

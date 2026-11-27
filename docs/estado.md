@@ -73,11 +73,12 @@ não muda mais nas regras (`antigoQuePodeTerAlertado`), mesmo que não tenha ale
    Comandos, na pasta do app:
    - `firebase deploy --only firestore:rules`
    - `node ferramentas/semear-firebase.mjs --reiniciar`
-   **Antes de publicar** (revisão da P4, M3): as `firestore.rules` mudaram muito e não têm teste executável
-   (`regras_test.dart` testa as funções Dart). Rodar um teste das regras no emulador do Firestore cobrindo: criar
-   (versão 1), versão seguinte, retirada com motivo, o reenvio que só muda `enviadoEm`, o caminho `doFormatoAntigo`
-   (inclusive o documento antigo "grave"/"critica" recusado por `antigoQuePodeTerAlertado`), o cuidador sem leitura do
-   diário e o alerta só de registro grave ou crítico.
+   **Antes de publicar**, rode o teste das regras no emulador local (`ferramentas/regras-firestore/`,
+   `npm run testar`, projeto `demo-*`; ver o LEIA-ME da pasta). São 22 casos: criar, corrigir, retirar, reenvio,
+   revisado/retirado/alertado imutáveis, formato antigo, cuidador e outra conta fora do diário, alerta D18,
+   `confirmacoes`, `metas` e `registrosCasa`. Ele achou e corrigiu (`846a023`) uma brecha que recusava toda primeira
+   correção: o recorte `versoesAnteriores[0:0]` dá erro de índice nas regras. Publicar continua pedindo o ok do
+   dono.
 2. O roteiro no emulador da P3 não foi feito: ele depende do item 1.
 3. O rascunho guardado no aparelho enquanto se escreve (o `useRascunho` do portal) não entrou. O texto do novo
    registro vive enquanto a tela estiver aberta.
@@ -713,6 +714,9 @@ Da revisão:
 2. ~~Item da fila do diário local sem dona vale para qualquer conta.~~ Resolvida pela TL8 (a): descartado ao ler.
 3. ~~Fila do diário local sem prazo.~~ Resolvida pela TL8 (b): validade de 7 dias, "Não deu para enviar" e
    "Descartar".
-4. Teste das `firestore.rules` no emulador do Firestore antes de publicar as regras e a semente da P3 (pede ok do dono).
-5. Registro marcado como recebido pelo 409 de chave em uso fica com o id do aparelho e sem recibo (só formato antigo).
+4. ~~Teste das `firestore.rules` no emulador do Firestore.~~ Resolvida em `846a023` (`ferramentas/regras-firestore/`,
+   22 casos; corrigiu a primeira correção do diário, recusada pelo recorte `[0:0]`). Publicar segue com o dono.
+5. ~~Registro recebido pelo 409 de chave em uso sem recibo.~~ Resolvida: o app procura na primeira página da lista o
+   registro que chegou (mesmas respostas, versão 1, não retirado) e adota o do servidor; sem achar, fica visto como
+   enviado pelo id do aparelho (nunca "inexistente").
 6. Repetir a fumaça do diário contra o Terae local depois de 1 h (o teto de 5 códigos por hora da persona da Alice).

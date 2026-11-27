@@ -385,8 +385,55 @@ void main() {
       portal.impressaoPorChave[_idLocal1] = '{"outro":"corpo"}';
       portal.recibosPorChave[_idLocal1] = const {};
       final saidos = await diario.reenviarFila();
-      expect(saidos, isEmpty);
+      expect(saidos, hasLength(1));
+      expect(saidos.single.enviado, isTrue);
       expect(await diario.pendentes(idAlice), isEmpty);
+      // Pendência 5: sem o registro na lista, a TM14 pelo id do aparelho
+      // ainda o abre (nunca "inexistente" de um registro que saiu).
+      final aberto = await diario.registro(_idLocal1);
+      expect(aberto.enviado, isTrue);
+    });
+
+    test('pendência 5: o 409 de chave em uso adota o registro que chegou ao '
+        'servidor (id, situação)', () async {
+      final offline = await semRede();
+      await offline.enviar(_novo(_idLocal1, sintomas: 'Dormiu mal'));
+      // O mesmo registro já tinha chegado por outro envio (o recibo se perdeu).
+      final chegou = await diario.enviar(
+        _novo(_idLocal2, sintomas: 'Dormiu mal'),
+      );
+      portal.impressaoPorChave[_idLocal1] = '{"outro":"corpo"}';
+      portal.recibosPorChave[_idLocal1] = const {};
+      final saidos = await diario.reenviarFila();
+      expect(saidos.single.registro.id, chegou.registro.id);
+      expect(await diario.pendentes(idAlice), isEmpty);
+      final aberto = await diario.registro(_idLocal1);
+      expect(aberto.id, chegou.registro.id);
+    });
+
+    test('oQueChegou: mesmas respostas, versão 1, não retirado, depois de '
+        'escrito', () {
+      final guardado = _novo(_idLocal1, sintomas: 'A');
+      RegistroDiario servidor(String id, {String? sintomas, DateTime? em}) =>
+          _novo(
+            id,
+            sintomas: sintomas ?? 'A',
+            em: em,
+          ).copyWith(situacaoEnvio: SituacaoEnvio.enviado);
+      final antes = servidor(
+        's0',
+        em: guardado.registradoEm.subtract(const Duration(hours: 1)),
+      );
+      final outro = servidor('s1', sintomas: 'B');
+      final certo = servidor(
+        's2',
+        em: guardado.registradoEm.add(const Duration(minutes: 1)),
+      );
+      expect(DiarioTeraeLocal.oQueChegou(guardado, [antes, outro]), isNull);
+      expect(
+        DiarioTeraeLocal.oQueChegou(guardado, [antes, outro, certo])?.id,
+        's2',
+      );
     });
 
     test('"Sair" de uma conta não apaga o que outra conta guardou', () async {
