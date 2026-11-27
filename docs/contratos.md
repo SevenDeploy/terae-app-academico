@@ -73,7 +73,8 @@ Portão: `dart format --set-exit-if-changed lib test`, `flutter analyze` sem iss
 
 ## Atividade 4 (06/11/2026)
 
-**Rotas novas** — `pacienteRegistros` TM13 `/paciente/registros`, `pacienteRegistro` TM14 e
+**Rotas novas** — `pacienteRegistros` TM13 `/paciente/registros` (na P3, 27/11, virou `pacienteNovoRegistro`
+`/paciente/registros/novo`, o "Novo registro"; ver D43 em `docs/estado.md`), `pacienteRegistro` TM14 e
 `pacienteCorrigirRegistro` TM15 (id na consulta: use `Rotas.registro(id)` e `Rotas.corrigirRegistro(id)`), todas em
 `doPaciente`, empilhadas sobre as abas pelo navegador raiz.
 

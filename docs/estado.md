@@ -3,6 +3,62 @@
 Projeto acadêmico (Dispositivos Móveis, UNEMAT 2026). Não é o app do Terae produção: o produto é um SaaS web, e o
 canal do paciente no produto é um PWA na Play Store.
 
+## Paridade com o portal da família — P3, o diário (27/11/2026, branch `portal-diario`)
+
+Pedido do dono (26/11/2026): o app o mais parecido possível com o portal da família do Terae web (`apps/portal`),
+porque depois ele fará o app real em React Native. No diário, ele escolheu "copiar tudo": as 4 perguntas, a lista com
+os selos, retirar com motivo e as versões. A P4 vai ligar o app ao Terae LOCAL (`/api/portal/*`), e por isso o modelo
+do registro já nasce com os nomes do corpo da API. Nada de produção. Fonte da verdade: `apps/portal/src/telas/diario/*`,
+`packages/contratos/src/portal/index.ts` e os quadros 18e, 18f, 18g e 19d.
+
+### Decisões (do líder, por delegação do dono)
+
+| # | Decisão |
+|---|---|
+| D38 | **D17 revista.** Corrigir cria a versão seguinte (`versao`), e a anterior fica em `versoesAnteriores`, no mesmo documento: "Ver a versão 1" lê dali. Não há mais o limite do mesmo dia. Corrigir e retirar só valem antes da revisão da terapeuta (`revisadoEm`, que só a clínica escreve), nunca no registro que avisou a equipe e nunca no retirado: é o `podeAlterar` do portal, e a recusa é `registroNaoMudaMais` (o 409). "Retirar" com motivo (`dia_errado`, `paciente_errado`, `enviado_sem_querer`, `outro` com detalhe obrigatório de até 300 caracteres) substitui a exclusão lógica: o retirado continua na lista, tachado, com o motivo. O excluído das A4/A5 vira retirado com "Outro" ("Excluído no app antes da mudança do diário.") |
+| D39 | **D8 revista.** O registro usa os nomes do corpo de `POST /portal/diario`: `adesao` (`total`, `parcial`, `nenhuma`), `sintomas` (texto), `intensidadeSintoma` (`leve`, `moderado`, `grave`, `critico`), `observacoes`, e o motivo da retirada com a grafia da API. O `registradoEm` é o `guardadoEm` da API quando o registro esperou na fila. A leitura ainda aceita a grafia antiga (`moderada`, `critica`, `sintomaPredominante`, `observacao`, `excluidoEm`), para o documento que ficou no Firebase antes da semente nova |
+| D40 | **D32 revista.** As 4 perguntas são as do portal, e só a primeira é obrigatória: "Aconteceu alguma coisa que você queira contar?" (texto), "O quanto isso atrapalhou o dia?" (4 cartões e "Deixar sem resposta") e "Quer deixar mais alguma observação?". A primeira muda pela linha de cuidado: com TO, "Vocês conseguiram fazer as atividades em casa?"; só com acompanhamento clínico, "Você conseguiu seguir o tratamento combinado?". A voz segue a D24 ("Fizemos parte" / "Fiz parte"), e quem lê é "a terapeuta" com TO e "a equipe" sem ela. A lista fechada de sintomas sai: o sintoma escolhido das A3–A5 vira o texto contado |
+| D41 | Como no portal, **corrigir e retirar pedem a internet na hora** (sem rede, o botão fica travado com o motivo, e o repositório recusa `semConexao` sem mudar nada). Só o registro novo vai para a fila: "Guardar e enviar depois" aparece sem internet, e a TM04 diz "Registro guardado neste aparelho.", com o SAMU e o CVV quando a resposta foi "Bastante" ou "Muito". O guardado aparece em "Guardados neste aparelho", no alto da lista, com "Enviar agora", e não se corrige até chegar. O "Descartar" do portal não entra: o app não apaga o que a família escreveu (§23) |
+| D42 | O alerta continua o do §7.1: "Muito" sempre, e "Bastante" depois de "Bastante" (a "regra da clínica" do portal); sem resposta, nunca. O registro leva `alertouAEquipe` no mesmo lote do alerta (D18), e a lista diz "A equipe foi avisada". As `firestore.rules` negam a mudança de registro revisado, retirado ou que avisou a equipe, e aceitam só três atualizações: a versão seguinte, a retirada com motivo, e o reenvio da fila que só muda o `enviadoEm` |
+| D43 | Navegação: a aba Diário (TM03) passa a ser a lista, 30 por vez. A TM13 deixa de ser "Meus registros" e vira o "Novo registro" (`/paciente/registros/novo`), e o atalho do Início abre ela. A TM14 é o registro com as versões, e a TM15 é a correção. A TM04 é o recibo do 18f e deixou de voltar sozinha ao Início em 3 s, porque o portal mostra "Corrigir agora" ao lado de "Voltar ao início". A D10 perde o objeto. A busca e o filtro da antiga TM13 saem, porque o portal não os tem |
+
+### O que entrou
+
+- **Dados:**
+  - `RegistroDiario` campo a campo, sem cast, com `EntradaDoDiario`, `VersaoDoRegistro`, `RetiradaDoRegistro` e o
+    enum `MotivoDaRetirada`;
+  - regras puras em `dados/regras/diario.dart` (`podeAlterar`, `maisNovoPrimeiro`, `esperouNaFila`);
+  - `RepositorioDiario` com `pagina` (30 por vez, `antes`), `pendentes`, `corrigir` e `retirar`, na memória e na
+    persistência;
+  - **SQLite v4**: a migração `_versao4` refaz `registros_diario` copiando cada linha (o SQLite não tira `NOT NULL`),
+    e o alerta antigo vira `alertou_a_equipe`;
+  - `firestore.rules` do diário, `semear-firebase.mjs` e `conferir-firebase.mjs`;
+  - a demonstração com revisados, um retirado (dia errado), um corrigido (versão 2), um que esperou na fila
+    ("Escrito em…") e 3 registros do Miguel.
+- **Telas:**
+  - TM03 lista com os selos, "Ver a versão 1", "Corrigir", "Retirar", os guardados, o estado vazio e "Ver
+    registros mais antigos";
+  - TM13 "Novo registro" com o rodapé sem internet;
+  - TM15 com o aviso da versão nova e o 409;
+  - folha "Retirar este registro?";
+  - TM14;
+  - TM04 "Registro enviado." / "Correção enviada." / "Registro guardado neste aparelho." com o recibo;
+  - TM05 com "A equipe da clínica foi avisada.";
+  - widget `GrupoDeCartoes` (o `CartaoDeOpcao` do portal), com ícones lucide e tokens `CoresTerae`.
+
+### Pendências da P3
+
+1. **Firebase acadêmico — pede o ok do dono.** As regras novas e a semente nova não foram publicadas. Até lá, o
+   Firebase tem os registros no formato antigo: o app os lê (D39), mas a regra antiga recusa gravar o formato novo.
+   Comandos, na pasta do app:
+   - `firebase deploy --only firestore:rules`
+   - `node ferramentas/semear-firebase.mjs --reiniciar`
+2. O roteiro no emulador da P3 não foi feito: ele depende do item 1.
+3. O rascunho guardado no aparelho enquanto se escreve (o `useRascunho` do portal) não entrou. O texto do novo
+   registro vive enquanto a tela estiver aberta.
+4. Para a P4: o mapeador da fonte Terae local manda `guardadoEm` = `registradoEm` só no registro que saiu da fila, e
+   a `Idempotency-Key` = `id`.
+
 ## Atividade 5 — finalização do MVP e testes (26/11/2026, branch `atividade-5`)
 
 Decisão do dono: o MVP final é a main da F3 (`389b7b8`). A F4 fica como evolução, e nenhuma funcionalidade nova
@@ -478,7 +534,7 @@ Do líder, por delegação do dono (06/11/2026):
 | # | Decisão |
 |---|---|
 | D16 | SQLite é a fonte local da verdade: o diário é lido do SQLite e a fila de envio são as linhas `naFila`; as cópias de leitura tentam o servidor por 2 s e caem na cópia local; persistência offline do Firestore desligada |
-| D17 | Corrigir e excluir o registro só no mesmo dia civil da clínica; exclusão lógica (`excluidoEm`); alerta já emitido nunca some. Substitui "depois de enviado, o registro não é editado" (A3 §23) |
+| D17 | Corrigir e excluir o registro só no mesmo dia civil da clínica; exclusão lógica (`excluidoEm`); alerta já emitido nunca some. Substitui "depois de enviado, o registro não é editado" (A3 §23). **Revista na P3 (D38)** |
 | D18 | Sem Cloud Functions no Spark, o alerta é avaliado no aparelho e vai no mesmo lote do registro (id derivado do registro: no máximo um); as `firestore.rules` só aceitam alerta de registro grave/crítico |
 | D19 | Web e testes continuam na memória (sqflite não roda na web); a memória ganhou e-mail/senha e o CRUD |
 | D20 | "Sair" encerra o Firebase e apaga o SQLite e as preferências da conta |
@@ -557,7 +613,7 @@ Do plano:
 | D5 | Login Google/Apple simulado ("Escolha uma conta"); Apple só no iOS — **superada pela D14 na Atividade 4** |
 | D6 | Nada persiste no aparelho nesta etapa (RNFM04 cumprido por ausência) — **superada pela D16 na Atividade 4** |
 | D7 | Fuso da clínica fixo em −04:00, com `Relogio` injetável |
-| D8 | Enums com a grafia do docx (`moderada`, `critica`) |
+| D8 | Enums com a grafia do docx (`moderada`, `critica`). **Revista na P3 (D39)** |
 | D9 | Datas da demonstração relativas a hoje |
 | D10 | Seletor com estado semântico, texto ≥ 14 sp, e a TM04 não volta sozinha com leitor de tela |
 | D11 | Painel de demonstração (sem conexão, reiniciar dados) só em modo depuração |
