@@ -27,7 +27,13 @@ class InicioCuidadorTela extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Revisão da P4 (B3): trocar de paciente pela folha refaz o controlador;
+    // a aba fica montada no `StatefulShellRoute`.
+    final pacienteId = context.select<Sessao, String?>(
+      (s) => s.perfilAtivo?.pacienteId,
+    );
     return ChangeNotifierProvider(
+      key: ValueKey(pacienteId),
       create: criarControladorDoCuidador,
       child: const _InicioCuidador(),
     );

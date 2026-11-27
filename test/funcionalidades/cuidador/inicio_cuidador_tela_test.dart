@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:terae_app/dados/enums/resposta_presenca.dart';
+import 'package:terae_app/dados/repositorios/autenticacao_repositorio.dart';
 import 'package:terae_app/dados/repositorios/falhas.dart';
 import 'package:terae_app/nucleo/rotas/rotas.dart';
 import 'package:terae_app/nucleo/sessao/sessao.dart';
@@ -49,6 +50,38 @@ Future<void> _tocar(WidgetTester tester, Finder alvo) async {
 }
 
 void main() {
+  testWidgets('cuidadora de dois pacientes: trocar pela folha refaz o Início '
+      'e a Agenda com o paciente novo (revisão da P4, B3)', (tester) async {
+    final visao = VisaoCuidadorFake();
+    final sessao = Sessao()
+      ..entrar(
+        VinculosDaConta(
+          conta: contaDe('c-regina', 'Regina Souza'),
+          acompanhados: [
+            pacienteDe('p-ana', 'Ana Lúcia Martins'),
+            pacienteDe('p-bento', 'Bento Lima'),
+          ],
+        ),
+      );
+    sessao.escolherPerfil(
+      sessao.perfis.firstWhere((p) => p.paciente.id == 'p-ana'),
+    );
+    await _abrir(tester, sessao: sessao, visao: visao);
+    await _tocar(tester, find.byKey(const Key('aba-agenda')));
+    expect(visao.chamadas.last, 'c-regina|p-ana');
+
+    visao.chamadas.clear();
+    await _tocar(tester, find.byKey(const Key('seletor-de-paciente')));
+    await _tocar(tester, find.text('Bento Lima').last);
+    await _tocar(tester, find.byKey(const Key('aba-agenda')));
+    expect(visao.chamadas, isNotEmpty);
+    expect(
+      visao.chamadas.every((c) => c == 'c-regina|p-bento'),
+      isTrue,
+      reason: '${visao.chamadas}',
+    );
+  });
+
   testWidgets('paciente só de TO: sem o atalho "Medicação" e sem o próximo '
       'remédio, mesmo com receita no repositório (D21; pendência 3 da F1)', (
     tester,
