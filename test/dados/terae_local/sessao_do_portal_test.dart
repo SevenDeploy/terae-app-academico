@@ -169,6 +169,32 @@ void main() {
     expect(sessao.temSessao, isFalse);
   });
 
+  test('um login feito enquanto o DELETE do "Sair" espera não perde o cookie '
+      'novo (revisão da P4)', () async {
+    var n = 0;
+    servidor.roteiro = (p) => p.metodo == 'DELETE'
+        ? const RespostaFalsa(
+            200,
+            json: {'sessoesRevogadas': 1},
+            setCookies: ['$_familia=; Path=/; Max-Age=0'],
+            demora: Duration(milliseconds: 400),
+          )
+        : RespostaFalsa(
+            201,
+            json: const {'etapa': 'concluida'},
+            setCookies: ['$_familia=s${n++}; Path=/'],
+          );
+    await sessao.entrar('a@b.test', 'x');
+    final saindo = sessao.sair();
+    await Future<void>.delayed(const Duration(milliseconds: 100));
+    await sessao.entrar('a@b.test', 'x');
+    expect(await saindo, 1);
+    expect(sessao.temSessao, isTrue, reason: 'o login novo ficou');
+    final proximo = servidor.pedidos.length;
+    await sessao.entrar('a@b.test', 'x');
+    expect(servidor.pedidos[proximo].cookies[_familia], 's1');
+  });
+
   test('sair sem rede ainda esquece a sessão', () async {
     servidor.roteiro = (_) => const RespostaFalsa(
       201,

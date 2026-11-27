@@ -196,6 +196,14 @@ class ClienteDoPortal {
   String? _dispositivo;
   Future<void>? _carregando;
 
+  /// Muda a cada sessão nova ou esquecida. A resposta de uma chamada que
+  /// começou noutra geração não mexe nos cookies (o `DELETE /sessoes` lento
+  /// do "Sair" não apaga o login feito em seguida).
+  int _geracao = 0;
+
+  /// A geração atual da sessão (ver [esquecerSessao] com `daGeracao`).
+  int get geracaoDaSessao => _geracao;
+
   /// Há cookie de sessão (completa ou provisória) em memória.
   bool get temSessao => _cookies.containsKey(cookieDaFamilia);
 
@@ -255,10 +263,17 @@ class ClienteDoPortal {
   );
 
   /// Esquece a sessão (e a prova) em memória; o aparelho confiável fica.
-  void esquecerSessao() => _cookies.clear();
+  /// Com [daGeracao], só esquece se nenhuma sessão nova nasceu desde então.
+  void esquecerSessao({int? daGeracao}) {
+    if (daGeracao != null && daGeracao != _geracao) return;
+    _cookies.clear();
+    _geracao++;
+  }
 
   /// Esquece o aparelho confiável: o próximo login volta a pedir o código.
-  Future<void> esquecerAparelho() async {
+  /// Com [daGeracao], só esquece se nenhuma sessão nova nasceu desde então.
+  Future<void> esquecerAparelho({int? daGeracao}) async {
+    if (daGeracao != null && daGeracao != _geracao) return;
     await _carregarDispositivo();
     _dispositivo = null;
     await _guarda.apagar();
@@ -289,6 +304,7 @@ class ClienteDoPortal {
     String? chaveDeIdempotencia,
   }) async {
     await _carregarDispositivo();
+    final geracao = _geracao;
     final endereco = enderecoDe(caminho, consulta);
     final escrita = metodo != 'GET' && metodo != 'HEAD';
 
@@ -334,7 +350,9 @@ class ClienteDoPortal {
     }
 
     // Cookies primeiro: até a resposta de erro pode girar ou apagar a sessão.
-    await _absorverCookies(cabecalhos[HttpHeaders.setCookieHeader]);
+    if (geracao == _geracao) {
+      await _absorverCookies(cabecalhos[HttpHeaders.setCookieHeader]);
+    }
 
     final Object? json = _decodificar(texto);
     if (status >= 200 && status < 300) {
@@ -377,6 +395,10 @@ class ClienteDoPortal {
       } else if (cookie.apagado) {
         _cookies.remove(cookie.nome);
       } else {
+        if (cookie.nome == cookieDaFamilia &&
+            _cookies[cookieDaFamilia] != cookie.valor) {
+          _geracao++; // sessão nova ou girada
+        }
         _cookies[cookie.nome] = cookie.valor;
       }
     }

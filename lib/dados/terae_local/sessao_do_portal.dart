@@ -175,6 +175,8 @@ class SessaoDoPortal {
   ///
   /// Devolve quantas sessões o servidor revogou (0 sem sessão ou sem rede).
   Future<int> sair({bool manterAparelhoConfiavel = false}) async {
+    // Um login feito enquanto o DELETE espera não perde o cookie novo.
+    final geracao = _cliente.geracaoDaSessao;
     try {
       if (!_cliente.temSessao) return 0;
       final r = await _cliente.delete('sessoes');
@@ -182,8 +184,10 @@ class SessaoDoPortal {
     } on FalhaDoPortal {
       return 0;
     } finally {
-      _cliente.esquecerSessao();
-      if (!manterAparelhoConfiavel) await _cliente.esquecerAparelho();
+      if (!manterAparelhoConfiavel) {
+        await _cliente.esquecerAparelho(daGeracao: geracao);
+      }
+      _cliente.esquecerSessao(daGeracao: geracao);
     }
   }
 
