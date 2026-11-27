@@ -1,12 +1,10 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:terae_app/dados/enums/adesao_em_casa.dart';
-import 'package:terae_app/dados/enums/motivo_da_retirada.dart';
 import 'package:terae_app/dados/enums/qualidade_consentimento.dart';
 import 'package:terae_app/dados/enums/quem_registrou.dart';
 import 'package:terae_app/dados/enums/resposta_presenca.dart';
 import 'package:terae_app/dados/enums/situacao_agendamento.dart';
 import 'package:terae_app/dados/enums/situacao_envio.dart';
-import 'package:terae_app/dados/modelos/registro_diario.dart';
 import 'package:terae_app/dados/repositorios/autenticacao_repositorio.dart';
 import 'package:terae_app/dados/repositorios/falhas.dart';
 import 'package:terae_app/dados/terae_local/autenticacao_terae_local.dart';
@@ -558,29 +556,6 @@ void main() {
   });
 
   group('o que o portal não tem', () {
-    test(
-      'diário: leitura vazia, escrita recusa (chega depois da P3)',
-      () async {
-        const diario = DiarioIndisponivelNoTeraeLocal();
-        expect((await diario.pagina(idAlice)).registros, isEmpty);
-        expect(await diario.pendentes(idAlice), isEmpty);
-        expect(await diario.reenviarFila(), isEmpty);
-        expect(await diario.alertaDoRegistro('x'), isNull);
-        await expectLater(
-          diario.retirar(
-            'x',
-            RetiradaDoRegistro(categoria: MotivoDaRetirada.outro),
-          ),
-          _recusa(MotivoRecusa.indisponivelNestaFonte),
-        );
-        await expectLater(
-          diario.registro('x'),
-          _recusa(MotivoRecusa.registroInexistente),
-        );
-        expect(RegistroDiario, isNotNull);
-      },
-    );
-
     test('cuidadores e metas: vazios', () async {
       const cuidadores = CuidadoresIndisponiveisNoTeraeLocal();
       expect(await cuidadores.cuidadores(idAlice), isEmpty);

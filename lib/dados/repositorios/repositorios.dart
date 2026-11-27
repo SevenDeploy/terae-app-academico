@@ -108,10 +108,10 @@ class CapacidadesDaFonte {
   /// faixa dos 14 dias (o programa só traz o registro de hoje), sem a
   /// ocupação da atividade, sem
   /// "Desfazer" no Em casa, sem cuidadores (chave `CUIDADOR_PELO_PORTAL`
-  /// desligada) e sem o primeiro acesso por código do app. O diário chega
-  /// depois da P3 (outra branch refaz o modelo).
+  /// desligada) e sem o primeiro acesso por código do app. O diário vem de
+  /// `/api/portal/diario` (`DiarioTeraeLocal`).
   static const CapacidadesDaFonte teraeLocal = CapacidadesDaFonte(
-    diario: false,
+    diario: true,
     jornada: false,
     faixaDosDias: false,
     desfazerEmCasa: false,

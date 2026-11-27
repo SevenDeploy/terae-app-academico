@@ -80,6 +80,19 @@ class PortalFalso {
 
   int giro = 0;
 
+  /// O diário da conta (`RegistroDoDiarioNoPortal` sem as versões), do mais
+  /// antigo ao mais novo, e as versões de cada registro.
+  final List<Map<String, Object?>> diario = [];
+  final Map<String, List<Map<String, Object?>>> versoes = {};
+
+  /// Recibos por `Idempotency-Key` (reenviar a mesma chave não duplica).
+  final Map<String, Map<String, Object?>> recibosPorChave = {};
+
+  /// Corpos recebidos no `POST diario`.
+  final List<Map<String, Object?>> enviosDoDiario = [];
+
+  int _seqDoDiario = 0;
+
   String _cookie() =>
       '$_familia=sessao-${giro++}; Path=/; HttpOnly; Secure; '
       'SameSite=Strict';
@@ -238,6 +251,7 @@ class PortalFalso {
         json: {'avisadoEm': '2026-11-26T18:00:06.000Z'},
       );
     }
+    if (_diario(p, chave) case final resposta?) return resposta;
     if (chave == 'GET programa') {
       return RespostaFalsa(
         200,
@@ -265,6 +279,130 @@ class PortalFalso {
     }
     return RespostaFalsa(404, json: problema(404, 'nao_encontrado'));
   }
+
+  RespostaFalsa? _diario(PedidoVisto p, String chave) {
+    if (chave == 'GET diario') {
+      final antes = Uri.parse(p.caminho).queryParameters['antes'];
+      final todos = [
+        for (final r in diario.reversed)
+          if (r['idPaciente'] == pacienteAtual &&
+              (antes == null ||
+                  (r['enviadoEm']! as String).compareTo(antes) < 0))
+            r,
+      ];
+      return RespostaFalsa(
+        200,
+        json: {'registros': todos.take(2).toList(), 'haMais': todos.length > 2},
+      );
+    }
+    if (chave == 'POST diario') {
+      final corpo = p.json! as Map<String, Object?>;
+      final idem = p.cabecalho('idempotency-key');
+      final jaVisto = idem == null ? null : recibosPorChave[idem];
+      if (jaVisto != null) return RespostaFalsa(201, json: jaVisto);
+      enviosDoDiario.add(corpo);
+      final n = ++_seqDoDiario;
+      final id = 'd0000000-0000-4000-8000-${n.toString().padLeft(12, '0')}';
+      final em = '2026-11-26T18:0$n:00.000Z';
+      final critico = corpo['intensidadeSintoma'] == 'critico';
+      final registro = <String, Object?>{
+        'id': id,
+        'idPaciente': corpo['idPaciente'],
+        'versao': 1,
+        'enviadoEm': em,
+        'adesao': corpo['adesao'],
+        'intensidadeSintoma': ?corpo['intensidadeSintoma'],
+        'sintomas': ?corpo['sintomas'],
+        'observacoes': ?corpo['observacoes'],
+        'situacao': 'enviado',
+        'podeAlterar': !critico,
+        'alertouAEquipe': critico,
+      };
+      diario.add(registro);
+      versoes[id] = [_versao(registro, vigente: true)];
+      final recibo = {
+        'id': id,
+        'versao': 1,
+        'recebidoEm': em,
+        'ajudaImediata': critico,
+      };
+      if (idem != null) recibosPorChave[idem] = recibo;
+      return RespostaFalsa(201, json: recibo);
+    }
+    final corrigir = RegExp(r'^PUT diario/([^/]+)$').firstMatch(chave);
+    final retirar = RegExp(r'^POST diario/([^/]+)/retirada$').firstMatch(chave);
+    final verVersoes = RegExp(r'^GET diario/([^/]+)/versoes$')
+        .firstMatch(chave);
+    final id = (corrigir ?? retirar ?? verVersoes)?.group(1);
+    if (id == null) return null;
+    final registro = diario.where((r) => r['id'] == id).firstOrNull;
+    if (registro == null) {
+      return RespostaFalsa(404, json: problema(404, 'nao_encontrado'));
+    }
+    if (verVersoes != null) return RespostaFalsa(200, json: versoes[id]);
+    if (registro['podeAlterar'] != true) {
+      return RespostaFalsa(409, json: problema(409, 'conflito'));
+    }
+    final corpo = p.json! as Map<String, Object?>;
+    if (corrigir != null) {
+      final versao = (registro['versao']! as int) + 1;
+      // Como a API: cada versão é uma linha nova, com id próprio.
+      final idNovo = 'e${id.substring(1, id.length - 1)}$versao';
+      final historico = versoes.remove(id)!;
+      for (final v in historico) {
+        v['vigente'] = false;
+      }
+      versoes[idNovo] = historico;
+      registro
+        ..['id'] = idNovo
+        ..remove('intensidadeSintoma')
+        ..remove('sintomas')
+        ..remove('observacoes')
+        ..addAll({
+          'versao': versao,
+          'adesao': corpo['adesao'],
+          'intensidadeSintoma': ?corpo['intensidadeSintoma'],
+          'sintomas': ?corpo['sintomas'],
+          'observacoes': ?corpo['observacoes'],
+        });
+      versoes[idNovo]!.add({
+        ..._versao(registro, vigente: true),
+        'enviadaEm': '2026-11-26T19:0$versao:00.000Z',
+      });
+      return RespostaFalsa(
+        200,
+        json: {
+          'id': idNovo,
+          'versao': versao,
+          'recebidoEm': '2026-11-26T19:0$versao:00.000Z',
+          'ajudaImediata': false,
+        },
+      );
+    }
+    registro.addAll({
+      'situacao': 'retirado',
+      'retiradoEm': '2026-11-26T20:00:00.000Z',
+      'motivoDaRetirada': corpo['motivo'],
+      'podeAlterar': false,
+    });
+    return RespostaFalsa(200, json: registro);
+  }
+
+  Map<String, Object?> _versao(
+    Map<String, Object?> r, {
+    required bool vigente,
+  }) => {
+    'id': r['id'],
+    'versao': r['versao'],
+    'enviadaEm': r['enviadoEm'],
+    'adesao': r['adesao'],
+    'intensidadeSintoma': ?r['intensidadeSintoma'],
+    'sintomas': ?r['sintomas'],
+    'observacoes': ?r['observacoes'],
+    'vigente': vigente,
+    'alertouAEquipe': r['alertouAEquipe'],
+    'podeAlterar': r['podeAlterar'],
+  };
 
   Map<String, Object?> _paciente() =>
       pacientes.firstWhere((x) => x['idPaciente'] == pacienteAtual);

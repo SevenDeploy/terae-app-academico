@@ -11,6 +11,7 @@ import 'autenticacao_terae_local.dart';
 import 'cliente_do_portal.dart';
 import 'configuracao_terae_local.dart';
 import 'contexto_do_portal.dart';
+import 'diario_terae_local.dart';
 import 'guarda_do_dispositivo_em_preferencias.dart';
 import 'indisponiveis_terae_local.dart';
 import 'repositorios_terae_local.dart';
@@ -61,6 +62,10 @@ Future<TeraeLocalMontado> montarTeraeLocal({
   final autenticacao = AutenticacaoTeraeLocal(contexto);
   final paciente = PacienteTeraeLocal(contexto);
   final programa = ProgramaTeraeLocal(contexto);
+  final diario = DiarioTeraeLocal(
+    contexto,
+    fila: GuardaDaFilaEmPreferencias(prefs),
+  );
   final lembretesDaFonte =
       lembretes ??
       LembretesLocais(
@@ -72,7 +77,7 @@ Future<TeraeLocalMontado> montarTeraeLocal({
   final repositorios = Repositorios(
     autenticacao: autenticacao,
     paciente: paciente,
-    diario: const DiarioIndisponivelNoTeraeLocal(),
+    diario: diario,
     cuidadores: const CuidadoresIndisponiveisNoTeraeLocal(),
     visaoCuidador: VisaoCuidadorTeraeLocal(contexto),
     demonstracao: const SemDemonstracaoNoTeraeLocal(),
@@ -88,6 +93,7 @@ Future<TeraeLocalMontado> montarTeraeLocal({
     aoSair: () async {
       await autenticacao.sair();
       await lembretesDaFonte.cancelarTudo();
+      await diario.esquecer();
     },
   );
 }
