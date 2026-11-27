@@ -68,6 +68,18 @@ em IPv6), olhando a tela, não só o banco:
 | Registro escrito sem internet ("Guardado offline Mariana") | Aparece uma vez só, "A revisar" |
 | "Confirmar presença" da sessão de 01/12 14:00 | Agenda mostra "Confirmada" e "Confirmada por Portal da família" |
 
-Ainda **sem comprovação na tela**: o caminho inverso (a terapeuta "Marcar como revisada" na web e o selo virar "Revisado"
-no app). Pede uma entrada no app com a Mariana, que só terá cota de código depois de 24 h do último pedido (teto de 10 por
-24 h). Os testes de unidade cobrem o selo "Revisado".
+### O caminho de volta, da web para o app (feito pela tela)
+
+A terapeuta marcou "Guardado offline Mariana" como revisada na caixa de entrada da clínica (a resposta saiu de "A revisar").
+Depois, no emulador, a Mariana entrou (senha e código do Mailpit; nenhuma captura mostra senha nem código) e viu:
+
+| Web da clínica | App | Captura |
+|---|---|---|
+| Sessão de 01/12 14:00 "Confirmada por Portal da família" | Início: "Presença confirmada", "Combinado! A clínica recebeu a resposta."; programa de hoje 2 de 3 | `J1-mariana-inicio-presenca-confirmada-na-web.png` |
+| "Marcar como revisada" no registro de 17:46 | Diário: selo "Revisado pela terapeuta", "Revisado pela terapeuta hoje, às 19:10. Não dá mais para corrigir nem retirar." | `J2-revisado-na-web-aparece-no-app.png` |
+
+"Sair" revogou a sessão (`sessao_autenticada.revogada_em` preenchido) e o app voltou à capa.
+
+Ainda **sem comprovação**: o portal web da família lado a lado com o app (faltou cota de código para entrar nele no
+navegador). Observação visual: em "Quem você acompanha" (Conta), o nome e o selo "Vendo agora" dividem a linha e o nome
+quebra em quatro linhas a 360 dp.
