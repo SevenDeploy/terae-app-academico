@@ -54,10 +54,17 @@ class DiarioControlador extends ChangeNotifier {
     _carregando = _registros.isEmpty && _pendentes.isEmpty && _vencidos.isEmpty;
     _erro = null;
     _avisar();
+    // Os guardados e os vencidos moram no aparelho: leem-se antes da rede e
+    // aparecem mesmo sem internet (como o `PendentesDoDiario` do portal),
+    // senão o registro guardado some da tela e a pessoa o escreve de novo.
     try {
-      final pagina = await repositorio.pagina(pacienteId);
       _pendentes = await repositorio.pendentes(pacienteId);
       _vencidos = await repositorio.vencidos(pacienteId);
+    } on Exception {
+      // Sem a leitura local, a lista do servidor ainda pode abrir.
+    }
+    try {
+      final pagina = await repositorio.pagina(pacienteId);
       _registros = pagina.registros;
       _haMais = pagina.haMais;
     } on RecusaDeRegra catch (recusa) {

@@ -211,6 +211,10 @@ class DiarioControlavel extends DiarioDuble {
   bool revisouNoMeio = false;
   int reenvios = 0;
 
+  /// A lista do servidor não abre (sem internet): `pagina` recusa, mas os
+  /// guardados no aparelho continuam legíveis.
+  bool listaForaDoAr = false;
+
   /// Resultado "enviado" (com alerta se "Muito") para o [registro].
   static ResultadoEnvio enviadoDe(RegistroDiario registro) {
     final critico = registro.intensidadeSintoma?.ehCritico ?? false;
@@ -279,6 +283,7 @@ class DiarioControlavel extends DiarioDuble {
 
   @override
   Future<PaginaDoDiario> pagina(String pacienteId, {DateTime? antes}) async {
+    if (listaForaDoAr) throw const RecusaDeRegra(MotivoRecusa.semConexao);
     final todos = [
       for (final r in servidor.values)
         if (r.pacienteId == pacienteId &&

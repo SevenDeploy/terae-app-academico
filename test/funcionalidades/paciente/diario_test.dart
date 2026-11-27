@@ -378,6 +378,30 @@ void main() {
       expect(find.text('Guardado, aguardando a internet'), findsOneWidget);
     });
 
+    testWidgets('sem internet a lista não abre, mas o guardado continua na '
+        'tela (não se escreve de novo)', (tester) async {
+      final diario = DiarioControlavel(ModoDoDiario.semConexao)
+        ..listaForaDoAr = true;
+      diario.fila['g-1'] = RegistroDiario(
+        id: 'g-1',
+        pacienteId: 'p-ana',
+        registradoEm: agoraDeTeste,
+        adesao: Adesao.total,
+        situacaoEnvio: SituacaoEnvio.naFila,
+      );
+      await abrirAppDoPaciente(
+        tester,
+        em: Rotas.pacienteDiario,
+        diario: diario,
+      );
+      expect(find.byKey(const Key('pendentes-do-diario')), findsOneWidget);
+      expect(find.byKey(const ValueKey('pendente-g-1')), findsOneWidget);
+      expect(
+        find.textContaining('Não conseguimos abrir o diário'),
+        findsOneWidget,
+      );
+    });
+
     testWidgets('na fila com "Pouco": sem os números de emergência', (
       tester,
     ) async {
