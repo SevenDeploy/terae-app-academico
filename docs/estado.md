@@ -720,3 +720,15 @@ Da revisão:
    registro que chegou (mesmas respostas, versão 1, não retirado) e adota o do servidor; sem achar, fica visto como
    enviado pelo id do aparelho (nunca "inexistente").
 6. Repetir a fumaça do diário contra o Terae local depois de 1 h (o teto de 5 códigos por hora da persona da Alice).
+
+## Verificação no emulador (27/11/2026)
+
+Percorridos contra o Terae local com a Laura (titular) e a Rosa (cuidadora): entrar com código do Mailpit, Início,
+Diário (novo, corrigir, "Ver a versão 1", retirar), Em casa, Agenda, Conta, Sair e o modo cuidador. Evidências em
+`docs/evidencias-terae-local/paridade/`. Dois defeitos achados e corrigidos (`fcc9a31`): a aba Diário abria com a
+lista velha depois de enviar, porque o ramo guardava o local da TM04 (agora a aba abre sempre na raiz); e, na capa
+marinho, relógio e ícones da barra de status ficavam escuros.
+
+Ficou para depois (anotado em `docs/paridade-com-portal.md`): a aba Em casa do cuidador no modo local, o Início do
+cuidador no desenho do portal, os botões de presença no cartão da próxima sessão e o telefone da clínica vindo do
+`/eu`. A Mariana (Alice) não entrou no emulador: a conta bateu o teto de 10 códigos em 24 h até as 21:41 UTC.

@@ -63,6 +63,26 @@ recibos, instalar como PWA, rascunho do diário guardado enquanto se escreve, av
 
 ## Divergências conhecidas
 
+Conferidas em 27/11/2026 com o app no emulador contra o Terae local e o quadro 18d do portal (Design/telas), mais a
+tela de entrada do portal rodando em `portal.localhost:5175`. Evidências em
+[`evidencias-terae-local/paridade/`](evidencias-terae-local/paridade/LEIA-ME.md).
+
+- **Entrar (modo local):** o portal tem "Etapa 1 de 2", o link "Esqueci a senha", o botão "Continuar →" e a frase
+  "Depois da senha, enviamos um código para o seu e-mail." O app mostra "Entrar" sem o indicador na primeira etapa (a
+  "Etapa 2 de 2" só aparece com o código) e não tem "Esqueci a senha".
+- **Topo:** o portal mostra só o primeiro nome do paciente e o botão "Ajuda imediata"; o app mostra o nome completo e
+  "Ajuda". A marca do portal é o símbolo do Terae em minúsculas ("terae"); o app usa um ícone lucide.
+- **Início, próxima sessão:** o portal tem o bloco de data (QUI 12 NOV), "14:00 · 50 minutos", "Com Ana · terapia
+  ocupacional", a sala e os botões "Confirmar presença" e "Avisar que não vamos" no próprio cartão; o app mostra o nome,
+  a especialidade, a data por extenso e as etiquetas, e responde pela aba Agenda. O portal também põe a clínica ao lado
+  da data ("Terça, 10 de novembro · Clínica Raízes").
+- **Cuidador (Início):** continua o desenho antigo da TM08 ("Olá, Rosa!", "Ver mais", "Conteúdo clínico bloqueado"); o
+  portal usa o mesmo Início da família ("Bom dia, Rosa."), com o programa primeiro e o diário bloqueado.
+- **Cuidador (programa):** a API local entrega o programa em casa à cuidadora e o portal o mostra, mas a moldura do
+  cuidador no app não tem a aba Em casa (só Início, Agenda e Conta).
+- **Agenda, "Falar com a clínica":** o telefone ainda é o número fictício fixo do app; o portal usa
+  `telefoneDaClinica` do `GET /portal/eu`.
+
 - **Agenda:** o visual é o do portal, mas ainda não agrupa as sessões em "Esta semana" e "Próxima semana".
 - **Primeiro acesso:** o termo vem antes da senha (no portal é o contrário), para não mexer na regra do consentimento.
 - **Rótulos da barra:** ficam em 14 (D10), não nos 12 do portal. A escala do texto da barra para em 1,15×, para "Em casa" caber
