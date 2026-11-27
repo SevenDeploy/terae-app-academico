@@ -368,9 +368,10 @@ void main() {
       fabrica: databaseFactoryFfi,
       caminho: caminho,
     );
-    // F2: a v3 (respostas de presença) roda junto, na mesma abertura.
+    // F2 e P3: a v3 (respostas de presença) e a v4 (o diário do portal)
+    // rodam junto, na mesma abertura.
     expect(await banco.db.getVersion(), BancoLocal.versao);
-    expect(BancoLocal.versao, 3);
+    expect(BancoLocal.versao, 4);
     final tabelas = await banco.db.query(
       'sqlite_master',
       columns: ['name'],

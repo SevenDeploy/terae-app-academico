@@ -63,6 +63,15 @@ class _FilaDeTeste implements FilaDeEntidade {
   }
 }
 
+/// O servidor que recusa toda gravação (as regras negam o registro).
+class _FonteQueRecusa extends FonteFirestore {
+  _FonteQueRecusa() : super(FakeFirebaseFirestore());
+
+  @override
+  Future<void> gravar(WriteBatch lote) async =>
+      throw const RecusaDeRegra(MotivoRecusa.acessoNegado);
+}
+
 void main() {
   late BancoLocal banco;
   late RegistroDiarioDao dao;
@@ -99,8 +108,8 @@ void main() {
       pacienteId: _paciente,
       registradoEm: agoraDaPersistencia,
       adesao: Adesao.total,
-      intensidade: Intensidade.leve,
-      sintomaPredominante: 'Cansaço',
+      intensidadeSintoma: Intensidade.leve,
+      sintomas: 'Cansaço',
       situacaoEnvio: SituacaoEnvio.naFila,
     ),
   );
@@ -120,6 +129,23 @@ void main() {
       'buscar $outro',
     ]);
     expect(sincronizador.situacao.value.online, isTrue);
+  });
+
+  test('o servidor recusa um registro do diário: ele fica na fila, e as '
+      'filas e a busca seguem (D33; revisão da P3)', () async {
+    await umRegistroNaFila();
+    final recusa = Sincronizador(
+      dao: dao,
+      fonte: _FonteQueRecusa(),
+      monitor: conexao.monitor,
+      relogio: RelogioFixo(agoraDaPersistencia),
+      filas: [casa, presenca],
+    )..acompanhar([_paciente]);
+    await recusa.sincronizar();
+    expect(casa.eventos, contains('buscar $_paciente'));
+    expect(presenca.eventos, contains('buscar $_paciente'));
+    expect(await dao.contarPendentes(), 1, reason: 'continua na fila');
+    expect(recusa.situacao.value.online, isTrue);
   });
 
   test('o aviso de conexão soma o diário e todas as filas', () async {

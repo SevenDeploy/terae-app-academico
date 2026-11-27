@@ -1,20 +1,25 @@
 import 'dart:math';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:terae_app/dados/enums/adesao.dart';
 import 'package:terae_app/dados/enums/intensidade.dart';
+import 'package:terae_app/dados/enums/motivo_da_retirada.dart';
 import 'package:terae_app/dados/enums/regra_alerta.dart';
+import 'package:terae_app/dados/enums/situacao_envio.dart';
 import 'package:terae_app/dados/memoria/regras.dart';
+import 'package:terae_app/dados/modelos/registro_diario.dart';
+import 'package:terae_app/dados/regras/diario.dart';
 
 void main() {
   group('regraDoAlerta (§7.1)', () {
     test('(a) crítica dispara mesmo sem histórico', () {
       expect(
-        regraDoAlerta(nova: Intensidade.critica, anterior: null),
+        regraDoAlerta(nova: Intensidade.critico, anterior: null),
         RegraAlerta.intensidadeCritica,
       );
       for (final anterior in Intensidade.values) {
         expect(
-          regraDoAlerta(nova: Intensidade.critica, anterior: anterior),
+          regraDoAlerta(nova: Intensidade.critico, anterior: anterior),
           RegraAlerta.intensidadeCritica,
         );
       }
@@ -31,8 +36,8 @@ void main() {
       for (final anterior in [
         null,
         Intensidade.leve,
-        Intensidade.moderada,
-        Intensidade.critica,
+        Intensidade.moderado,
+        Intensidade.critico,
       ]) {
         expect(
           regraDoAlerta(nova: Intensidade.grave, anterior: anterior),
@@ -42,12 +47,77 @@ void main() {
       }
     });
 
-    test('leve e moderada nunca disparam', () {
-      for (final nova in [Intensidade.leve, Intensidade.moderada]) {
+    test('leve, moderado e sem resposta (P3: a pergunta é opcional) nunca '
+        'disparam', () {
+      for (final nova in [null, Intensidade.leve, Intensidade.moderado]) {
         for (final anterior in [null, ...Intensidade.values]) {
           expect(regraDoAlerta(nova: nova, anterior: anterior), isNull);
         }
       }
+    });
+  });
+
+  group('regras do diário (P3, D17 revista)', () {
+    final antes = DateTime.utc(2026, 11, 20, 22);
+    RegistroDiario registro({
+      SituacaoEnvio situacao = SituacaoEnvio.enviado,
+      DateTime? enviadoEm,
+      bool alertou = false,
+      DateTime? revisadoEm,
+      DateTime? retiradoEm,
+      String id = 'r',
+    }) => RegistroDiario(
+      id: id,
+      pacienteId: 'p',
+      registradoEm: antes,
+      adesao: Adesao.total,
+      situacaoEnvio: situacao,
+      enviadoEm: enviadoEm,
+      alertouAEquipe: alertou,
+      revisadoEm: revisadoEm,
+      retiradoEm: retiradoEm,
+      motivoDaRetirada: retiradoEm == null
+          ? null
+          : RetiradaDoRegistro(categoria: MotivoDaRetirada.diaErrado),
+    );
+
+    test('pode mudar só o que chegou, sem revisão, retirada nem alerta — '
+        'em qualquer dia', () {
+      expect(podeAlterar(registro(enviadoEm: antes)), isTrue);
+      expect(podeAlterar(registro(situacao: SituacaoEnvio.naFila)), isFalse);
+      expect(podeAlterar(registro(alertou: true)), isFalse);
+      expect(podeAlterar(registro(revisadoEm: antes)), isFalse);
+      expect(podeAlterar(registro(retiradoEm: antes)), isFalse);
+    });
+
+    test('"Escrito em…, enviado em…" só quando esperou mais de 5 minutos', () {
+      expect(esperouNaFila(registro(enviadoEm: antes)), isFalse);
+      expect(
+        esperouNaFila(
+          registro(enviadoEm: antes.add(const Duration(minutes: 5))),
+        ),
+        isFalse,
+      );
+      expect(
+        esperouNaFila(
+          registro(enviadoEm: antes.add(const Duration(minutes: 6))),
+        ),
+        isTrue,
+      );
+      expect(esperouNaFila(registro(situacao: SituacaoEnvio.naFila)), isFalse);
+    });
+
+    test('a lista vai do mais novo ao mais antigo pelo recebimento, com o id '
+        'no empate', () {
+      final a = registro(id: 'a', enviadoEm: antes);
+      final b = registro(id: 'b', enviadoEm: antes);
+      final c = registro(
+        id: 'c',
+        enviadoEm: antes.add(const Duration(days: 1)),
+      );
+      final lista = [a, c, b]..sort(maisNovoPrimeiro);
+      expect([for (final r in lista) r.id], ['c', 'b', 'a']);
+      expect(momentoNaLista(registro(situacao: SituacaoEnvio.naFila)), antes);
     });
   });
 

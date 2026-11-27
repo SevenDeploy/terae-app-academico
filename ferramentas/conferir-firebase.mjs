@@ -32,8 +32,9 @@ const registros = await paciente.collection('registros').orderBy('registradoEm',
 console.log(`Registros mais recentes de ${pid}:`);
 for (const d of registros.docs) {
   const r = d.data();
-  console.log(`  ${r.registradoEm}  ${r.intensidade.padEnd(9)} ${r.sintomaPredominante.padEnd(12)} ${r.situacaoEnvio}` +
-    `${r.atualizadoEm ? '  corrigido ' + r.atualizadoEm : ''}${r.excluidoEm ? '  EXCLUÍDO ' + r.excluidoEm : ''}`);
+  console.log(`  ${r.registradoEm}  ${(r.intensidadeSintoma ?? '—').padEnd(9)} ${r.adesao.padEnd(8)} v${r.versao ?? 1} ${r.situacaoEnvio}` +
+    `${r.alertouAEquipe ? '  AVISOU A EQUIPE' : ''}${r.revisadoEm ? '  revisado ' + r.revisadoEm : ''}` +
+    `${r.retiradoEm ? '  RETIRADO ' + r.retiradoEm + ' (' + r.motivoDaRetirada?.categoria + ')' : ''}`);
 }
 // Evolução de TO (F1): os registros mais recentes das atividades de casa.
 const daCasa = await paciente.collection('registrosCasa').orderBy('registradoEm', 'desc').limit(4).get();

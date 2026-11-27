@@ -156,7 +156,7 @@ void main() {
       var ids = <String>[];
       for (var i = 0; i < 100 && !ids.contains('dd1'); i++) {
         await Future<void>.delayed(const Duration(milliseconds: 10));
-        ids = [for (final r in await diario.registros(_pidAna)) r.id];
+        ids = [for (final r in (await diario.pagina(_pidAna)).registros) r.id];
       }
       expect(ids, contains('dd1'));
     });

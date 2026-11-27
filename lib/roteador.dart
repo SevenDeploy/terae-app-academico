@@ -22,8 +22,8 @@ import 'funcionalidades/paciente/lembretes/lembretes_tela.dart';
 import 'funcionalidades/paciente/lembretes/reagenda_lembretes.dart';
 import 'funcionalidades/paciente/metas/meta_tela.dart';
 import 'funcionalidades/paciente/registros/correcao_tela.dart';
+import 'funcionalidades/paciente/registros/novo_registro_tela.dart';
 import 'funcionalidades/paciente/registros/registro_tela.dart';
-import 'funcionalidades/paciente/registros/registros_tela.dart';
 import 'funcionalidades/paciente/sessoes/sessoes_tela.dart';
 import 'funcionalidades/publico/boas_vindas_tela.dart';
 import 'nucleo/rotas/rotas.dart';
@@ -76,9 +76,9 @@ String? guardaDePerfil(Sessao sessao, String caminho) {
 /// fixos na ordem de [ramosDoPaciente] e [ramosDoCuidador]; a barra mostra
 /// só os da linha de cuidado, D22),
 /// TM04/TM05 no navegador raiz (tela cheia,
-/// acima das abas), TM11/TM12 sobre a TM08 e, na Atividade 4, TM13 → TM14 →
-/// TM15 empilhadas sobre as abas. Reavalia a guarda a cada mudança da
-/// [sessao].
+/// acima das abas), TM11/TM12 sobre a TM08 e TM13 (novo registro), TM14 e
+/// TM15 (corrigir) empilhadas sobre as abas (P3). Reavalia a guarda a cada
+/// mudança da [sessao].
 GoRouter criarRoteador({
   required Sessao sessao,
   String localInicial = Rotas.boasVindas,
@@ -237,8 +237,9 @@ GoRouter criarRoteador({
         pageBuilder: (context, state) => _pagina(state, const LembretesTela()),
       ),
       GoRoute(
-        path: Rotas.pacienteRegistros,
-        pageBuilder: (context, state) => _pagina(state, const RegistrosTela()),
+        path: Rotas.pacienteNovoRegistro,
+        pageBuilder: (context, state) =>
+            _pagina(state, const NovoRegistroTela()),
       ),
       GoRoute(
         path: Rotas.pacienteRegistro,

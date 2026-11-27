@@ -212,9 +212,14 @@ async function semear() {
       ...r, situacaoEnvio: 'enviado', atualizadoEm: null, excluidoEm: null,
     });
   }
+  // P3: o diário igual ao do portal — revisados pela terapeuta, um retirado
+  // com motivo, um corrigido (versão 2) e os que aguardam a terapeuta.
   for (const r of dados.registros) {
     lote.set(doPaciente(r.pacienteId, 'registros', r.id), {
-      ...r, situacaoEnvio: 'enviado', atualizadoEm: null, excluidoEm: null,
+      sintomas: null, intensidadeSintoma: null, observacoes: null,
+      versao: 1, atualizadoEm: null, alertouAEquipe: false,
+      revisadoEm: null, retiradoEm: null, motivoDaRetirada: null, versoesAnteriores: [],
+      ...r, situacaoEnvio: 'enviado',
     });
   }
   for (const a of dados.alertas) {

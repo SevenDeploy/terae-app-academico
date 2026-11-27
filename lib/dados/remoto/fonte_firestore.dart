@@ -17,7 +17,9 @@ import 'falhas_remotas.dart';
 /// - `pacientes/{pid}/privado/identificacao` — CPF e nascimento (só o
 ///   titular);
 /// - `pacientes/{pid}/{registros|alertas|agendamentos|receitas|itensMedicacao
-///   |marcos|convites}` — o que é do paciente;
+///   |marcos|convites}` — o que é do paciente (P3: o registro do diário
+///   leva a versão vigente, as anteriores em `versoesAnteriores`, a revisão
+///   da clínica e a retirada com motivo, num documento só);
 /// - `pacientes/{pid}/{agendaCuidador|receitaCuidador|itensCuidador|
 ///   avisosCuidador}` — as cópias reduzidas do cuidador (RNFM05);
 /// - `convites/{codigo}` — o código de primeiro acesso, com o CPF e o

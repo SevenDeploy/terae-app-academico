@@ -275,7 +275,8 @@ class _AtalhoDoDiario extends StatelessWidget {
             rotulo: 'Escrever no diário',
             icone: LucideIcons.notebookPen,
             variante: VarianteBotao.secundario,
-            aoTocar: () => context.go(Rotas.pacienteDiario),
+            // P3: o atalho abre o "Novo registro" (TM13), como no portal.
+            aoTocar: () => context.push(Rotas.pacienteNovoRegistro),
           ),
         ],
       ),

@@ -154,9 +154,9 @@ void main() {
         pacienteId: idAna,
         registradoEm: agoraDaMemoria,
         adesao: Adesao.nenhuma,
-        intensidade: Intensidade.critica,
-        sintomaPredominante: 'Pensamentos difíceis',
-        observacao: 'Texto que só a equipe lê',
+        intensidadeSintoma: Intensidade.critico,
+        sintomas: 'Pensamentos difíceis',
+        observacoes: 'Texto que só a equipe lê',
         situacaoEnvio: SituacaoEnvio.naFila,
       ),
     );

@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:terae_app/dados/enums/intensidade.dart';
 import 'package:terae_app/dados/enums/linha_de_cuidado.dart';
+import 'package:terae_app/dados/enums/motivo_da_retirada.dart';
 import 'package:terae_app/dados/enums/qualidade_consentimento.dart';
 import 'package:terae_app/dados/enums/situacao_vinculo.dart';
 import 'package:terae_app/dados/enums/tipo_convite.dart';
@@ -200,13 +201,40 @@ void main() {
     test('Ana: ~14 dias de diário, nenhum crítico, último ontem', () {
       final daAna = e.registros.values.where((r) => r.pacienteId == idAna);
       expect(daAna.length, inInclusiveRange(12, 14));
-      expect(daAna.any((r) => r.intensidade == Intensidade.critica), isFalse);
+      expect(
+        daAna.any((r) => r.intensidadeSintoma == Intensidade.critico),
+        isFalse,
+      );
       final ultimo = ordenar<RegistroDiario>(
         daAna,
         (a, b) => b.registradoEm.compareTo(a.registradoEm),
       ).first;
       expect(DataCivil.doInstante(ultimo.registradoEm), hoje.somarDias(-1));
-      expect(ultimo.intensidade, Intensidade.leve);
+      expect(ultimo.intensidadeSintoma, Intensidade.leve);
+    });
+
+    test('P3: o diário da Ana mostra todas as situações do portal', () {
+      final daAna = [
+        for (final r in e.registros.values)
+          if (r.pacienteId == idAna) r,
+      ];
+      expect(daAna.where((r) => r.revisado), isNotEmpty);
+      expect(daAna.where((r) => r.alertouAEquipe), hasLength(1));
+      final retirado = daAna.singleWhere((r) => r.retirado);
+      expect(retirado.motivoDaRetirada!.categoria, MotivoDaRetirada.diaErrado);
+      final corrigido = daAna.singleWhere((r) => r.versao > 1);
+      expect(corrigido.versoesAnteriores.single.versao, 1);
+      expect(corrigido.revisado, isFalse, reason: 'ainda pode mudar');
+      expect(daAna.where((r) => r.sintomas == null), isNotEmpty);
+      expect(daAna.where((r) => r.intensidadeSintoma == null), isNotEmpty);
+      expect(
+        daAna.where(
+          (r) => r.enviadoEm!.difference(r.registradoEm).inMinutes > 5,
+        ),
+        isNotEmpty,
+        reason: 'um registro que esperou na fila ("Escrito em…")',
+      );
+      expect(e.fila, isEmpty);
     });
 
     test('João Pedro: sem conta, código válido e último registro grave '
@@ -221,7 +249,7 @@ void main() {
         e.registros.values.where((r) => r.pacienteId == idJoao),
         (a, b) => b.registradoEm.compareTo(a.registradoEm),
       ).first;
-      expect(ultimo.intensidade, Intensidade.grave);
+      expect(ultimo.intensidadeSintoma, Intensidade.grave);
       expect(DataCivil.doInstante(ultimo.registradoEm), hoje.somarDias(-1));
     });
 
@@ -260,13 +288,13 @@ void main() {
       final esperados = <String>{};
       for (final p in e.pacientes.values) {
         final seq = ordenar<RegistroDiario>(
-          e.registros.values.where((r) => r.pacienteId == p.id),
+          e.registros.values.where((r) => r.pacienteId == p.id && !r.retirado),
           (a, b) => a.registradoEm.compareTo(b.registradoEm),
         );
         for (var i = 0; i < seq.length; i++) {
           final regra = regraDoAlerta(
-            nova: seq[i].intensidade,
-            anterior: i == 0 ? null : seq[i - 1].intensidade,
+            nova: seq[i].intensidadeSintoma,
+            anterior: i == 0 ? null : seq[i - 1].intensidadeSintoma,
           );
           if (regra != null) esperados.add(seq[i].id);
         }

@@ -37,7 +37,7 @@ String idDoAlertaDe(String registroId) {
 /// O fluxo online/offline do diário (Atividade 4, D16, D18) e das outras
 /// entidades gravadas no aparelho ([FilaDeEntidade], evolução de TO).
 ///
-/// - Envia a fila do SQLite (registros novos, corrigidos e excluídos), do
+/// - Envia a fila do SQLite (os registros novos guardados sem internet), do
 ///   mais antigo ao mais novo, um lote do Firestore por registro: o registro
 ///   `enviado` e, se a regra do §7.1 disparar, o alerta e o aviso do
 ///   cuidador — tudo confirmado junto ou nada.
@@ -113,22 +113,29 @@ class Sincronizador {
     );
   }
 
-  /// Envia um registro da fila agora. Lança `RecusaDeRegra(semConexao)` sem
-  /// rede ou se o servidor não confirmar no prazo — o registro continua na
-  /// fila. Devolve o resultado confirmado, com o alerta se houver.
+  /// Envia um registro agora: o novo da fila, a correção ou a retirada
+  /// (P3). Lança `RecusaDeRegra(semConexao)` sem rede ou se o servidor não
+  /// confirmar no prazo — nada muda no aparelho. Devolve o resultado
+  /// confirmado, com o alerta se houver; o registro volta com `enviadoEm`
+  /// (o primeiro recebimento) e `alertouAEquipe`.
   Future<ResultadoEnvio> enviar(RegistroDiario registro) async {
     if (!_monitor.online) {
       throw const RecusaDeRegra(MotivoRecusa.semConexao);
     }
     final existente = await _dao.alertaDoRegistro(registro.id);
     final anterior = await _dao.anteriorA(registro);
-    final regra = registro.excluido || existente != null
+    final regra =
+        registro.retirado || registro.alertouAEquipe || existente != null
         ? null
         : regraDoAlerta(
-            nova: registro.intensidade,
-            anterior: anterior?.intensidade,
+            nova: registro.intensidadeSintoma,
+            anterior: anterior?.intensidadeSintoma,
           );
-    final enviado = registro.copyWith(situacaoEnvio: SituacaoEnvio.enviado);
+    final enviado = registro.copyWith(
+      situacaoEnvio: SituacaoEnvio.enviado,
+      enviadoEm: registro.enviadoEm ?? _relogio.agora(),
+      alertouAEquipe: regra != null ? true : null,
+    );
     final pid = registro.pacienteId;
     final lote = _fonte.db.batch()
       ..set(
@@ -180,7 +187,11 @@ class Sincronizador {
         saidas.add(await enviar(r));
       } on RecusaDeRegra catch (recusa) {
         if (recusa.motivo == MotivoRecusa.semConexao) return saidas;
-        rethrow;
+        // D33 também no diário (revisão da P3): o servidor recusou este
+        // registro. Ele continua na fila (o aviso conta), e os outros, as
+        // filas e a busca seguem — senão a revisão da terapeuta nunca mais
+        // chegaria ao aparelho.
+        debugPrint('Registro ${r.id} recusado: ${recusa.motivo}');
       }
     }
     for (final fila in _filas) {
@@ -204,16 +215,18 @@ class Sincronizador {
   /// Busca no servidor os registros e alertas dos pacientes acompanhados.
   Future<void> buscarDoServidor() async {
     for (final pid in _pacientes) {
+      // Os alertas antes dos registros: a mescla confere se o registro tem
+      // alerta (o documento das A3–A5 não traz `alertouAEquipe`).
+      final alertas = await _fonte.listar(_fonte.doPaciente(pid, 'alertas'));
+      for (final m in alertas) {
+        await _dao.salvarAlerta(Alerta.fromMap(m));
+      }
       final registros = await _fonte.listar(
         _fonte.doPaciente(pid, 'registros'),
       );
       await _dao.mesclarDoServidor([
         for (final m in registros) RegistroDiario.fromMap(m),
       ]);
-      final alertas = await _fonte.listar(_fonte.doPaciente(pid, 'alertas'));
-      for (final m in alertas) {
-        await _dao.salvarAlerta(Alerta.fromMap(m));
-      }
       for (final fila in _filas) {
         try {
           await fila.buscar(pid);

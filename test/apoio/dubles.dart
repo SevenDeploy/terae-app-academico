@@ -6,7 +6,6 @@
 library;
 
 import 'package:terae_app/dados/enums/canal_autorizado.dart';
-import 'package:terae_app/dados/enums/intensidade.dart';
 import 'package:terae_app/dados/enums/linha_de_cuidado.dart';
 import 'package:terae_app/dados/enums/qualidade_consentimento.dart';
 import 'package:terae_app/dados/enums/resposta_presenca.dart';
@@ -108,15 +107,13 @@ class DiarioDuble implements RepositorioDiario {
   @override
   Future<List<ResultadoEnvio>> reenviarFila() => _naoUsado();
 
+  /// A aba Diário lê a lista ao abrir (P3): sem registros, por padrão.
   @override
-  Future<List<RegistroDiario>> registros(String pacienteId) => _naoUsado();
+  Future<PaginaDoDiario> pagina(String pacienteId, {DateTime? antes}) async =>
+      const PaginaDoDiario(registros: [], haMais: false);
 
   @override
-  Future<List<RegistroDiario>> buscar(
-    String pacienteId, {
-    String texto = '',
-    Set<Intensidade> intensidades = const {},
-  }) => _naoUsado();
+  Future<List<RegistroDiario>> pendentes(String pacienteId) async => const [];
 
   @override
   Future<RegistroDiario> registro(String registroId) => _naoUsado();
@@ -125,10 +122,14 @@ class DiarioDuble implements RepositorioDiario {
   Future<Alerta?> alertaDoRegistro(String registroId) => _naoUsado();
 
   @override
-  Future<ResultadoEnvio> atualizar(RegistroDiario corrigido) => _naoUsado();
+  Future<ResultadoEnvio> corrigir(String registroId, EntradaDoDiario entrada) =>
+      _naoUsado();
 
   @override
-  Future<RegistroDiario> excluir(String registroId) => _naoUsado();
+  Future<RegistroDiario> retirar(
+    String registroId,
+    RetiradaDoRegistro motivo,
+  ) => _naoUsado();
 }
 
 class CuidadoresDuble implements RepositorioCuidadores {

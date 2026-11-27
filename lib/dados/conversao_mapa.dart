@@ -99,3 +99,24 @@ List<String> lerTextos(Mapa mapa, String chave) {
   }
   return List.unmodifiable(textos);
 }
+
+/// Enum opcional pelo `name` gravado; `null` se a chave faltar ou for nula.
+T? lerEnumOpcional<T extends Enum>(Mapa mapa, String chave, List<T> valores) =>
+    mapa[chave] == null ? null : lerEnum(mapa, chave, valores);
+
+/// Lista de mapas (ex.: `RegistroDiario.versoesAnteriores`), cada um lido por
+/// [ler]; a chave ausente ou nula vale lista vazia.
+List<T> lerMapas<T>(Mapa mapa, String chave, T Function(Mapa) ler) {
+  final valor = mapa[chave];
+  if (valor == null) return const [];
+  if (valor is! List) throw _invalido(chave, valor);
+  return List.unmodifiable([
+    for (final item in valor)
+      if (item is Map<String, Object?>)
+        ler(item)
+      else if (item is Map)
+        ler(Map<String, Object?>.from(item))
+      else
+        throw _invalido(chave, item),
+  ]);
+}

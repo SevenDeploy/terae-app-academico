@@ -16,8 +16,8 @@ RegistroDiario _registro(SituacaoEnvio situacao) => RegistroDiario(
   pacienteId: 'p',
   registradoEm: _instante,
   adesao: Adesao.total,
-  intensidade: Intensidade.critica,
-  sintomaPredominante: 'Tristeza',
+  intensidadeSintoma: Intensidade.critico,
+  sintomas: 'Muito difícil.',
   situacaoEnvio: situacao,
 );
 

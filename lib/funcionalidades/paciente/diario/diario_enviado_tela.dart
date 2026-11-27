@@ -1,89 +1,46 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../dados/modelos/registro_diario.dart';
+import '../../../dados/regras/diario.dart' as regra;
 import '../../../dados/repositorios/diario_repositorio.dart';
 import '../../../nucleo/rotas/rotas.dart';
 import '../../../nucleo/tema/cores.dart';
 import '../../../nucleo/tema/tema.dart';
 import '../../../nucleo/widgets/botao_grande.dart';
 import '../../../nucleo/widgets/cartao.dart';
-import '../componentes_paciente.dart';
+import '../../../nucleo/widgets/faixa_emergencia.dart';
+import '../registros/componentes_registros.dart';
 import 'campos_do_diario.dart';
 import 'resultado_provisorio.dart';
 
-/// Quanto a TM04 espera antes de voltar sozinha ao Início (§21).
-const Duration esperaDaConfirmacao = Duration(seconds: 3);
-
-/// TM04 — Diário enviado. RFM05. Tela cheia, fora das abas: confirmação e
-/// resumo do que foi enviado. Volta sozinha ao Início 3 s depois que o envio
-/// responde — exceto com `MediaQuery.accessibleNavigation` (leitor de tela,
-/// D10, WCAG 2.2.1), que mostra só o botão "Voltar ao início". O voltar do
-/// Android já leva ao Início (roteador).
+/// TM04 — Diário enviado (P3; quadros 18f "Registro enviado" e 19d "Registro
+/// guardado" do portal). RFM05. Tela cheia, fora das abas.
 ///
-/// Com o registro na fila (`naFila`, §19): "será enviado quando houver
-/// conexão" — nunca "chegou à equipe". Enquanto o envio provisório não
-/// responde: "Enviando…", sem volta automática. Se falhar: a falha, com
-/// "Tentar de novo" (o mesmo registro), e a tela não volta sozinha.
+/// - **Enviado**: "Registro enviado." (ou "Correção enviada.", da versão 2
+///   em diante), o recibo com as quatro respostas e, enquanto o registro
+///   pode mudar, "Corrigir agora" ao lado de "Voltar ao início".
+/// - **Guardado** (`naFila`, §19): "Registro guardado neste aparelho." — diz
+///   com todas as letras que ainda não foi enviado. Se ele disse "Bastante"
+///   ou "Muito", os números de emergência vêm antes: a equipe só é avisada
+///   quando o registro chegar.
+/// - Enquanto o envio provisório não responde: "Enviando…". Se falhar: a
+///   falha, com "Tentar de novo" (o mesmo registro).
 ///
-/// A `Key('TM04')` no Scaffold raiz faz parte do contrato (testes de
-/// navegação).
-class DiarioEnviadoTela extends StatefulWidget {
+/// O voltar do Android leva ao Início (roteador). A `Key('TM04')` no
+/// Scaffold raiz faz parte do contrato (testes de navegação).
+class DiarioEnviadoTela extends StatelessWidget {
   const DiarioEnviadoTela({super.key, this.envio});
 
-  /// Resultado do envio, vindo do diário por `extra`; nulo em link direto.
+  /// Resultado do envio, vindo do formulário por `extra`; nulo em link
+  /// direto.
   final ResultadoEnvio? envio;
-
-  @override
-  State<DiarioEnviadoTela> createState() => _DiarioEnviadoTelaState();
-}
-
-class _DiarioEnviadoTelaState extends State<DiarioEnviadoTela> {
-  Timer? _volta;
-  bool _semVoltaAutomatica = false;
-
-  /// O envio já respondeu (ou não há envio a esperar)?
-  late bool _respondido = widget.envio is! ResultadoProvisorio;
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _semVoltaAutomatica = MediaQuery.accessibleNavigationOf(context);
-    _armarVolta();
-  }
-
-  void _aoMudarAndamento(AndamentoDoEnvio andamento) {
-    _respondido = andamento == AndamentoDoEnvio.respondido;
-    _armarVolta();
-  }
-
-  /// A volta de 3 s só corre com o envio respondido e sem navegação
-  /// acessível.
-  void _armarVolta() {
-    if (_semVoltaAutomatica || !_respondido) {
-      _volta?.cancel();
-      _volta = null;
-    } else {
-      _volta ??= Timer(esperaDaConfirmacao, _voltarAoInicio);
-    }
-  }
-
-  void _voltarAoInicio() {
-    _volta?.cancel();
-    if (mounted) context.go(Rotas.pacienteInicio);
-  }
-
-  @override
-  void dispose() {
-    _volta?.cancel();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
     final textos = Theme.of(context).textTheme;
+    final palavras = palavrasDoDiario(context);
     return Scaffold(
       key: const Key('TM04'),
       body: SafeArea(
@@ -91,16 +48,17 @@ class _DiarioEnviadoTelaState extends State<DiarioEnviadoTela> {
           child: SingleChildScrollView(
             padding: MedidasTerae.paddingTela,
             child: AcompanharEnvio(
-              envio: widget.envio,
-              aoMudarAndamento: _aoMudarAndamento,
+              envio: envio,
               construtor: (context, envio, andamento, tentarDeNovo) {
+                final registro = envio?.registro;
                 final naFila = envio != null && !envio.enviado;
+                final falhou = andamento == AndamentoDoEnvio.falhou;
                 final (titulo, mensagem) = switch (envio) {
                   null => (
                     'Tudo certo',
                     'Volte ao início para continuar cuidando de você.',
                   ),
-                  _ when andamento == AndamentoDoEnvio.falhou => (
+                  _ when falhou => (
                     'Registro não enviado',
                     'Não conseguimos enviar seu registro agora. Toque em '
                         '"Tentar de novo".',
@@ -111,23 +69,32 @@ class _DiarioEnviadoTelaState extends State<DiarioEnviadoTela> {
                         'espere só um pouco.',
                   ),
                   _ when naFila => (
-                    'Registro guardado',
-                    'Sem internet agora. Seu registro está guardado no '
-                        'aparelho e será enviado quando houver conexão.',
+                    'Registro guardado neste aparelho.',
+                    'Ele ainda não foi enviado. Quando a internet voltar, '
+                        'enviamos, e você vê no diário. '
+                        '${palavras.quemLeNaFrase} só lê depois que ele for '
+                        'enviado.',
                   ),
                   _ => (
-                    'Registro enviado!',
-                    'Sua equipe vai ver o que você contou. Obrigado por '
-                        'cuidar de você hoje.',
+                    envio.registro.versao > 1
+                        ? 'Correção enviada.'
+                        : 'Registro enviado.',
+                    '${palavras.quemLeNaFrase} vai ler com atenção.',
                   ),
                 };
+                final podeMudar =
+                    registro != null &&
+                    !naFila &&
+                    andamento == AndamentoDoEnvio.respondido &&
+                    regra.podeAlterar(registro);
+                final comAjuda =
+                    naFila &&
+                    (registro?.intensidadeSintoma?.pedeAjudaSemInternet ??
+                        false);
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    _Selo(
-                      naFila: naFila,
-                      falhou: andamento == AndamentoDoEnvio.falhou,
-                    ),
+                    _Simbolo(naFila: naFila, falhou: falhou),
                     const SizedBox(height: MedidasTerae.espaco),
                     Semantics(
                       header: true,
@@ -148,38 +115,104 @@ class _DiarioEnviadoTelaState extends State<DiarioEnviadoTela> {
                         color: CoresTerae.neutro600,
                       ),
                     ),
-                    if (envio != null) ...[
+                    if (comAjuda) ...[
                       const SizedBox(height: MedidasTerae.espacoGrande),
-                      _Resumo(registro: envio.registro),
+                      Semantics(
+                        header: true,
+                        child: const Text(
+                          'Se for urgente, não espere a internet',
+                          key: Key('ajuda-sem-internet'),
+                          style: TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w600,
+                            color: CoresTerae.neutro900,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      const Text(
+                        'A equipe da clínica só é avisada quando o registro '
+                        'for enviado. Para uma situação de risco agora, '
+                        'ligue:',
+                        style: TextStyle(
+                          fontSize: 15,
+                          color: CoresTerae.neutro700,
+                        ),
+                      ),
+                      const SizedBox(height: MedidasTerae.espacoPequeno),
+                      const FaixaEmergencia(destaque: true),
+                    ],
+                    if (registro != null) ...[
+                      const SizedBox(height: MedidasTerae.espacoGrande),
+                      _Recibo(registro: registro, palavras: palavras),
+                    ],
+                    if (podeMudar) ...[
+                      const SizedBox(height: MedidasTerae.espaco),
+                      Cartao(
+                        corFundo: CoresTerae.neutro50,
+                        padding: const EdgeInsets.all(12),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const ExcludeSemantics(
+                              child: Icon(
+                                LucideIcons.pencil,
+                                size: 18,
+                                color: CoresTerae.neutro700,
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                'Enquanto a ${palavras.quemLe} não revisar, '
+                                'você pode corrigir ou retirar este registro '
+                                'no diário.',
+                                style: const TextStyle(
+                                  fontSize: 15,
+                                  color: CoresTerae.neutro700,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ],
                     const SizedBox(height: MedidasTerae.espacoGrande),
                     if (tentarDeNovo != null) ...[
                       BotaoGrande(
                         key: const Key('tentar-de-novo'),
                         rotulo: 'Tentar de novo',
-                        icone: Icons.refresh,
+                        icone: LucideIcons.rotateCw,
                         aoTocar: tentarDeNovo,
                       ),
                       const SizedBox(height: MedidasTerae.espacoPequeno),
                     ],
-                    if (!_semVoltaAutomatica &&
-                        andamento == AndamentoDoEnvio.respondido) ...[
-                      Text(
-                        'A tela inicial abre sozinha em instantes.',
-                        textAlign: TextAlign.center,
-                        style: textos.bodySmall?.copyWith(
-                          color: CoresTerae.textoSecundario,
-                        ),
+                    if (naFila)
+                      BotaoGrande(
+                        key: const Key('ver-no-diario'),
+                        rotulo: 'Ver no diário',
+                        aoTocar: () => context.go(Rotas.pacienteDiario),
+                      )
+                    else
+                      BotaoGrande(
+                        key: const Key('voltar-ao-inicio'),
+                        rotulo: 'Voltar ao início',
+                        variante: tentarDeNovo == null
+                            ? VarianteBotao.primario
+                            : VarianteBotao.secundario,
+                        aoTocar: () => context.go(Rotas.pacienteInicio),
                       ),
+                    if (podeMudar) ...[
                       const SizedBox(height: MedidasTerae.espacoPequeno),
+                      BotaoGrande(
+                        key: const Key('corrigir-agora'),
+                        rotulo: 'Corrigir agora',
+                        icone: LucideIcons.pencil,
+                        variante: VarianteBotao.secundario,
+                        aoTocar: () =>
+                            context.push(Rotas.corrigirRegistro(registro.id)),
+                      ),
                     ],
-                    BotaoGrande(
-                      key: const Key('voltar-ao-inicio'),
-                      rotulo: 'Voltar ao início',
-                      icone: Icons.home_outlined,
-                      variante: VarianteBotao.secundario,
-                      aoTocar: _voltarAoInicio,
-                    ),
                   ],
                 );
               },
@@ -191,30 +224,32 @@ class _DiarioEnviadoTelaState extends State<DiarioEnviadoTela> {
   }
 }
 
-class _Selo extends StatelessWidget {
-  const _Selo({required this.naFila, required this.falhou});
+class _Simbolo extends StatelessWidget {
+  const _Simbolo({required this.naFila, required this.falhou});
 
   final bool naFila;
   final bool falhou;
 
   @override
   Widget build(BuildContext context) {
-    final cores = naFila
-        ? const ParDeCores(CoresTerae.aviso700, CoresTerae.aviso50)
-        : const ParDeCores(CoresTerae.clinico600, CoresTerae.clinico50);
+    final cores = falhou
+        ? const ParDeCores(CoresTerae.erro, CoresTerae.erroFundo)
+        : naFila
+        ? const ParDeCores(CoresTerae.info, CoresTerae.infoFundo)
+        : const ParDeCores(CoresTerae.sucesso, CoresTerae.sucessoFundo);
     return ExcludeSemantics(
       child: Center(
         child: DecoratedBox(
           decoration: BoxDecoration(color: cores.fundo, shape: BoxShape.circle),
           child: Padding(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.all(18),
             child: Icon(
               falhou
-                  ? Icons.error_outline
+                  ? LucideIcons.circleAlert
                   : naFila
-                  ? Icons.cloud_upload_outlined
-                  : Icons.check_circle_outline,
-              size: 56,
+                  ? LucideIcons.cloudOff
+                  : LucideIcons.check,
+              size: 30,
               color: cores.texto,
             ),
           ),
@@ -224,67 +259,75 @@ class _Selo extends StatelessWidget {
   }
 }
 
-/// O que foi registrado: adesão, intensidade (cor + nome), sintoma e
-/// observação.
-class _Resumo extends StatelessWidget {
-  const _Resumo({required this.registro});
+/// O recibo do 18f: as quatro respostas, com "Nada a contar", "Sem
+/// resposta" e "Sem observação" para as opcionais em branco.
+class _Recibo extends StatelessWidget {
+  const _Recibo({required this.registro, required this.palavras});
 
   final RegistroDiario registro;
+  final TextosDoDiario palavras;
 
   @override
   Widget build(BuildContext context) {
-    final textos = Theme.of(context).textTheme;
-    final palavras = palavrasDoDiario(context);
-    Widget linha(String rotulo, Widget valor) => Padding(
-      padding: const EdgeInsets.only(top: MedidasTerae.espacoPequeno),
-      child: MergeSemantics(
+    final intensidade = registro.intensidadeSintoma;
+    Widget item(
+      String termo,
+      Widget valor, {
+      bool ultimo = false,
+    }) => MergeSemantics(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          border: ultimo
+              ? null
+              : const Border(bottom: BorderSide(color: CoresTerae.neutro100)),
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              rotulo,
-              style: textos.bodySmall?.copyWith(
-                color: CoresTerae.textoSecundario,
-              ),
+              termo,
+              style: const TextStyle(fontSize: 14, color: CoresTerae.neutro600),
             ),
+            const SizedBox(height: 2),
             valor,
           ],
         ),
       ),
     );
-    final observacao = registro.observacao;
+    const forte = TextStyle(
+      fontSize: 15,
+      fontWeight: FontWeight.w600,
+      color: CoresTerae.neutro900,
+    );
     return Cartao(
       key: const Key('resumo-envio'),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const RotuloDeSecao(
-            'O que você registrou',
-            cor: CoresTerae.neutro600,
+          item(
+            palavras.termoDaAdesao,
+            Text(palavras.tituloDaAdesao(registro.adesao), style: forte),
           ),
-          linha(
-            palavras.resumoAdesao,
-            Text(
-              palavras.rotuloDaAdesao(registro.adesao),
-              style: textos.titleSmall,
-            ),
+          item(
+            'O que você contou',
+            Text(registro.sintomas ?? 'Nada a contar', style: forte),
           ),
-          linha(
-            'Intensidade',
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Etiqueta(
-                texto: registro.intensidade.rotulo,
-                cores: CoresTerae.daIntensidade(registro.intensidade),
-              ),
-            ),
+          item(
+            'O quanto atrapalhou',
+            intensidade == null
+                ? const Text('Sem resposta', style: forte)
+                : Align(
+                    alignment: Alignment.centerLeft,
+                    child: SeloDaIntensidade(intensidade, curto: true),
+                  ),
           ),
-          linha(
-            palavras.resumoSintoma,
-            Text(registro.sintomaPredominante, style: textos.titleSmall),
+          item(
+            'Observações',
+            Text(registro.observacoes ?? 'Sem observação', style: forte),
+            ultimo: true,
           ),
-          if (observacao != null)
-            linha('Observação', Text(observacao, style: textos.bodyMedium)),
         ],
       ),
     );

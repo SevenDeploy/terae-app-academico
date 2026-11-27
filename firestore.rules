@@ -117,22 +117,97 @@ service cloud.firestore {
         allow read: if ehTitular(pid);
       }
 
-      // Item principal (D13, D17): o titular cria e corrige; nunca apaga.
+      // Item principal (D13), o diário igual ao do portal (P3, D17 revista):
+      // só a adesão é obrigatória; corrigir cria a versão seguinte e guarda a
+      // anterior; retirar marca a data e o motivo. Nada é apagado, e só a
+      // clínica marca a revisão (revisadoEm).
       match /registros/{rid} {
+        function textoDoDiario(campo) {
+          let valor = request.resource.data.get(campo, null);
+          return valor == null || (valor is string && valor.size() <= 2000);
+        }
+
+        function registroValido() {
+          let d = request.resource.data;
+          return d.id == rid
+            && d.pacienteId == pid
+            && d.situacaoEnvio == 'enviado'
+            && d.adesao in ['total', 'parcial', 'nenhuma']
+            && d.get('intensidadeSintoma', null) in [null, 'leve', 'moderado', 'grave', 'critico']
+            && textoDoDiario('sintomas')
+            && textoDoDiario('observacoes')
+            && d.versao is int
+            && d.versoesAnteriores is list
+            && d.versoesAnteriores.size() == d.versao - 1
+            && d.get('revisadoEm', null) == null;
+        }
+
+        function retiradaValida() {
+          let m = request.resource.data.motivoDaRetirada;
+          return request.resource.data.retiradoEm is string
+            && m.categoria in ['dia_errado', 'paciente_errado', 'enviado_sem_querer', 'outro']
+            && (m.categoria != 'outro'
+              || (m.detalhe is string && m.detalhe.size() > 0 && m.detalhe.size() <= 300));
+        }
+
         allow read: if ehTitular(pid);
-        allow create, update: if ehTitular(pid)
-          && request.resource.data.id == rid
-          && request.resource.data.pacienteId == pid
-          && request.resource.data.situacaoEnvio == 'enviado';
+        allow create: if ehTitular(pid) && registroValido()
+          && request.resource.data.versao == 1;
+        function podeMudar() {
+          return resource.data.get('revisadoEm', null) == null
+            && resource.data.get('retiradoEm', null) == null
+            && !resource.data.get('alertouAEquipe', false);
+        }
+
+        // O documento das A3–A5 (sem `versao`): o aparelho que atualizou o
+        // app reenvia a correção ou a exclusão que ainda estava na fila, já
+        // no formato novo (D39). A semente nova (`--reiniciar`) apaga esses
+        // documentos; isto cobre o Firebase antes dela.
+        function doFormatoAntigo() {
+          return !('versao' in resource.data);
+        }
+
+        // Corrigir: a versão seguinte, com as anteriores intactas e o mesmo
+        // primeiro recebimento (R04: nada se perde).
+        function versaoSeguinte() {
+          let d = request.resource.data;
+          let anteriores = resource.data.get('versoesAnteriores', []);
+          return d.versao == resource.data.get('versao', 1) + 1
+            && d.versoesAnteriores[0:anteriores.size()] == anteriores
+            && d.get('enviadoEm', null) == resource.data.get('enviadoEm', null)
+            && d.get('retiradoEm', null) == null;
+        }
+
+        // O 409 do portal: o revisado, o retirado e o que avisou a equipe não
+        // mudam mais. Mudam: a versão seguinte (corrigir) e a retirada com
+        // motivo. O reenvio da fila que já tinha chegado (o lote que estourou
+        // o prazo e gravou depois) só muda o instante do envio e vale sempre,
+        // também no que avisou a equipe.
+        allow update: if ehTitular(pid) && registroValido()
+          && request.resource.data.registradoEm == resource.data.registradoEm
+          && (
+            (request.resource.data.versao == resource.data.get('versao', 1)
+              && soMudam(['enviadoEm']))
+            || (podeMudar() && doFormatoAntigo()
+              && request.resource.data.versao == 1
+              && (request.resource.data.get('retiradoEm', null) == null
+                || retiradaValida()))
+            || (podeMudar() && !doFormatoAntigo() && (
+              versaoSeguinte()
+              || (request.resource.data.versao == resource.data.versao
+                && soMudam(['retiradoEm', 'motivoDaRetirada'])
+                && retiradaValida())))
+          );
         allow delete: if false;
       }
 
-      // D18: alerta só de registro grave ou crítico confirmado no mesmo lote.
+      // D18: alerta só de registro "Bastante" ou "Muito" (grave ou crítico)
+      // confirmado no mesmo lote.
       match /alertas/{aid} {
         allow read: if ehTitular(pid);
         allow create, update: if ehTitular(pid)
           && getAfter(/databases/$(db)/documents/pacientes/$(pid)/registros/$(request.resource.data.registroId))
-               .data.intensidade in ['grave', 'critica'];
+               .data.intensidadeSintoma in ['grave', 'critico'];
         allow delete: if false;
       }
 

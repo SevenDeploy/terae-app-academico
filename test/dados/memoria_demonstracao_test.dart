@@ -20,8 +20,8 @@ RegistroDiario _registro(String pacienteId, Intensidade intensidade) =>
       pacienteId: pacienteId,
       registradoEm: agoraDaMemoria,
       adesao: Adesao.parcial,
-      intensidade: intensidade,
-      sintomaPredominante: 'Ansiedade',
+      intensidadeSintoma: intensidade,
+      sintomas: 'Fiquei ansiosa.',
       situacaoEnvio: SituacaoEnvio.naFila,
     );
 
@@ -32,7 +32,7 @@ void main() {
     final inicial = m.estado.paraMapa();
 
     // Mexe em tudo o que o app consegue mexer.
-    await r.diario.enviar(_registro(idAna, Intensidade.critica));
+    await r.diario.enviar(_registro(idAna, Intensidade.critico));
     await r.cuidadores.revogar(vinculoRegina);
     await r.autenticacao.aceitarConviteCuidador(
       codigo: codigoPaulo,

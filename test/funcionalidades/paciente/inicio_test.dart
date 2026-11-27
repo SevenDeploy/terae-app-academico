@@ -110,14 +110,19 @@ void main() {
       expect(find.text('Dra. Helena Prado'), findsOneWidget);
     });
 
-    testWidgets('o atalho abre o diário com um toque', (tester) async {
+    testWidgets('o atalho abre o novo registro com um toque (P3)', (
+      tester,
+    ) async {
       await abrirAppDoPaciente(tester);
       await tester.ensureVisible(find.byKey(const Key('atalho-diario')));
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('atalho-diario')));
       await tester.pumpAndSettle();
-      expect(localDe(tester), Rotas.pacienteDiario);
-      expect(find.byKey(const Key('TM03')), findsOneWidget);
+      expect(find.byKey(const Key('TM13')), findsOneWidget);
+      // Voltar leva ao Início, que ficou embaixo.
+      await tester.tap(find.byTooltip('Voltar'));
+      await tester.pumpAndSettle();
+      expect(localDe(tester), Rotas.pacienteInicio);
     });
   });
 
