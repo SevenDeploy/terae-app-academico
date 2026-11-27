@@ -756,3 +756,11 @@ cuidador no desenho do portal, os botões de presença no cartão da próxima se
   botão (D27); (b) a escala do texto do topo para em 1,15× (troca consciente, restrição de acessibilidade); (c) "Ver a
   Jornada" do programa encerrado não checa `capacidades.jornada` (inalcançável hoje no modo local); (d) falta teste do
   topo a 360 dp com a fonte em 2×.
+
+## Teste assistido no emulador (27/11/2026)
+
+Roteiro A–I com Laura, Rosa e Mariana contra o Terae local; resultado e capturas em
+[`evidencias-terae-local/assistido-27-11/`](evidencias-terae-local/assistido-27-11/LEIA-ME.md). Achou e corrigiu quatro
+defeitos (diário sem internet, agenda não liberada, aviso de recusa fora da tela, "Mudar a resposta" repetindo a
+resposta). Abertos: texto próprio para o 409 de "Confirmar presença" depois do aviso de ausência; o cuidador vê
+"Corrigir" na resposta de outra conta; a cota de 10 códigos por conta em 24 h limita rodadas seguidas de teste.

@@ -291,24 +291,30 @@ class RespostasDaSessao extends StatelessWidget {
           ),
         ),
         if (perguntando) ...[
-          const SizedBox(height: 12),
-          BotaoGrande(
-            key: Key('vamos-${a.id}'),
-            rotulo: 'Confirmar presença',
-            icone: LucideIcons.calendarCheck,
-            aoTocar: ocupado
-                ? null
-                : () => unawaited(aoResponder(RespostaPresenca.vamos)),
-          ),
-          const SizedBox(height: 8),
-          BotaoGrande(
-            key: Key('nao-vamos-${a.id}'),
-            rotulo: 'Avisar que não vamos',
-            variante: VarianteBotao.secundario,
-            aoTocar: ocupado
-                ? null
-                : () => unawaited(_perguntarAntesDeAvisar(context)),
-          ),
+          // "Mudar a resposta" oferece só o que muda: repetir a resposta de
+          // agora é inútil (e, no Terae local, o portal a recusa com 409).
+          if (r?.resposta != RespostaPresenca.vamos) ...[
+            const SizedBox(height: 12),
+            BotaoGrande(
+              key: Key('vamos-${a.id}'),
+              rotulo: 'Confirmar presença',
+              icone: LucideIcons.calendarCheck,
+              aoTocar: ocupado
+                  ? null
+                  : () => unawaited(aoResponder(RespostaPresenca.vamos)),
+            ),
+          ],
+          if (r?.resposta != RespostaPresenca.naoVamos) ...[
+            const SizedBox(height: 8),
+            BotaoGrande(
+              key: Key('nao-vamos-${a.id}'),
+              rotulo: 'Avisar que não vamos',
+              variante: VarianteBotao.secundario,
+              aoTocar: ocupado
+                  ? null
+                  : () => unawaited(_perguntarAntesDeAvisar(context)),
+            ),
+          ],
         ] else if (r != null) ...[
           const SizedBox(height: 8),
           Semantics(

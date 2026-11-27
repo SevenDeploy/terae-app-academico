@@ -65,6 +65,10 @@ void main() {
 
       // Avisar que não vamos pergunta antes: o aviso não cancela a sessão.
       await tocar(tester, find.byKey(Key('mudar-$_sessaoMiguel')));
+      // "Mudar a resposta" oferece só o que muda: não repete o "Confirmar"
+      // que já está dado (no Terae local o portal o recusaria com 409).
+      expect(find.byKey(Key('vamos-$_sessaoMiguel')), findsNothing);
+      expect(find.byKey(Key('nao-vamos-$_sessaoMiguel')), findsOneWidget);
       await tocar(tester, find.byKey(Key('nao-vamos-$_sessaoMiguel')));
       expect(find.text('Avisar que vocês não vêm?'), findsOneWidget);
       expect(find.text('• A sessão continua marcada.'), findsOneWidget);
