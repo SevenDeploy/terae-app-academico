@@ -27,6 +27,9 @@ Widget _soATela({required bool modoDepuracao}) => MultiProvider(
 );
 
 Future<void> _abrirFolha(WidgetTester tester, Key botao) async {
+  // A capa do portal é mais alta que a tela: rola até o botão.
+  await tester.ensureVisible(find.byKey(botao));
+  await tester.pumpAndSettle();
   await tester.tap(find.byKey(botao));
   await tester.pumpAndSettle();
 }
@@ -54,10 +57,7 @@ void main() {
     await tester.pumpWidget(montarApp(sessao: Sessao()));
     await tester.pumpAndSettle();
     expect(find.text('Terae'), findsOneWidget);
-    expect(
-      find.text('Acompanhe o seu tratamento entre uma consulta e outra.'),
-      findsOneWidget,
-    );
+    expect(find.text('O acompanhamento continua em casa.'), findsOneWidget);
     expect(find.byType(SeloAcademico), findsOneWidget);
   });
 

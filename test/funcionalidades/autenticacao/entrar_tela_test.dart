@@ -194,9 +194,10 @@ void main() {
     testWidgets('lista os perfis com papel e nome', (tester) async {
       await abrirSelecao(tester);
       expect(find.byKey(const Key('TM01')), findsOneWidget);
-      expect(find.text('Paciente ou família'), findsOneWidget);
+      // Como a folha "De quem você quer ver?" da moldura (18l).
+      expect(find.text('Você é responsável'), findsOneWidget);
       expect(find.text('Miguel Andrade Neves'), findsOneWidget);
-      expect(find.text('Cuidador'), findsOneWidget);
+      expect(find.text('Você é cuidador'), findsOneWidget);
       expect(find.text('Ana Lúcia Martins'), findsOneWidget);
       expect(_botaoEntrar, findsNothing);
     });

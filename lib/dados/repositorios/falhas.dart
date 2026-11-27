@@ -39,7 +39,10 @@ enum MotivoRecusa {
   /// TM01 — e-mail ou senha não conferem (D14). Não diz qual dos dois, para
   /// não revelar quem tem conta.
   credenciaisInvalidas(
-    'E-mail ou senha não conferem. Confira e tente de novo.',
+    // O texto do portal (Entrar.tsx), com a clínica no lugar do "Esqueci a
+    // senha", que o app ainda não tem.
+    'E-mail ou senha não conferem. Confira os dois e tente de novo. Se não '
+    'lembra a senha, fale com a clínica.',
   ),
 
   /// TM09/TM10 passo 4 — o e-mail já tem acesso, com outra senha.

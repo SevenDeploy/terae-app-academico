@@ -38,11 +38,12 @@ class CadastroCuidadorTela extends StatelessWidget {
   }
 }
 
+/// O rótulo da etapa de cada passo (1 a 4; ver `etapaDoPasso`).
 const List<String> _nomesDosPassos = [
-  'Código do convite',
-  'O que você verá',
+  'Confirmação',
+  'Confirmação',
   'Termo de acesso',
-  'Seu acesso',
+  'Senha',
 ];
 
 class _CadastroCuidador extends StatefulWidget {

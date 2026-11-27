@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../nucleo/rotas/rotas.dart';
 import '../../nucleo/tema/cores.dart';
@@ -28,7 +29,7 @@ Future<void> abrirPrimeiroAcesso(BuildContext context) async {
           const SizedBox(height: MedidasTerae.espaco),
           _OpcaoDePrimeiroAcesso(
             key: const Key('primeiro-acesso-clinica'),
-            icone: Icons.local_hospital_outlined,
+            icone: LucideIcons.hospital,
             titulo: 'Recebi um código da clínica',
             descricao: 'Para o paciente ou para quem responde por ele.',
             aoTocar: () => Navigator.of(folha).pop(Rotas.cadastroPaciente),
@@ -36,7 +37,7 @@ Future<void> abrirPrimeiroAcesso(BuildContext context) async {
           const SizedBox(height: MedidasTerae.espacoPequeno),
           _OpcaoDePrimeiroAcesso(
             key: const Key('primeiro-acesso-cuidador'),
-            icone: Icons.volunteer_activism_outlined,
+            icone: LucideIcons.handHeart,
             titulo: 'Recebi um convite de cuidador',
             descricao: 'Para quem vai acompanhar o cuidado de alguém.',
             aoTocar: () => Navigator.of(folha).pop(Rotas.cadastroCuidador),
@@ -87,7 +88,7 @@ class _OpcaoDePrimeiroAcesso extends StatelessWidget {
               ],
             ),
           ),
-          const Icon(Icons.chevron_right, color: CoresTerae.neutro400),
+          const Icon(LucideIcons.chevronRight, color: CoresTerae.neutro600),
         ],
       ),
     );

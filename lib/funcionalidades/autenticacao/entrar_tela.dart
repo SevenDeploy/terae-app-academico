@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 
 import '../../dados/repositorios/autenticacao_repositorio.dart';
@@ -9,13 +10,16 @@ import '../../nucleo/tema/cores.dart';
 import '../../nucleo/tema/tema.dart';
 import '../../nucleo/widgets/botao_grande.dart';
 import '../../nucleo/widgets/cartao.dart';
+import '../moldura/moldura_do_portal.dart';
 import 'entrar_controlador.dart';
+import 'moldura_de_entrada.dart';
 import 'primeiro_acesso.dart';
 import 'widgets_entrada.dart';
 
-/// TM01 — Entrar (RFM01). Em `/entrar` (pública): e-mail e senha (D14), com
-/// a recusa em linguagem simples; aviso de que a senha não fica no celular
-/// (RNFM04); atalho para o primeiro acesso.
+/// TM01 — Entrar (RFM01), na [MolduraDeEntrada] e com os textos do "Entrar
+/// no portal" do portal da família (18a). Em `/entrar` (pública): e-mail e
+/// senha (D14), com a recusa em linguagem simples; aviso de que a senha não
+/// fica no celular (RNFM04); o bloco "Primeiro acesso?".
 ///
 /// Em `/entrar/perfil` ([selecaoDePerfil], exige sessão): a lista de
 /// `Sessao.perfis`, com papel e nome do paciente; tocar chama
@@ -65,86 +69,119 @@ class _EntrarState extends State<_Entrar> {
   @override
   Widget build(BuildContext context) {
     final controlador = context.watch<EntrarControlador>();
-    final textos = Theme.of(context).textTheme;
     final mensagem = controlador.mensagem;
-    return Scaffold(
-      key: const Key('TM01'),
-      appBar: AppBar(title: const Text('Entrar')),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: MedidasTerae.paddingTela,
+    return MolduraDeEntrada(
+      chaveDaTela: const Key('TM01'),
+      titulo: 'Entrar no portal',
+      descricao: 'Use o e-mail em que a clínica mandou o convite.',
+      children: [
+        if (mensagem != null) ...[
+          AvisoDeRecusa(mensagem),
+          const SizedBox(height: MedidasTerae.espacoCartao),
+        ],
+        AutofillGroup(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Semantics(
-                header: true,
-                child: Text('Entrar no Terae', style: textos.headlineSmall),
+              CampoDeEmail(
+                key: const Key('campo-email'),
+                controlador: _email,
+                erro: controlador.erroEmail,
               ),
-              const SizedBox(height: MedidasTerae.espacoPequeno),
-              Text(
-                'Use o e-mail e a senha que você criou no primeiro acesso.',
-                style: textos.bodyLarge?.copyWith(color: CoresTerae.neutro600),
-              ),
-              const SizedBox(height: MedidasTerae.espacoGrande),
-              AutofillGroup(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    CampoDeEmail(
-                      key: const Key('campo-email'),
-                      controlador: _email,
-                      erro: controlador.erroEmail,
-                    ),
-                    const SizedBox(height: MedidasTerae.espaco),
-                    CampoDeSenha(
-                      key: const Key('campo-senha'),
-                      controlador: _senha,
-                      rotulo: 'Senha',
-                      erro: controlador.erroSenha,
-                      acao: TextInputAction.done,
-                      aoConcluir: () => unawaited(_entrar()),
-                    ),
-                  ],
-                ),
-              ),
-              if (mensagem != null) ...[
-                const SizedBox(height: MedidasTerae.espaco),
-                AvisoDeRecusa(mensagem),
-              ],
-              const SizedBox(height: MedidasTerae.espaco),
-              if (controlador.ocupado) ...[
-                const LinearProgressIndicator(semanticsLabel: 'Entrando'),
-                const SizedBox(height: MedidasTerae.espaco),
-              ],
-              BotaoGrande(
-                key: const Key('entrar'),
-                rotulo: controlador.ocupado ? 'Entrando…' : 'Entrar',
-                icone: Icons.login,
-                aoTocar: controlador.ocupado
-                    ? null
-                    : () => unawaited(_entrar()),
-              ),
-              const SizedBox(height: MedidasTerae.espacoGrande),
-              const CaixaInformativa(
-                icone: Icons.lock_outline,
-                texto:
-                    'A senha não fica guardada neste celular. Quem confere a '
-                    'senha é o serviço de login do Terae.',
-              ),
-              const SizedBox(height: MedidasTerae.espacoGrande),
-              const Divider(),
-              const SizedBox(height: MedidasTerae.espaco),
-              Text('É a sua primeira vez aqui?', style: textos.titleSmall),
-              const SizedBox(height: MedidasTerae.espacoPequeno),
-              BotaoGrande(
-                key: const Key('ir-primeiro-acesso'),
-                rotulo: 'Primeiro acesso',
-                icone: Icons.vpn_key_outlined,
-                variante: VarianteBotao.secundario,
-                aoTocar: () => unawaited(abrirPrimeiroAcesso(context)),
+              const SizedBox(height: MedidasTerae.espacoCartao),
+              CampoDeSenha(
+                key: const Key('campo-senha'),
+                controlador: _senha,
+                rotulo: 'Senha',
+                erro: controlador.erroSenha,
+                acao: TextInputAction.done,
+                aoConcluir: () => unawaited(_entrar()),
               ),
             ],
           ),
+        ),
+        const SizedBox(height: MedidasTerae.espacoCartao),
+        if (controlador.ocupado) ...[
+          const LinearProgressIndicator(semanticsLabel: 'Entrando'),
+          const SizedBox(height: MedidasTerae.espaco),
+        ],
+        BotaoGrande(
+          key: const Key('entrar'),
+          rotulo: controlador.ocupado ? 'Entrando…' : 'Entrar',
+          icone: LucideIcons.logIn,
+          aoTocar: controlador.ocupado ? null : () => unawaited(_entrar()),
+        ),
+        const SizedBox(height: 12),
+        const Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            ExcludeSemantics(
+              child: Icon(
+                LucideIcons.lock,
+                size: 16,
+                color: CoresTerae.neutro600,
+              ),
+            ),
+            SizedBox(width: 6),
+            Flexible(
+              child: Text(
+                'A senha não fica guardada neste celular.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 14, color: CoresTerae.neutro600),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: MedidasTerae.espacoGrande),
+        const _PrimeiroAcessoNaEntrada(),
+      ],
+    );
+  }
+}
+
+/// O bloco "Primeiro acesso?" do 18a, cinza, com o caminho do convite.
+class _PrimeiroAcessoNaEntrada extends StatelessWidget {
+  const _PrimeiroAcessoNaEntrada();
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: CoresTerae.neutro50,
+        borderRadius: const BorderRadius.all(Radius.circular(12)),
+        border: Border.all(color: CoresTerae.borda),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Semantics(
+              header: true,
+              child: const Text(
+                'Primeiro acesso?',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: CoresTerae.texto,
+                ),
+              ),
+            ),
+            const SizedBox(height: 4),
+            const Text(
+              'Use o código ou o convite que a clínica mandou. Ainda não '
+              'recebeu? Fale com a clínica.',
+              style: TextStyle(fontSize: 14, color: CoresTerae.neutro600),
+            ),
+            const SizedBox(height: 12),
+            BotaoGrande(
+              key: const Key('ir-primeiro-acesso'),
+              rotulo: 'Primeiro acesso',
+              icone: LucideIcons.keyRound,
+              variante: VarianteBotao.secundario,
+              aoTocar: () => unawaited(abrirPrimeiroAcesso(context)),
+            ),
+          ],
         ),
       ),
     );
@@ -159,53 +196,31 @@ class _SelecaoDePerfil extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final sessao = context.watch<Sessao>();
-    final textos = Theme.of(context).textTheme;
     final nome = sessao.conta?.nomeExibicao.split(' ').first;
-    return Scaffold(
-      key: const Key('TM01'),
-      appBar: AppBar(
-        title: const Text('Escolha o perfil'),
-        automaticallyImplyLeading: false,
-      ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: MedidasTerae.paddingTela,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Semantics(
-                header: true,
-                child: Text(
-                  nome == null ? 'Olá!' : 'Olá, $nome!',
-                  style: textos.headlineSmall,
-                ),
-              ),
-              const SizedBox(height: MedidasTerae.espacoPequeno),
-              Text(
-                'Esta conta tem mais de um perfil. '
-                'Com qual você quer entrar agora?',
-                style: textos.bodyLarge?.copyWith(color: CoresTerae.neutro600),
-              ),
-              const SizedBox(height: MedidasTerae.espacoGrande),
-              for (final perfil in sessao.perfis) ...[
-                _CartaoDePerfil(
-                  perfil: perfil,
-                  aoTocar: () => context.read<Sessao>().escolherPerfil(perfil),
-                ),
-                const SizedBox(height: 12),
-              ],
-              const SizedBox(height: MedidasTerae.espaco),
-              BotaoGrande(
-                key: const Key('sair'),
-                rotulo: 'Sair',
-                icone: Icons.logout,
-                variante: VarianteBotao.secundario,
-                aoTocar: () => context.read<Sessao>().sair(),
-              ),
-            ],
+    return MolduraDeEntrada(
+      chaveDaTela: const Key('TM01'),
+      titulo: 'De quem você quer ver?',
+      descricao:
+          '${nome == null ? 'Esta' : '$nome, esta'} conta acompanha mais de '
+          'uma pessoa. Escolha por onde começar; depois dá para trocar no '
+          'topo.',
+      children: [
+        for (final perfil in sessao.perfis) ...[
+          _CartaoDePerfil(
+            perfil: perfil,
+            aoTocar: () => context.read<Sessao>().escolherPerfil(perfil),
           ),
+          const SizedBox(height: 12),
+        ],
+        const SizedBox(height: MedidasTerae.espaco),
+        BotaoGrande(
+          key: const Key('sair'),
+          rotulo: 'Sair',
+          icone: LucideIcons.logOut,
+          variante: VarianteBotao.secundario,
+          aoTocar: () => context.read<Sessao>().sair(),
         ),
-      ),
+      ],
     );
   }
 }
@@ -219,43 +234,30 @@ class _CartaoDePerfil extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textos = Theme.of(context).textTheme;
-    final icone = switch (perfil.papel) {
-      Papel.pacienteFamilia => Icons.family_restroom,
-      Papel.cuidador => Icons.volunteer_activism_outlined,
-    };
     return Cartao(
       key: Key('perfil-${perfil.papel.name}-${perfil.pacienteId}'),
       aoTocar: aoTocar,
+      padding: const EdgeInsets.all(MedidasTerae.espaco),
       child: Row(
         children: [
-          DecoratedBox(
-            decoration: const BoxDecoration(
-              color: CoresTerae.primaria50,
-              borderRadius: BorderRadius.all(
-                Radius.circular(MedidasTerae.raioBotao),
-              ),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(10),
-              child: Icon(icone, color: CoresTerae.primaria700),
-            ),
-          ),
+          Avatar(nome: perfil.paciente.nome, tamanho: 44),
           const SizedBox(width: MedidasTerae.espaco),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                Text(perfil.paciente.nome, style: textos.titleSmall),
+                const SizedBox(height: 2),
                 Text(
-                  perfil.papel.rotulo,
-                  style: textos.labelMedium?.copyWith(
+                  rotuloDoPerfil(perfil),
+                  style: textos.bodySmall?.copyWith(
                     color: CoresTerae.neutro600,
                   ),
                 ),
-                Text(perfil.paciente.nome, style: textos.titleMedium),
               ],
             ),
           ),
-          const Icon(Icons.chevron_right, color: CoresTerae.neutro400),
+          const Icon(LucideIcons.chevronRight, color: CoresTerae.neutro600),
         ],
       ),
     );

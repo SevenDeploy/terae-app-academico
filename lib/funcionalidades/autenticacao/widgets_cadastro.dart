@@ -5,12 +5,24 @@ import '../../nucleo/tema/cores.dart';
 import '../../nucleo/tema/tema.dart';
 import '../../nucleo/widgets/cartao.dart';
 import 'cadastro_controlador.dart';
+import 'moldura_de_entrada.dart';
 import 'widgets_entrada.dart';
 
-/// Moldura dos cadastros em quatro passos (TM09, TM10): indicador "Passo X de
-/// 4", conteúdo do passo, recusa em linguagem simples e as ações. No passo 2
-/// em diante, o voltar (Android ou seta da barra) volta um passo em vez de
-/// sair.
+/// Etapa do portal (1 a 3) de cada passo do cadastro (1 a 4): o
+/// "Primeiro acesso" do portal tem três etapas (Confirmação, Termos, Senha,
+/// 18c). O app pede mais na confirmação (quem vai usar, o que o cuidador
+/// verá), então os passos 1 e 2 são a etapa 1. O termo vem antes da senha,
+/// como sempre foi aqui: o aceite é a base para criar o acesso.
+int etapaDoPasso(int passo) => switch (passo) {
+  1 || 2 => 1,
+  3 => 2,
+  _ => 3,
+};
+
+/// Moldura dos cadastros (TM09, TM10) na [MolduraDeEntrada]: "Etapa X de 3 ·
+/// nome", o conteúdo do passo, a recusa em linguagem simples e as ações. No
+/// passo 2 em diante, o voltar (Android ou seta da faixa) volta um passo em
+/// vez de sair. Um `Key('passo-N')` invisível marca o passo interno.
 class MolduraDoCadastro extends StatelessWidget {
   const MolduraDoCadastro({
     super.key,
@@ -29,12 +41,17 @@ class MolduraDoCadastro extends StatelessWidget {
   final Key chaveDaTela;
   final String titulo;
   final int passo;
+
+  /// O rótulo da etapa ("Confirmação", "Termo de consentimento", "Senha").
   final String nomeDoPasso;
   final VoidCallback aoVoltarPasso;
   final String? mensagem;
   final bool ocupado;
   final List<Widget> conteudo;
   final List<Widget> acoes;
+
+  /// Quantas etapas o primeiro acesso mostra.
+  static const int totalDeEtapas = 3;
 
   @override
   Widget build(BuildContext context) {
@@ -44,84 +61,31 @@ class MolduraDoCadastro extends StatelessWidget {
       onPopInvokedWithResult: (saiu, _) {
         if (!saiu) aoVoltarPasso();
       },
-      child: Scaffold(
-        key: chaveDaTela,
-        appBar: AppBar(title: Text(titulo)),
-        body: SafeArea(
-          child: SingleChildScrollView(
-            padding: MedidasTerae.paddingTela,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                IndicadorDePassos(passo: passo, nome: nomeDoPasso),
-                const SizedBox(height: MedidasTerae.espacoGrande),
-                ...conteudo,
-                if (mensagem != null) ...[
-                  const SizedBox(height: MedidasTerae.espaco),
-                  AvisoDeRecusa(mensagem),
-                ],
-                const SizedBox(height: MedidasTerae.espacoGrande),
-                if (ocupado) ...[
-                  const LinearProgressIndicator(semanticsLabel: 'Conferindo'),
-                  const SizedBox(height: MedidasTerae.espaco),
-                ],
-                for (final acao in acoes) ...[
-                  acao,
-                  if (acao != acoes.last) const SizedBox(height: 12),
-                ],
-              ],
-            ),
-          ),
+      child: MolduraDeEntrada(
+        chaveDaTela: chaveDaTela,
+        titulo: titulo,
+        etapa: EtapaDaEntrada(
+          atual: etapaDoPasso(passo),
+          total: totalDeEtapas,
+          rotulo: nomeDoPasso,
         ),
-      ),
-    );
-  }
-}
-
-/// Um segmento por passo e o texto "Passo X de 4 · nome", lido como uma
-/// frase só.
-class IndicadorDePassos extends StatelessWidget {
-  const IndicadorDePassos({super.key, required this.passo, required this.nome});
-
-  final int passo;
-  final String nome;
-
-  @override
-  Widget build(BuildContext context) {
-    const total = CadastroControlador.totalDePassos;
-    return Semantics(
-      container: true,
-      label: 'Passo $passo de $total: $nome',
-      excludeSemantics: true,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+        aoVoltar: passo == 1 ? null : aoVoltarPasso,
         children: [
-          Row(
-            children: [
-              for (var i = 1; i <= total; i++) ...[
-                if (i > 1) const SizedBox(width: 6),
-                Expanded(
-                  child: Container(
-                    height: 6,
-                    decoration: BoxDecoration(
-                      color: i <= passo
-                          ? CoresTerae.primaria600
-                          : CoresTerae.neutro200,
-                      borderRadius: const BorderRadius.all(
-                        Radius.circular(999),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ],
-          ),
-          const SizedBox(height: MedidasTerae.espacoPequeno),
-          Text(
-            'Passo $passo de $total · $nome',
-            style: Theme.of(context).textTheme.labelMedium
-                ?.copyWith(color: CoresTerae.neutro600),
-          ),
+          SizedBox.shrink(key: Key('passo-$passo')),
+          ...conteudo,
+          if (mensagem != null) ...[
+            const SizedBox(height: MedidasTerae.espaco),
+            AvisoDeRecusa(mensagem),
+          ],
+          const SizedBox(height: MedidasTerae.espacoGrande),
+          if (ocupado) ...[
+            const LinearProgressIndicator(semanticsLabel: 'Conferindo'),
+            const SizedBox(height: MedidasTerae.espaco),
+          ],
+          for (final acao in acoes) ...[
+            acao,
+            if (acao != acoes.last) const SizedBox(height: 12),
+          ],
         ],
       ),
     );
@@ -138,7 +102,7 @@ class TituloDoPasso extends StatelessWidget {
   Widget build(BuildContext context) {
     return Semantics(
       header: true,
-      child: Text(texto, style: Theme.of(context).textTheme.headlineSmall),
+      child: Text(texto, style: Theme.of(context).textTheme.titleLarge),
     );
   }
 }
@@ -224,7 +188,7 @@ class FormularioDeAcesso extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const TituloDoPasso('Crie seu acesso'),
+          const TituloDoPasso('Crie a sua senha'),
           const SizedBox(height: MedidasTerae.espacoPequeno),
           Text(
             'Com este e-mail e esta senha você entra no Terae. Se você já '
