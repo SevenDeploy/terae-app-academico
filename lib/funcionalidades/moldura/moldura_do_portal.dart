@@ -137,9 +137,12 @@ class MolduraDoPortal extends StatelessWidget {
   }
 }
 
-/// O topo do portal no telefone: o seletor de paciente (avatar, nome e, com
-/// mais de um perfil, a seta que abre "De quem você quer ver?") e o atalho
-/// "Ajuda", que abre a ajuda imediata (SAMU 192, CVV 188).
+/// O topo do portal no telefone: o seletor de paciente (avatar, primeiro nome
+/// e, com mais de um perfil, a seta que abre "De quem você quer ver?") e o
+/// atalho "Ajuda imediata", que abre os números do SAMU 192 e do CVV 188.
+///
+/// Como a barra de baixo, o topo para a escala do texto em 1,15×: com a
+/// fonte grande, "Ajuda imediata" e o nome não cabem lado a lado a 360 dp.
 class TopoDoPortal extends StatelessWidget implements PreferredSizeWidget {
   const TopoDoPortal({super.key});
 
@@ -150,24 +153,38 @@ class TopoDoPortal extends StatelessWidget implements PreferredSizeWidget {
   Widget build(BuildContext context) {
     final perfil = context.select<Sessao, Perfil?>((s) => s.perfilAtivo);
     final varios = context.select<Sessao, bool>((s) => s.temVariosPerfis);
-    return AppBar(
-      automaticallyImplyLeading: false,
-      toolbarHeight: 64,
-      titleSpacing: 12,
-      shape: const Border(bottom: BorderSide(color: CoresTerae.borda)),
-      title: perfil == null
-          ? null
-          : _SeletorDePaciente(perfil: perfil, varios: varios),
-      actions: [
-        TextButton.icon(
-          key: const Key('topo-ajuda'),
-          onPressed: () => context.push(Rotas.ajuda),
-          style: TextButton.styleFrom(foregroundColor: CoresTerae.erro),
-          icon: const Icon(LucideIcons.lifeBuoy, size: 20),
-          label: const Text('Ajuda'),
-        ),
-        const SizedBox(width: 8),
-      ],
+    return MediaQuery.withClampedTextScaling(
+      maxScaleFactor: 1.15,
+      child: AppBar(
+        automaticallyImplyLeading: false,
+        toolbarHeight: 64,
+        titleSpacing: 12,
+        shape: const Border(bottom: BorderSide(color: CoresTerae.borda)),
+        title: perfil == null
+            ? null
+            : _SeletorDePaciente(perfil: perfil, varios: varios),
+        actions: [
+          // O botão nunca passa de 176 dp: o rótulo encolhe antes de tirar o
+          // lugar do nome do paciente (fonte muito larga ou do aparelho).
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 176),
+            child: TextButton.icon(
+              key: const Key('topo-ajuda'),
+              onPressed: () => context.push(Rotas.ajuda),
+              style: TextButton.styleFrom(
+                foregroundColor: CoresTerae.erro,
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+              ),
+              icon: const Icon(LucideIcons.lifeBuoy, size: 20),
+              label: const FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text('Ajuda imediata'),
+              ),
+            ),
+          ),
+          const SizedBox(width: 4),
+        ],
+      ),
     );
   }
 }
@@ -186,8 +203,10 @@ class _SeletorDePaciente extends StatelessWidget {
         Avatar(nome: perfil.paciente.nome),
         const SizedBox(width: 10),
         Flexible(
+          // O portal mostra só o primeiro nome no topo; o nome inteiro fica
+          // na folha "De quem você quer ver?" e na Conta.
           child: Text(
-            perfil.paciente.nome,
+            perfil.paciente.primeiroNome,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(
               fontSize: 16,
@@ -206,7 +225,14 @@ class _SeletorDePaciente extends StatelessWidget {
         ],
       ],
     );
-    if (!varios) return conteudo;
+    if (!varios) {
+      // O nó de semântica cobre o avatar e o nome, com o nome inteiro lido.
+      return Semantics(
+        label: perfil.paciente.nome,
+        excludeSemantics: true,
+        child: conteudo,
+      );
+    }
     return Semantics(
       button: true,
       label: 'De quem você quer ver? Agora: ${perfil.paciente.nome}',

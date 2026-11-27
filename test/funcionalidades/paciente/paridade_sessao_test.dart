@@ -164,4 +164,32 @@ void main() {
       );
     });
   });
+
+  group('Topo: o seletor de paciente e a Ajuda imediata do portal', () {
+    testWidgets('só o primeiro nome no topo, o nome inteiro na folha e na '
+        'Conta; "Ajuda imediata" no botão', (tester) async {
+      final sessao = Sessao()..entrar(vinculosPatricia());
+      sessao.escolherPerfil(
+        sessao.perfis.firstWhere((p) => p.paciente.id == 'p-miguel'),
+      );
+      await abrirAppDoPaciente(tester, sessao: sessao);
+      final seletor = find.byKey(const Key('seletor-de-paciente'));
+      expect(
+        find.descendant(of: seletor, matching: find.text('Miguel')),
+        findsOneWidget,
+      );
+      expect(find.text('Miguel Andrade Neves'), findsNothing);
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('topo-ajuda')),
+          matching: find.text('Ajuda imediata'),
+        ),
+        findsOneWidget,
+      );
+      await tocar(tester, seletor);
+      expect(find.text('De quem você quer ver?'), findsOneWidget);
+      expect(find.text('Miguel Andrade Neves'), findsOneWidget);
+      expect(find.text('Laura Andrade Neves'), findsOneWidget);
+    });
+  });
 }
