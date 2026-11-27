@@ -239,6 +239,21 @@ void main() {
       },
     );
 
+    test('a clínica, o telefone e a duração chegam ao app (paridade com o '
+        'portal)', () async {
+      await entrar();
+      final repo = PacienteTeraeLocal(contexto);
+      final paciente = await repo.paciente(idAlice);
+      expect(paciente.nomeDaClinica, 'Clínica Exemplo');
+      expect(paciente.telefoneDaClinica, '+55 65 3000-0000');
+      // Sem telefone no /eu, fica nulo (o app não inventa um).
+      expect((await repo.paciente(idBento)).telefoneDaClinica, isNull);
+      final proxima = await repo.proximaConsulta(idAlice);
+      expect(proxima!.duracaoMinutos, 50);
+      final agenda = await repo.agendamentos(idAlice);
+      expect(agenda.map((a) => a.duracaoMinutos), [50, 50]);
+    });
+
     test('agenda em ordem, desmarcada pela clínica vira cancelada', () async {
       await entrar();
       final repo = PacienteTeraeLocal(contexto);

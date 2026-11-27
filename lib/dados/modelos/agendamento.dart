@@ -18,6 +18,7 @@ class Agendamento {
     required DateTime dataHora,
     this.motivoRetorno,
     required this.situacao,
+    this.duracaoMinutos,
   }) : dataHora = dataHora.toUtc();
 
   factory Agendamento.fromMap(Mapa mapa) => Agendamento(
@@ -27,6 +28,7 @@ class Agendamento {
     dataHora: lerInstante(mapa, 'dataHora'),
     motivoRetorno: lerOpcional<String>(mapa, 'motivoRetorno'),
     situacao: lerEnum(mapa, 'situacao', SituacaoAgendamento.values),
+    duracaoMinutos: lerOpcional<int>(mapa, 'duracaoMinutos'),
   );
 
   final String id;
@@ -38,6 +40,10 @@ class Agendamento {
   final String? motivoRetorno;
   final SituacaoAgendamento situacao;
 
+  /// Duração da sessão, em minutos ("14:00 · 50 minutos" no Início). Só o
+  /// portal do Terae local a manda; no Firebase é nula e nada a mostra.
+  final int? duracaoMinutos;
+
   /// Só a situação muda (agendado → realizado ou cancelado).
   Agendamento copyWith({SituacaoAgendamento? situacao}) => Agendamento(
     id: id,
@@ -46,6 +52,7 @@ class Agendamento {
     dataHora: dataHora,
     motivoRetorno: motivoRetorno,
     situacao: situacao ?? this.situacao,
+    duracaoMinutos: duracaoMinutos,
   );
 
   /// RNFM05 — cópia para o aparelho do cuidador, sem o motivo do retorno.
@@ -55,6 +62,7 @@ class Agendamento {
     profissionalId: profissionalId,
     dataHora: dataHora,
     situacao: situacao,
+    duracaoMinutos: duracaoMinutos,
   );
 
   Mapa toMap() => {
@@ -64,6 +72,8 @@ class Agendamento {
     'dataHora': escreverInstante(dataHora),
     'motivoRetorno': motivoRetorno,
     'situacao': situacao.name,
+    // Só quando existe: o mapa do Firebase e do SQLite não muda.
+    if (duracaoMinutos != null) 'duracaoMinutos': duracaoMinutos,
   };
 
   @override
@@ -74,7 +84,8 @@ class Agendamento {
       other.profissionalId == profissionalId &&
       other.dataHora == dataHora &&
       other.motivoRetorno == motivoRetorno &&
-      other.situacao == situacao;
+      other.situacao == situacao &&
+      other.duracaoMinutos == duracaoMinutos;
 
   @override
   int get hashCode => Object.hash(
@@ -84,6 +95,7 @@ class Agendamento {
     dataHora,
     motivoRetorno,
     situacao,
+    duracaoMinutos,
   );
 
   @override

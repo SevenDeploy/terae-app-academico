@@ -22,6 +22,8 @@ class Paciente {
     this.dataNascimento,
     required this.ativo,
     Set<LinhaDeCuidado> linhasDeCuidado = linhasPadrao,
+    this.nomeDaClinica,
+    this.telefoneDaClinica,
   }) : linhasDeCuidado = _conferirLinhas(linhasDeCuidado);
 
   factory Paciente.fromMap(Mapa mapa) => Paciente(
@@ -35,6 +37,8 @@ class Paciente {
     linhasDeCuidado: mapa['linhasDeCuidado'] == null
         ? linhasPadrao
         : lerEnums(mapa, 'linhasDeCuidado', LinhaDeCuidado.values).toSet(),
+    nomeDaClinica: lerOpcional<String>(mapa, 'nomeDaClinica'),
+    telefoneDaClinica: lerOpcional<String>(mapa, 'telefoneDaClinica'),
   );
 
   /// D21 — paciente sem linha gravada (dados das Atividades 3 e 4, cópias
@@ -73,6 +77,14 @@ class Paciente {
   /// Início; vai também na cópia do cuidador, que não traz conteúdo clínico.
   final Set<LinhaDeCuidado> linhasDeCuidado;
 
+  /// A clínica que atende o paciente, como o `GET /portal/eu` a manda no
+  /// Terae local ("Terça, 10 de novembro · Clínica Raízes"). Nula no Firebase.
+  final String? nomeDaClinica;
+
+  /// Telefone da clínica (`telefoneDaClinica` do `/eu`), para "Falar com a
+  /// clínica". Nulo no Firebase, onde vale o número fictício da demonstração.
+  final String? telefoneDaClinica;
+
   /// Tem receita e remédios (TM02, TM06, TM11).
   bool get temAcompanhamentoClinico =>
       linhasDeCuidado.contains(LinhaDeCuidado.acompanhamentoClinico);
@@ -94,6 +106,8 @@ class Paciente {
     dataNascimento: dataNascimento,
     ativo: ativo ?? this.ativo,
     linhasDeCuidado: linhasDeCuidado,
+    nomeDaClinica: nomeDaClinica,
+    telefoneDaClinica: telefoneDaClinica,
   );
 
   /// RNFM05 — cópia para o aparelho do cuidador: sem CPF, sem data de
@@ -104,6 +118,8 @@ class Paciente {
     nome: nome,
     ativo: ativo,
     linhasDeCuidado: linhasDeCuidado,
+    nomeDaClinica: nomeDaClinica,
+    telefoneDaClinica: telefoneDaClinica,
   );
 
   Mapa toMap() => {
@@ -118,6 +134,9 @@ class Paciente {
       for (final linha in LinhaDeCuidado.values)
         if (linhasDeCuidado.contains(linha)) linha.name,
     ],
+    // Só quando existem: o mapa do Firebase e do SQLite não muda.
+    if (nomeDaClinica != null) 'nomeDaClinica': nomeDaClinica,
+    if (telefoneDaClinica != null) 'telefoneDaClinica': telefoneDaClinica,
   };
 
   @override
@@ -130,6 +149,8 @@ class Paciente {
       other.cpf == cpf &&
       other.dataNascimento == dataNascimento &&
       other.ativo == ativo &&
+      other.nomeDaClinica == nomeDaClinica &&
+      other.telefoneDaClinica == telefoneDaClinica &&
       setEquals(other.linhasDeCuidado, linhasDeCuidado);
 
   @override
@@ -142,6 +163,8 @@ class Paciente {
     dataNascimento,
     ativo,
     Object.hashAllUnordered(linhasDeCuidado),
+    nomeDaClinica,
+    telefoneDaClinica,
   );
 
   @override

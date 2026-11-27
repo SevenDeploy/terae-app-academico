@@ -36,6 +36,7 @@ class PortalFalso {
       'idPaciente': idAlice,
       'nome': 'Alice Souza',
       'nomeDaClinica': 'Clínica Exemplo',
+      'telefoneDaClinica': '+55 65 3000-0000',
       'fusoHorario': 'America/Cuiaba',
       'perfil': 'responsavel_legal',
       'agendaLiberada': true,

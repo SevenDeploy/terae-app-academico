@@ -276,6 +276,8 @@ Paciente pacienteDoPortal(PacienteDaConta p) => Paciente(
   nome: p.nome,
   ativo: true,
   linhasDeCuidado: linhasDoTeraeLocal,
+  nomeDaClinica: p.nomeDaClinica,
+  telefoneDaClinica: p.telefoneDaClinica,
 );
 
 /// O `/eu` vira a conta e os vínculos de onde a `Sessao` deriva os perfis:
@@ -323,6 +325,7 @@ Agendamento agendamentoDoPortal(
   situacao: s.confirmacao == ConfirmacaoNoPortal.desmarcadaPelaClinica
       ? SituacaoAgendamento.cancelado
       : SituacaoAgendamento.agendado,
+  duracaoMinutos: s.fim.difference(s.inicio).inMinutes,
 );
 
 /// A resposta de presença que a sessão já tem, ou `null` (pendente ou

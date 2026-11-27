@@ -579,6 +579,58 @@ void main() {
     );
   });
 
+  group('clínica e duração, só do Terae local (paridade com o portal)', () {
+    test('Agendamento: a duração vai e volta; sem ela o mapa não muda', () {
+      final com = Agendamento(
+        id: 'a',
+        pacienteId: 'p',
+        profissionalId: 'pr',
+        dataHora: DateTime.utc(2026, 11, 27, 18),
+        situacao: SituacaoAgendamento.agendado,
+        duracaoMinutos: 50,
+      );
+      expect(Agendamento.fromMap(_peloJson(com.toMap())), com);
+      expect(com.toMap()['duracaoMinutos'], 50);
+      expect(com.paraCuidador().duracaoMinutos, 50);
+      expect(
+        com.copyWith(situacao: SituacaoAgendamento.cancelado).duracaoMinutos,
+        50,
+      );
+      final sem = Agendamento(
+        id: 'a',
+        pacienteId: 'p',
+        profissionalId: 'pr',
+        dataHora: DateTime.utc(2026, 11, 27, 18),
+        situacao: SituacaoAgendamento.agendado,
+      );
+      expect(sem.toMap().containsKey('duracaoMinutos'), isFalse);
+      expect(sem == com, isFalse);
+    });
+
+    test('Paciente: clínica e telefone vão e voltam; sem eles o mapa não '
+        'muda (Firebase e SQLite)', () {
+      final com = Paciente(
+        id: 'p',
+        profissionalRefId: '',
+        nome: 'Alice Souza',
+        ativo: true,
+        nomeDaClinica: 'Clínica Raízes',
+        telefoneDaClinica: '+55 65 3000-0000',
+      );
+      expect(Paciente.fromMap(_peloJson(com.toMap())), com);
+      expect(com.paraCuidador().nomeDaClinica, 'Clínica Raízes');
+      expect(com.copyWith(ativo: false).telefoneDaClinica, '+55 65 3000-0000');
+      final sem = Paciente(
+        id: 'p',
+        profissionalRefId: 'pr',
+        nome: 'Alice Souza',
+        ativo: true,
+      );
+      expect(sem.toMap().containsKey('nomeDaClinica'), isFalse);
+      expect(sem.toMap().containsKey('telefoneDaClinica'), isFalse);
+    });
+  });
+
   group('Paciente.linhasDeCuidado (D21)', () {
     Mapa mapaDoPaciente() => {
       'id': 'p',
