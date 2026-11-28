@@ -75,8 +75,8 @@ e a aba Em casa do cuidador no Terae local e a "Etapa 1 de 2" do Entrar. O que f
 - **Sala da sessão:** o portal mostra o local ("Sala 2"); o `Agendamento` do app não tem local.
 - **Agenda do cuidador:** a aba Agenda do cuidador ainda é a TM12 "Agenda e avisos" (D29, com os avisos à equipe); no
   portal é a mesma Agenda da família, sem botões.
-- **Presença:** o app mantém "Mudar a resposta" (D27); o portal só deixa "Avisar que não vamos" na sessão já confirmada.
-  No Terae local, "Confirmar presença" depois do aviso volta recusado pela API (409 → `sessaoEncerrada`).
+- **Presença no Firebase:** o app mantém "Mudar a resposta" (D27), que o portal não tem. No Terae local (capacidade
+  `mudarPresenca` desligada) é como o portal: confirmada, só "Avisar que não vamos"; avisada, nenhum botão (PV9).
 - **Primeiro acesso:** o termo vem antes da senha (no portal é o contrário), para não mexer na regra do consentimento.
 - **Rótulos da barra:** ficam em 14 (D10), não nos 12 do portal. A escala do texto da barra e a do topo param em 1,15×,
   para "Em casa" caber em 72 dp e "Ajuda imediata" não tirar o lugar do nome (o botão do topo tem no máximo 176 dp e o
@@ -95,9 +95,10 @@ Mesmo login (Mariana, perfil da Alice), o portal em `portal.localhost:5175` numa
   com "Revisado pela terapeuta" e "Retirado por você", "Ver a versão 1", o aviso "Não dá mais para corrigir nem
   retirar"); os dados do Início (saudação, "Próxima sessão", Ter 1 dez, "14:00 · 50 minutos", "Com Terapeuta · Terapia
   Ocupacional", "Presença confirmada", "2 de 3 orientações registradas").
-- **Diferem no Início:** o portal lista cada orientação do dia no cartão ("Em parte · por você", "Falta registrar") e o app
-  só mostra a barra e o botão; o portal mantém "Avisar que não vamos" depois de confirmar e o app mostra "Mudar a
-  resposta" mais "Abrir a agenda"; o portal diz "orientações registradas" e o app "atividades registradas".
-- **Topo (corrige o que estava escrito antes, que vinha do quadro):** o portal ao vivo mostra as iniciais ("AF") e o nome
-  inteiro cortado ("Alice Fictícia D…"); o app mostra "A" e o primeiro nome ("Alice"). Os dois têm "Ajuda imediata".
+- **Diferiam no Início e fecharam (PV8–PV10):** a lista de cada orientação do dia no cartão ("Em parte · por você",
+  "Falta registrar") e o título "orientações registradas"; "Avisar que não vamos" depois de confirmar, sem "Mudar a
+  resposta" nem "Abrir a agenda" (este só quando a sessão não aceita mais resposta); o topo com as iniciais ("AF") e o
+  nome inteiro cortado, com "Ajuda imediata" sempre visível.
 - **Texto:** o portal diz "registros que você enviou pelo portal"; o app, "pelo app".
+- **Ainda diferem no Início:** sem a autoria do portal (Firebase e memória), a linha do programa mostra só o estado
+  ("Feito"), sem "por você"; o portal diz "de <terapeuta>" ao lado em tela larga (não existe no telefone).

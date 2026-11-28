@@ -120,7 +120,7 @@ composição por fonte e a trava; telas da etapa do código e das seções escon
 ## Paridade com o portal — divergências visuais fechadas (27/11/2026, `portal-paridade`)
 
 Delegação do dono ("faz as ações recomendadas e prossiga"): fechar as divergências visuais que o roteiro do emulador
-achou (`docs/paridade-com-portal.md`). Decisões PV1–PV7.
+achou (`docs/paridade-com-portal.md`). Decisões PV1–PV7; PV8–PV10 vieram da conferência lado a lado com o portal rodando.
 
 | # | Decisão |
 |---|---|
@@ -131,6 +131,9 @@ achou (`docs/paridade-com-portal.md`). Decisões PV1–PV7.
 | PV5 | Topo: só o primeiro nome do paciente (o inteiro na folha e na Conta) e "Ajuda imediata". O botão tem no máximo 176 dp (rótulo em `FittedBox`) e o topo para a escala do texto em 1,15×; o nó de semântica cobre avatar e nome (o teste de contraste media só o avatar) |
 | PV6 | Cuidador no Terae local (`CapacidadesDaFonte.programaDoCuidador`): o Início é o da família (programa de hoje primeiro com "Registrar o de hoje", sessão sem botões de presença, diário bloqueado com a frase do portal) e a moldura ganha a aba Em casa em `/cuidador/casa` e `/cuidador/casa/atividade`. A guarda recusa essas rotas sem a capacidade ou sem TO, e o cuidador continua sem alcançar o diário. Rotas pelo papel: `Rotas.inicioDe`, `casaDe`, `agendaDe`, `atividadeDe` |
 | PV7 | Entrar no modo local: "Etapa 1 de 2", botão "Continuar" e a frase "Depois da senha, enviamos um código para o seu e-mail.". No Firebase fica uma etapa. Sem "Esqueci a senha" (não existe no app) |
+| PV8 | Programa de hoje no Início como o portal: cada orientação do dia com o ícone do estado (círculo tracejado, check, meio, traço) e a linha "Falta registrar" ou "<estado> · <autoria>" (`programaDeHoje` e `ItemDoProgramaDeHoje.linha` em `regras/programa_em_casa.dart`). A autoria ("por você", "por Rosa", "pelo link", "por outra pessoa da família") vem do `quemRegistrou` do portal pelo campo `RegistroDeAtividade.autoria`, só para mostrar (fora do mapa e da igualdade): Firebase e memória mostram só o estado. O título do cartão do Início passa a "X de Y orientações registradas"; o Em casa continua "atividades" |
+| PV9 | Presença por capacidade (`CapacidadesDaFonte.mudarPresenca`, desligada no Terae local): sem "Mudar a resposta", a sessão confirmada oferece só "Avisar que não vamos" (com a pergunta antes) e a avisada, nenhum botão, porque a API não deixa voltar (409). No Firebase continua "Mudar a resposta" (D27). "Abrir a agenda" no Início só aparece quando a sessão não aceita mais resposta (`!podeResponderNaProxima`), como no portal |
+| PV10 | Topo: o avatar leva as iniciais do `Avatar` do portal (`iniciaisDoNome`: a primeira letra das duas primeiras partes, sem contar "da" e "de" salvo a última) e o nome inteiro, cortado com reticências; "Ajuda imediata" fica com no máximo 176 dp e é o nome que encolhe. Revê a PV5 (que mostrava só o primeiro nome, tirado do quadro: o portal ao vivo mostra o nome inteiro) |
 
 ## Atividade 5 — finalização do MVP e testes (26/11/2026, branch `atividade-5`)
 
