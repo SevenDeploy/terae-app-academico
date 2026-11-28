@@ -195,17 +195,17 @@ $env:TERAE_LOCAL_EMAIL = node .\ferramentas\terae-local\credenciais-da-persona.m
 - Os segredos TOTP das contas **da equipe** (operador, coordenação, terapeuta-a) foram impressos por engano no terminal
   em 27/11. São só do banco local, mas regenere-os se isso importar (`semear-contas-de-demonstracao`).
 
-## 9. Não faça sem decidir
+## 9. Firebase real (`terae-app-academico`)
 
-**Publicar as regras e a semente da P3 no Firebase real (`terae-app-academico`).** O app da A5 entregue (v5.0.1) usa o
-formato antigo do diário nesse mesmo Firebase; as regras novas quebram a demonstração dele. Só depois que a A5 for
-avaliada, e com o teste das regras (seção 7) verde:
+Em 27/11 a sessão que fecha a A5 **já publicou as `firestore.rules` atuais** (os 22 casos do emulador de regras
+passaram) e rodou `node ferramentas/semear-firebase.mjs --reiniciar` com o formato novo do diário (a Ana ficou com versão 2,
+um registro retirado e os revisados). Então o app do Firebase e o do modo local usam o mesmo modelo de diário. Não
+publique de novo sem necessidade: cada publicação pede o ok do dono. Reconferir as regras a qualquer momento (não toca o
+Firebase real): seção 7, "Regras do Firestore no emulador local".
 
-```powershell
-firebase deploy --only firestore:rules --project terae-app-academico
-```
-
-e, se for o caso, `node ferramentas/semear-firebase.mjs --reiniciar` (veja `docs/estado.md`). Isso pede o seu ok.
+A entrega da A5 está amarrada ao commit **`e1ebdb9`** (a `main` local avançou até ele; nada foi enviado ao GitHub). Quem
+precisar mudar `lib/` ou `test/` deve avisar a sessão da A5 antes. O emulador pode estar com a versão do Firebase
+instalada por cima do modo local: para voltar ao modo local, rode o `flutter run` da seção 4.
 
 ## 10. Pendências abertas (todas em `docs/estado.md`)
 
