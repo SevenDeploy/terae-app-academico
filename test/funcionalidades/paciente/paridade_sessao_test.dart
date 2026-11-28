@@ -169,6 +169,30 @@ void main() {
     });
   });
 
+  group('Início: "Abrir a agenda" só quando a sessão não aceita resposta', () {
+    testWidgets('sessão que já começou: sem botões de resposta e com o '
+        'caminho à agenda', (tester) async {
+      // Uma hora antes do "agora" dos testes: D27, não dá mais para responder.
+      final paciente = PacienteComDados(
+        consulta: _em('ag-1', agoraDeTeste.subtract(const Duration(hours: 1))),
+      );
+      await abrirAppDoPaciente(tester, paciente: paciente);
+      expect(find.byKey(const Key('vamos-ag-1')), findsNothing);
+      expect(find.byKey(const Key('nao-vamos-ag-1')), findsNothing);
+      expect(find.byKey(const Key('abrir-a-agenda')), findsOneWidget);
+    });
+
+    testWidgets('sessão que aceita resposta: os botões, sem o caminho à '
+        'agenda', (tester) async {
+      final paciente = PacienteComDados(
+        consulta: _em('ag-2', instanteNaClinica(2026, 10, 7, 14)),
+      );
+      await abrirAppDoPaciente(tester, paciente: paciente);
+      expect(find.byKey(const Key('vamos-ag-2')), findsOneWidget);
+      expect(find.byKey(const Key('abrir-a-agenda')), findsNothing);
+    });
+  });
+
   group('Falar com a clínica: o telefone vem do paciente', () {
     testWidgets('com o telefone do /eu: Ligar para ele, sem WhatsApp nem '
         '"fictício"', (tester) async {

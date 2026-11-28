@@ -540,7 +540,9 @@ class _ProximaConsulta extends StatelessWidget {
                   ),
                 ),
               ),
-            if (!controlador.perguntando) ...[
+            // Como no portal: "Abrir a agenda" só quando a sessão não aceita
+            // mais resposta (já começou, cancelada, ou sem presença).
+            if (!controlador.podeResponderNaProxima) ...[
               const SizedBox(height: 12),
               BotaoGrande(
                 key: const Key('abrir-a-agenda'),

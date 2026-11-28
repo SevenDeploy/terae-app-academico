@@ -14,6 +14,7 @@ import '../../../nucleo/tempo/relogio.dart';
 import '../../../nucleo/textos/encontros.dart';
 import '../../../nucleo/widgets/botao_grande.dart';
 import '../../../nucleo/widgets/cartao.dart';
+import '../../capacidades.dart';
 
 /// As três primeiras letras com a primeira em maiúscula: `Qui`, `Sáb`.
 String _curto(String nome, {required bool maiuscula}) {
@@ -278,6 +279,7 @@ class RespostasDaSessao extends StatelessWidget {
     final a = agendamento;
     final r = resposta;
     final textos = Theme.of(context).textTheme;
+    final mudarPresenca = capacidadesDaFonte(context).mudarPresenca;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -333,7 +335,7 @@ class RespostasDaSessao extends StatelessWidget {
               style: textos.bodyMedium,
             ),
           ),
-          if (podeMudar)
+          if (podeMudar && mudarPresenca)
             Align(
               alignment: Alignment.centerLeft,
               child: TextButton.icon(
@@ -342,7 +344,19 @@ class RespostasDaSessao extends StatelessWidget {
                 icon: const Icon(LucideIcons.pencil, size: 18),
                 label: const Text('Mudar a resposta'),
               ),
+            )
+          else if (podeMudar && r.resposta == RespostaPresenca.vamos) ...[
+            // Como no portal: confirmada, só resta avisar que não vão.
+            const SizedBox(height: 8),
+            BotaoGrande(
+              key: Key('nao-vamos-${a.id}'),
+              rotulo: 'Avisar que não vamos',
+              variante: VarianteBotao.secundario,
+              aoTocar: ocupado
+                  ? null
+                  : () => unawaited(_perguntarAntesDeAvisar(context)),
             ),
+          ],
         ],
         if (erro != null) ...[
           const SizedBox(height: 8),

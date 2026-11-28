@@ -91,6 +91,7 @@ class CapacidadesDaFonte {
     required this.ocupacaoDaAtividade,
     required this.demonstracao,
     this.programaDoCuidador = false,
+    this.mudarPresenca = true,
   });
 
   /// Firebase acadêmico e memória de demonstração.
@@ -104,6 +105,7 @@ class CapacidadesDaFonte {
     ocupacaoDaAtividade: true,
     demonstracao: true,
     programaDoCuidador: false,
+    mudarPresenca: true,
   );
 
   /// Terae local (API `/api/portal/*`): sem metas nem marcos (Jornada), sem a
@@ -122,6 +124,7 @@ class CapacidadesDaFonte {
     ocupacaoDaAtividade: false,
     demonstracao: false,
     programaDoCuidador: true,
+    mudarPresenca: false,
   );
 
   /// O cuidador vê o programa em casa e registra o dia, como no portal
@@ -130,6 +133,12 @@ class CapacidadesDaFonte {
   /// desligado lá; o Início do cuidador passa a ser o da família e a moldura
   /// ganha a aba "Em casa".
   final bool programaDoCuidador;
+
+  /// "Mudar a resposta" de presença (D27): voltar atrás de uma resposta já
+  /// dada. A API do portal não deixa (depois de avisar que não vai, confirmar
+  /// de novo é 409): lá, depois de confirmar só resta "Avisar que não vamos"
+  /// e, depois do aviso, nenhum botão, como no portal.
+  final bool mudarPresenca;
 
   /// Diário entre consultas (TM03–TM05, TM13, TM14).
   final bool diario;

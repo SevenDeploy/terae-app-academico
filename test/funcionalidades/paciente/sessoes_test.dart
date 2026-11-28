@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:terae_app/dados/enums/resposta_presenca.dart';
 import 'package:terae_app/dados/enums/situacao_envio.dart';
+import 'package:terae_app/dados/repositorios/repositorios.dart';
 import 'package:terae_app/dados/sincronizacao/situacao_sincronizacao.dart';
 import 'package:terae_app/nucleo/rotas/rotas.dart';
 
@@ -55,7 +56,10 @@ void main() {
         find.descendant(of: cartao, matching: find.text('Presença confirmada')),
         findsOneWidget,
       );
-      await tocar(tester, find.byKey(const Key('abrir-a-agenda')));
+      // "Abrir a agenda" é só para a sessão que não aceita mais resposta
+      // (como no portal): enquanto dá para responder, não aparece.
+      expect(find.byKey(const Key('abrir-a-agenda')), findsNothing);
+      await tocar(tester, find.byKey(const Key('aba-agenda')));
       expect(find.byKey(const Key('TM18')), findsOneWidget);
       expect(find.text('Presença confirmada'), findsOneWidget);
       expect(
@@ -97,6 +101,57 @@ void main() {
         findsOneWidget,
         reason: 'o Início relê a resposta ao voltar',
       );
+    });
+
+    testWidgets('no Terae local, depois de confirmar só resta "Avisar que não '
+        'vamos"; depois do aviso, nenhum botão (a API não deixa voltar)', (
+      tester,
+    ) async {
+      await abrirComMemoria(
+        tester,
+        persona: Persona.patricia,
+        em: Rotas.entrarPerfil,
+        capacidades: CapacidadesDaFonte.teraeLocal,
+      );
+      await tocar(tester, find.text('Miguel Andrade Neves'));
+      final cartao = find.byKey(const Key('proxima-consulta'));
+      await tocar(tester, find.byKey(Key('vamos-$_sessaoMiguel')));
+      expect(
+        find.descendant(of: cartao, matching: find.text('Presença confirmada')),
+        findsOneWidget,
+      );
+      // Sem "Mudar a resposta": o botão de avisar já está ali, e o de
+      // confirmar (que a API recusaria com 409) não volta.
+      expect(find.byKey(Key('mudar-$_sessaoMiguel')), findsNothing);
+      expect(find.byKey(Key('vamos-$_sessaoMiguel')), findsNothing);
+      expect(find.byKey(Key('nao-vamos-$_sessaoMiguel')), findsOneWidget);
+      expect(find.byKey(const Key('abrir-a-agenda')), findsNothing);
+
+      await tocar(tester, find.byKey(Key('nao-vamos-$_sessaoMiguel')));
+      expect(find.text('Avisar que vocês não vêm?'), findsOneWidget);
+      await tocar(tester, find.byKey(const Key('avisar-a-clinica')));
+      expect(
+        find.descendant(
+          of: cartao,
+          matching: find.text('Avisaram que não vão'),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.textContaining('Obrigado por avisar. A recepção vai ligar'),
+        findsOneWidget,
+      );
+      expect(find.byKey(Key('mudar-$_sessaoMiguel')), findsNothing);
+      expect(find.byKey(Key('vamos-$_sessaoMiguel')), findsNothing);
+      expect(find.byKey(Key('nao-vamos-$_sessaoMiguel')), findsNothing);
+    });
+
+    testWidgets('no Firebase (D27) continua "Mudar a resposta" depois do '
+        'aviso', (tester) async {
+      await _comoMiguel(tester, em: Rotas.pacienteInicio);
+      await tocar(tester, find.byKey(Key('nao-vamos-$_sessaoMiguel')));
+      await tocar(tester, find.byKey(const Key('avisar-a-clinica')));
+      expect(find.byKey(Key('mudar-$_sessaoMiguel')), findsOneWidget);
     });
 
     testWidgets('o titular vê "Falta confirmar" e depois "Presença '
