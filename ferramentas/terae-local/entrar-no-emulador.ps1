@@ -1,4 +1,4 @@
-# Entra no app (já instalado no emulador, fonte local) como uma persona do Terae local: abre o app, digita e-mail e
+﻿# Entra no app (já instalado no emulador, fonte local) como uma persona do Terae local: abre o app, digita e-mail e
 # senha, espera o e-mail do código, lê o código no Mailpit e digita. Senha e código nunca são impressos nem gravados;
 # a captura só é tirada DEPOIS do login (a tela do código mostra o código digitado).
 #
@@ -68,20 +68,33 @@ Remove-Variable senha
 # 4. Pede o código (só depois de anotar qual era o e-mail mais novo, para não pegar um código velho).
 $antes = & node $ajudante ultimo-id $Persona
 Tocar 'Continuar'
+# Aparelho confiável: a API entra só com a senha e não manda código. A barra de abas ("Guia 1 de N") prova que entrou.
+function JaEntrou {
+  & $adb shell uiautomator dump /sdcard/terae-tela.xml 2>&1 | Out-Null
+  $xml = (& $adb shell cat /sdcard/terae-tela.xml 2>$null) -join ''
+  & $adb shell rm /sdcard/terae-tela.xml 2>&1 | Out-Null
+  return ($xml -match 'Guia 1 de')
+}
 $codigo = $null
-for ($i = 0; $i -lt 20 -and -not $codigo; $i++) {
+$confiavel = $false
+for ($i = 0; $i -lt 20 -and -not $codigo -and -not $confiavel; $i++) {
   Start-Sleep -Seconds 2
   $codigo = & node $ajudante codigo $Persona $antes 2>$null
   if ($LASTEXITCODE -ne 0) { $codigo = $null }
+  if (-not $codigo -and ($i % 2 -eq 1)) { $confiavel = JaEntrou }
 }
-if (-not $codigo) { Falha 'o e-mail do código não chegou em 40 s (confira o worker e a senha da persona)' }
+if ($confiavel) {
+  Write-Host '  ok    aparelho confiável: entrou só com a senha, sem gastar código' -ForegroundColor Green
+} else {
+  if (-not $codigo) { Falha 'o e-mail do código não chegou em 40 s (confira o worker e a senha da persona)' }
 
-# 5. Digita o código e entra.
-Tocar 'PrimeiraCaixa'; Start-Sleep -Seconds 1; & $adb shell input text $codigo; Remove-Variable codigo
-Start-Sleep -Seconds 2
-if ($Confiar) { Tocar 'Confiar'; Start-Sleep -Seconds 1 }
-Tocar 'EntrarComCodigo'
-Start-Sleep -Seconds 10
+  # 5. Digita o código e entra.
+  Tocar 'PrimeiraCaixa'; Start-Sleep -Seconds 1; & $adb shell input text $codigo; Remove-Variable codigo
+  Start-Sleep -Seconds 2
+  if ($Confiar) { Tocar 'Confiar'; Start-Sleep -Seconds 1 }
+  Tocar 'EntrarComCodigo'
+  Start-Sleep -Seconds 10
+}
 
 # 6. Só agora a captura (não mostra mais senha nem código).
 # (o pipe do PowerShell estraga binário: a captura vai para o aparelho e volta por `adb pull`)

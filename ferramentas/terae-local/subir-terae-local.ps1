@@ -80,9 +80,19 @@ if (Escutando 5175) { Ok 'portal web em http://portal.localhost:5175' }
 elseif ($Subir) { AbrirNoBash 'portal :5175' 'pnpm --filter @terae/portal dev' }
 else { Falta 'portal em :5175: pnpm --filter @terae/portal dev' }
 
-foreach ($p in @(@{ Porta = 5201; Perfil = 'terapeuta' }, @{ Porta = 5202; Perfil = 'coordenação' })) {
+# Atalhos sem senha da demonstração (só no vite dev; a API os ignora em produção). Ids do banco terae_app_local:
+# Terapeuta Demonstração A (atende a Alice: programa em casa, caixa de entrada, revisão) e Coordenação Demonstração
+# (vê a caixa da clínica inteira, inclusive o diário da Laura, que não tem terapeuta).
+$instituicao = '39c33119-c392-4ec9-b45f-adc97d924418'
+foreach ($p in @(
+    @{ Porta = 5201; Perfil = 'terapeuta'; Usuario = '01a219cd-71a9-7000-9a62-0890d691a86e' },
+    @{ Porta = 5202; Perfil = 'coordenacao'; Usuario = '01a219cd-7084-7000-97ef-3f763eea5e3b' })) {
   if (Escutando $p.Porta) { Ok "atalho de dev ($($p.Perfil)) em http://localhost:$($p.Porta)" }
-  else { Write-Host "  opc.  atalho de dev ($($p.Perfil)) em :$($p.Porta) desligado (LEIA-ME, 'Atalho sem senha')" -ForegroundColor DarkGray }
+  elseif ($Subir) {
+    AbrirNoBash "clínica sem senha ($($p.Perfil)) :$($p.Porta)" ("PORTA_WEB=$($p.Porta) TERAE_DEV_SESSAO=" +
+      "'$($p.Usuario):${instituicao}:$($p.Perfil):mfa' VITE_MODO=api pnpm --filter @terae/web dev")
+  }
+  else { Write-Host "  opc.  atalho de dev ($($p.Perfil)) em :$($p.Porta) desligado (rode com -Subir)" -ForegroundColor DarkGray }
 }
 
 if (Escutando 8025) { Ok 'Mailpit em http://127.0.0.1:8025' } else { Falta 'Mailpit em :8025' }
