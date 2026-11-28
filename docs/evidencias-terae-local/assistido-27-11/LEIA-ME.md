@@ -87,3 +87,16 @@ portal revogou a sessão (`revogada_em` preenchido).
 
 O que a revisão visual achou na aba Conta ("Quem você acompanha": o nome quebrava em quatro linhas a 360 dp porque o selo
 "Vendo agora" ficava ao lado) foi corrigido em `298f4a3`, com teste.
+
+## Reteste de 28/11/2026 (depois das diferenças do Início e do ajuste da Conta)
+
+App reinstalado no emulador (`flutter run`, fonte local), a Mariana entrou de novo (código lido do Mailpit, sem captura da
+tela de senha nem do código) e conferi pela tela: o Início novo (`R1-inicio-depois-da-paridade.png`: iniciais "AF" e nome
+inteiro, "Avisar que não vamos" no lugar de "Mudar a resposta", "2 de 3 orientações registradas" com a lista e quem
+registrou), a pergunta de avisar ausência (aberta e cancelada com Voltar, porque no Terae local o aviso não desfaz), a
+Agenda por semana e a Conta com o nome inteiro e o selo "Vendo agora" embaixo (`R2-conta-quem-voce-acompanha-arrumado.png`).
+"Sair" revogou as duas sessões da Mariana no banco. A segunda sessão da Agenda (03/12 08:00, "Presença confirmada") veio
+do banco (`canal_confirmacao = portal`, confirmada em 27/11).
+
+Não repeti o portal web neste reteste: a Mariana chegou a 10 códigos em 24 h (o teto). O lado do portal é o da conferência
+anterior.

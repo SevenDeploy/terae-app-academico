@@ -102,3 +102,13 @@ Mesmo login (Mariana, perfil da Alice), o portal em `portal.localhost:5175` numa
 - **Texto:** o portal diz "registros que você enviou pelo portal"; o app, "pelo app".
 - **Ainda diferem no Início:** sem a autoria do portal (Firebase e memória), a linha do programa mostra só o estado
   ("Feito"), sem "por você"; o portal diz "de <terapeuta>" ao lado em tela larga (não existe no telefone).
+
+### Reteste depois de fechar as diferenças do Início (28/11/2026)
+
+App novo no emulador, login da Mariana (a Alice) contra o Terae local; o lado do portal é o já conferido na véspera (o
+portal não mudou). Agora iguais ao portal: as iniciais "AF" e o nome inteiro no topo; "2 de 3 orientações registradas" com
+a lista de cada uma ("Em parte · por você", "Em parte · por Rosa", "Falta registrar"); depois de confirmada, só "Avisar
+que não vamos" (com a pergunta "Avisar que vocês não vêm?" e Voltar/"Avisar a clínica"); a Agenda por semana ("Próxima
+semana", bloco da data, "14:00 · 50 minutos"). A aba Conta mostra o nome inteiro e o selo embaixo. Capturas em
+[`evidencias-terae-local/assistido-27-11/`](evidencias-terae-local/assistido-27-11/LEIA-ME.md) (`R1`, `R2`).
+Continuam diferentes só o "pelo app"/"pelo portal" no Diário e o "de <terapeuta>" de tela larga.
