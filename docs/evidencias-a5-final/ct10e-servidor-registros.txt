@@ -1,0 +1,4 @@
+Registros mais recentes de a0000000-0000-4000-8000-000000000001:
+  2026-11-28T02:57:12.907820Z  —         nenhuma  v1 enviado
+  2026-11-28T02:53:43.910874Z  moderado  total    v2 enviado  RETIRADO 2026-11-28T02:55:32.015253Z (outro)
+  2026-11-27T00:40:00.000Z  leve      total    v2 enviado

@@ -1,0 +1,2 @@
+244,1037 | 'Digite o e-mail.'
+521,1284 | 'A senha precisa ter pelo menos 8 caracteres.'

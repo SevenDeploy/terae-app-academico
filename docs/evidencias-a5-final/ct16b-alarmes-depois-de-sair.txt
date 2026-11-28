@@ -1,0 +1,7 @@
+dumpsys alarm depois do Sair: as 2 entradas do br.edu.unemat.terae_app estão no histórico com Reason=alarm_cancelled (nenhum alarme pendente).
+        Snapshot:
+          type=RTC_WAKEUP tag=*walarm*:br.edu.unemat.terae_app/com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver 
+--
+--
+        Snapshot:
+          type=RTC_WAKEUP tag=*walarm*:br.edu.unemat.terae_app/com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver 

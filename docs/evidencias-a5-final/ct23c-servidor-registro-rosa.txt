@@ -1,0 +1,3 @@
+registro_programa_domiciliar: 2026-11-27|feito|27/11 23:35|cuidador-alice@homologacao.terae.invalid
+registro_programa_domiciliar: 2026-11-27|em_parte|27/11 17:28|cuidador-alice@homologacao.terae.invalid
+registro_programa_domiciliar: 2026-11-27|em_parte|27/11 13:41|responsavel-alice@homologacao.terae.invalid

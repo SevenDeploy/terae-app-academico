@@ -1,529 +1,349 @@
-# Casos de teste — Atividade 5 (versão 5.0)
+# Casos de teste — Atividade 5 (versão 5.0, entrega final)
 
 Projeto acadêmico (Dispositivos Móveis, UNEMAT 2026). Não é o app do Terae produção.
 
+Esta é a rodada final, feita com o app da paridade com o portal (commit `e1ebdb9`). Ela substitui a rodada de 26/11
+(CT01–CT20 da v5.0.1, no histórico do git deste arquivo), que usava o diário antigo.
+
 ## Como o roteiro foi feito
 
-- **Data:** 26/11/2026, das 15h45 às 16h15 no fuso da clínica (−04:00), longe da virada do dia, por causa da regra
-  do mesmo dia (D17).
+- **Data:** 27/11/2026, das 22h50 às 23h41 no fuso da clínica (−04:00).
 - **Aparelho:** emulador `Terae_Pixel` (Android 16, 1080×2400).
-- **App:** APK de depuração do branch `atividade-5`.
-  - O roteiro começou no `389b7b8` (a main da F3).
-  - Depois das correções, foi reinstalado no `29a9920` para conferir de novo o CT06 e o CT16.
-  - Antes de instalar, o `pm clear` limpou os dados do app.
-- **Servidor:** o Firebase acadêmico real, `terae-app-academico`.
-  - Com o ok do dono, a semente rodou com `node ferramentas/semear-firebase.mjs --reiniciar` antes do roteiro.
-  - As regras do Firestore não foram publicadas de novo.
-- **Toques:** um passo por vez, com `adb shell input`. Cada tela foi lida pelo `uiautomator` antes do toque
-  seguinte.
-- **Evidências:** ficam em [`docs/evidencias-a5/`](evidencias-a5/).
-  - `.png` é captura da tela.
-  - `.txt` é o texto da tela lido pelo `uiautomator`, ou a saída de `node ferramentas/conferir-firebase.mjs`, ou a
-    contagem do SQLite no aparelho (`run-as … sqlite3`).
-  - **Nenhuma captura mostra a tela de login nem o passo da senha**, porque o Android mostra por um instante o
-    último caractere digitado. Nesses casos a evidência é o texto da tela, sem o campo de senha.
-- **Senhas:** a senha de demonstração vem do `.env` (fora do git), digitada direto no campo pelo `adb`. Ela nunca vai
-  para o repositório nem para as evidências.
-- **Testes automatizados:** a coluna "Teste automatizado" aponta o arquivo em `test/` (e o nome do teste) que cobre o
-  mesmo caso na suíte. O CT08–CT11 também é coberto, ponta a ponta no aparelho, por
-  `integration_test/jornada_principal_test.dart`.
+- **App:** commit `e1ebdb9`, em dois APKs de depuração:
+  - **Firebase** (padrão): para o CT01–CT19;
+  - **Terae local** (`--dart-define=TERAE_FONTE=local --dart-define=TERAE_LOCAL_URL=http://10.0.2.2:3000`): para o
+    CT20–CT27.
+- **Servidores:**
+  - o Firebase acadêmico real `terae-app-academico`, com as regras e a semente do diário novo publicadas em 27/11;
+  - o Terae web local desta máquina: API `:3000`, banco `terae_app_local`, Mailpit e clínica em `:5201`. Nunca a
+    produção.
+- **Toques:** um passo por vez, com `adb shell input`. Cada tela foi lida pelo `uiautomator` antes do toque seguinte.
+- **Evidências:** ficam em [`docs/evidencias-a5-final/`](evidencias-a5-final/).
+  - `.png` é a captura da tela.
+  - `.txt` é o texto da tela, a saída de `node ferramentas/conferir-firebase.mjs`, a contagem do SQLite no aparelho
+    ou uma consulta de só leitura ao banco local.
+  - O CT25 e o CT26 (Mariana) usam as capturas do teste assistido de 27/11, em
+    [`evidencias-terae-local/assistido-27-11/`](evidencias-terae-local/assistido-27-11/LEIA-ME.md). A Mariana estava
+    sem cota de código nesta rodada.
+- **Senhas e códigos:** a senha de demonstração do Firebase vem do `.env`. No Terae local, o
+  `ferramentas/terae-local/entrar-no-emulador.ps1` lê a senha de `terae/.credenciais/` e o código no Mailpit. Nenhum
+  dos dois aparece em evidência: nenhuma captura mostra a tela de senha nem a de código.
 
-### Requisitos
+### Cota de códigos gasta nesta rodada (Terae local)
 
-Os requisitos citados foram conferidos no código: os comentários de documentação citam `RFM01`–`RFM10` e
-`RNFM01`–`RNFM05`. A tabela do v4.0 acrescentou:
-- `RFM11` — CRUD do diário;
-- `RFM12` — funcionar sem conexão;
-- `RFM13` — atividades de casa.
-
-Sessões e presença, lembretes e metas (evolução de TO, F2 e F3) **ainda não têm número de RFM**: o v4.0 é anterior a
-elas. Aqui elas aparecem pela decisão que as rege (D27, D28 e D35), com a sugestão **RFM14–RFM16** para o documento
-v5.0.
+| Persona | Códigos gastos | Total em 24 h | Observação |
+|---|---|---|---|
+| Rosa (cuidadora) | 1 | 5 de 10 | o APK do Firebase instalado por cima apagou a confiança do aparelho; a Rosa voltou a pedir código |
+| Laura (paciente adulta) | 1 | 7 de 10 | mais cota a partir das 16:30 de 28/11 |
+| Mariana (mãe da Alice) | 0 | 10 de 10 | 1 código às 13:36 de 28/11 e 6 às 15:16 |
 
 ### Personas
 
-| Persona | Conta | Linhas de cuidado |
+| Persona | Fonte | Papel |
 |---|---|---|
-| Ana Lúcia Martins (16) | `ana.lucia.martins@exemplo.test` | acompanhamento clínico e TO, titular |
-| Antônio Carlos Ribeiro (71) | `antonio.ribeiro@exemplo.test` | só TO, titular |
-| João Pedro Assis (27) | primeiro acesso no roteiro | acompanhamento clínico |
-| Carla Ribeiro (fictícia) | criada no roteiro (`carla.ribeiro@exemplo.test`) | cuidadora do Antônio, pelo convite que ele gerou |
-| Patrícia Andrade Neves | `patricia.neves@exemplo.test` | só no CT03, para o bloqueio não atingir as outras contas |
+| Ana Lúcia Martins (16) | Firebase | titular; acompanhamento clínico e TO |
+| João Pedro Assis (27) | Firebase | primeiro acesso pelo código `K7M4QX` (consumido nesta rodada) |
+| Regina Martins | Firebase | cuidadora da Ana |
+| Laura Fictícia Nogueira | Terae local | titular adulta |
+| Rosa Fictícia Duarte | Terae local | avó, cuidadora da Alice |
+| Mariana Fictícia Duarte | Terae local | responsável legal da Alice |
 
 ## Resumo
 
-| CT | Funcionalidade | Resultado |
-|---|---|---|
-| CT01 | Login válido | Aprovado |
-| CT02 | Login inválido e validação do formulário | Aprovado |
-| CT03 | Bloqueio por muitas tentativas | Aprovado |
-| CT04 | Primeiro acesso do paciente com código válido (TM09) | Aprovado |
-| CT05 | Primeiro acesso com código inexistente e com código usado | Aprovado |
-| CT06 | Convite e primeiro acesso do cuidador (TM07 → TM10) | **Reprovado → corrigido → aprovado** (`29a9920`) |
-| CT07 | "Sair" zera os dados do aparelho (D20) | Aprovado |
-| CT08 | Diário: criar registro em até 5 toques (TM03 → TM04) | Aprovado |
-| CT09 | Meus registros: listar e buscar (TM13) | Aprovado |
-| CT10 | Corrigir no mesmo dia; outro dia só leitura (D17) | Aprovado |
-| CT11 | Excluir (lógico) | Aprovado |
-| CT12 | Sem conexão: fila, aviso e envio sozinho | Aprovado |
-| CT13 | Registro crítico: ajuda imediata e alerta | Aprovado |
-| CT14 | Em casa: registrar a atividade do dia (TM16/TM17) | Aprovado |
-| CT15 | Sessões e presença (TM18) | Aprovado |
-| CT16 | Lembretes locais (TM19) | **Reprovado → corrigido → aprovado** (`2f389fa`) |
-| CT17 | Metas: Jornada e TM20 | Aprovado |
-| CT18 | Indicador de carregamento e mensagem de erro | Aprovado |
-| CT19 | Cuidador sem conteúdo clínico (RNFM05) | Aprovado |
-| CT20 | Validação de formulário (diário e cadastro) | Aprovado |
+| CT | Fonte | Funcionalidade (requisito) | Resultado |
+|---|---|---|---|
+| CT01 | Firebase | Login válido (RFM01) | Aprovado |
+| CT02 | Firebase | Login inválido e validação do formulário (RFM01, RNFM01) | Aprovado |
+| CT03 | Firebase | "Sair" zera os dados do aparelho (RNFM04, D20) | Aprovado |
+| CT04 | Firebase | Diário: só a primeira pergunta é obrigatória (RFM03) | Aprovado |
+| CT05 | Firebase | Diário: novo registro e recibo (RFM03, RFM05) | Aprovado |
+| CT06 | Firebase | Diário: lista com selos de versão e retirado (RFM11) | Aprovado |
+| CT07 | Firebase | Diário: corrigir cria a versão 2; "Ver a versão 1" (RFM11) | Aprovado |
+| CT08 | Firebase | Diário: retirar com motivo, sem apagar (RFM11) | Aprovado |
+| CT09 | Firebase | Revisado pela terapeuta não muda mais (RFM11) | Aprovado |
+| CT10 | Firebase | Sem internet: guardar, "Enviar agora" e envio sozinho (RFM12) | Aprovado |
+| CT11 | Firebase | Sem internet: corrigir e retirar ficam travados (RFM12) | Aprovado |
+| CT12 | Firebase | Registro crítico: ajuda imediata e equipe avisada (RFM04) | Aprovado |
+| CT13 | Firebase | Primeiro acesso com código inexistente e com código usado (RFM09) | Aprovado |
+| CT14 | Firebase | Primeiro acesso do paciente com código válido (RFM09) | Aprovado |
+| CT15 | Firebase | Presença e agenda (RFM14) | Aprovado |
+| CT16 | Firebase | Lembretes locais; o "Sair" cancela (RFM15) | Aprovado |
+| CT17 | Firebase | Em casa: registrar a atividade do dia (RFM13) | Aprovado |
+| CT18 | Firebase | Metas: TM20 só de leitura (RFM16) | Aprovado |
+| CT19 | Firebase | Cuidadora sem conteúdo clínico (RFM08, RNFM05) | Aprovado |
+| CT20 | Terae local | Entrar em duas etapas: senha e código do e-mail (RFM01) | Aprovado |
+| CT21 | Terae local | Diário no Terae web: novo, crítico, corrigir, versões, retirar (RFM03, RFM11) | Aprovado |
+| CT22 | Terae local | Sem internet: guardado visível e enviado uma vez só (RFM12) | Aprovado |
+| CT23 | Terae local | Cuidadora: 4 abas, sem diário, registra o programa (RFM08, RFM13) | Aprovado |
+| CT24 | Terae local | "Sair" revoga a sessão no servidor (RNFM04) | Aprovado |
+| CT25 | Terae local | Confirmar presença grava no Terae web (RFM14) | Aprovado (27/11, teste assistido) |
+| CT26 | Terae local | Web ↔ app: revisado na clínica aparece no app (RFM05, RFM11) | Aprovado (27/11, teste assistido) |
+| CT27 | Terae local | Trava: o app só fala com endereço local, nunca a produção | Aprovado (teste automatizado) |
 
-São 20 casos: 18 aprovados de primeira e 2 reprovados. Os 2 reprovados foram corrigidos com teste de regressão e
-aprovados no reteste, no aparelho.
+**27 casos, 27 aprovados.** Nesta rodada final nenhum caso reprovou. Os defeitos achados antes dela, no teste
+assistido e nas revisões, estão em "Falhas encontradas e corrigidas".
 
-## Casos
+## Casos — Firebase
 
 ### CT01 — Login válido
-
-- **Requisito:** RFM01 (D14).
-- **Persona:** Ana.
-- **Pré-condição:** semente aplicada; app recém-instalado, na TM00.
-- **Passos:**
-  1. Tocar em "Entrar".
-  2. Digitar `ana.lucia.martins@exemplo.test` e a senha de demonstração.
-  3. Tocar em "Entrar".
-- **Resultado esperado:** abre a TM02 com "Olá, Ana", o atalho do diário, "Atividades de casa", a próxima consulta e
-  as abas Início, Diário, Em casa e Jornada.
-- **Resultado obtido:** como esperado. A TM02 mostrou "Olá, Ana", "Hoje: 0 de 2 registradas" e "Sua próxima consulta
-  — Dra. Helena Prado — Terça-feira, 1 de dezembro às 14:00".
+- **Passos:** TM00 → "Entrar" → e-mail e senha da Ana → "Entrar".
+- **Esperado:** abre o Início da Ana com a próxima consulta, o programa em casa de hoje e as 5 abas.
+- **Obtido:** como esperado.
 - **Evidência:** `ct01-inicio-ana.png`.
-- **Teste automatizado:**
-  - `test/funcionalidades/autenticacao/entrar_tela_test.dart`, "e-mail e senha entram com a conta (D14)";
-  - `test/funcionalidades/roteador_test.dart`, "entrar leva ao Início com a barra de abas";
-  - `integration_test/jornada_principal_test.dart`.
+- **Teste automatizado:** `test/funcionalidades/autenticacao/entrar_tela_test.dart`.
 
 ### CT02 — Login inválido e validação do formulário
-
-- **Requisito:** RFM01, RNFM01.
-- **Persona:** Ana.
-- **Pré-condição:** TM01 aberta.
-- **Passos:**
-  1. Tocar em "Entrar" com os dois campos vazios.
-  2. Digitar `ana.lucia.martins`, sem o domínio, e tocar em "Entrar".
-  3. Completar o e-mail, digitar uma senha errada e tocar em "Entrar".
-- **Resultado esperado:**
-  1. "Digite o e-mail." e "Digite a senha.", sem chamar o servidor.
-  2. "Confira o e-mail: ele precisa ter @ e um domínio."
-  3. "E-mail ou senha não conferem. Confira e tente de novo.", e a sessão não abre.
-- **Resultado obtido:** como esperado, nos três passos.
+- **Passos:** (a) "Entrar" com os campos vazios; (b) e-mail sem domínio; (c) senha errada.
+- **Esperado:** (a) "Digite o e-mail." e "Digite a senha.", sem chamar o servidor; (b) "Confira o e-mail: ele
+  precisa ter @ e um domínio."; (c) "E-mail ou senha não conferem…", sem dizer qual dos dois errou.
+- **Obtido:** como esperado.
 - **Evidência:** `ct02a-campos-vazios.txt`, `ct02b-email-mal-formado.txt`, `ct02c-senha-errada.txt`.
-- **Teste automatizado:** `test/funcionalidades/autenticacao/entrar_tela_test.dart`:
-  - "campo vazio ou e-mail mal formado: erro no campo, sem chamar o repositório";
-  - "senha errada mostra a recusa e não abre sessão".
+- **Teste automatizado:** `entrar_tela_test.dart`, `test/dados/memoria_autenticacao_test.dart`.
 
-### CT03 — Bloqueio por muitas tentativas
+### CT03 — "Sair" zera os dados do aparelho
+- **Passos:** contar as tabelas do SQLite e as chaves do SharedPreferences → Conta → "Sair" → contar de novo.
+- **Esperado:** volta à capa, com o SQLite sem linhas e sem as chaves da conta.
+- **Obtido:** antes, `registros_diario` 17, `cache_documentos` 14, `registros_casa` 13, `alertas` 2,
+  `confirmacoes_presenca` 1, mais `perfil_ativo` e `ultima_sincronizacao`. Depois, tudo com 0 e nenhuma chave.
+- **Evidência:** `ct03a-antes-de-sair.txt`, `ct03b-conta-com-sair.png`, `ct03c-capa-depois-de-sair.png`,
+  `ct03d-depois-de-sair.txt`.
+- **Teste automatizado:** `test/dados/persistente/autenticacao_firebase_test.dart` ("sair encerra o Firebase e apaga
+  o SQLite e as preferências").
 
-- **Requisito:** RFM01. É a falha 3 do roteiro da A4.
-- **Persona:** Patrícia.
-- **Pré-condição:** TM01 com o e-mail da Patrícia e uma senha errada.
-- **Passos:** tocar em "Entrar" seguidas vezes, lendo a mensagem a cada vez.
-- **Resultado esperado:** primeiro "E-mail ou senha não conferem…". Quando o Firebase Authentication bloqueia
-  (`too-many-requests`), aparece "Muitas tentativas seguidas. Espere alguns minutos e tente de novo." no lugar de
-  "Sem internet".
-- **Resultado obtido:** da 1ª à 6ª tentativa, "E-mail ou senha não conferem…". Na 7ª, "Muitas tentativas seguidas.
-  Espere alguns minutos e tente de novo."
-- **Evidência:** `ct03-muitas-tentativas.txt`.
-- **Teste automatizado:**
-  - `test/dados/persistente/falhas_remotas_test.dart`, "cada código conhecido vira a recusa certa"
-    (`too-many-requests` → `muitasTentativas`);
-  - `test/funcionalidades/autenticacao/entrar_tela_test.dart`, "muitas tentativas mostram a espera, não "sem
-    internet" (A5, CT03)" (novo nesta rodada).
+### CT04 — Diário: só a primeira pergunta é obrigatória
+- **Passos:** Diário → "Novo registro" → tentar enviar sem responder à primeira pergunta.
+- **Esperado:** o envio fica bloqueado e a tela mostra o que falta. As demais perguntas aparecem como opcionais.
+- **Obtido:** como esperado.
+- **Evidência:** `ct04a-novo-registro-falta-a-primeira.png`.
+- **Teste automatizado:** `test/funcionalidades/paciente/diario_test.dart`.
 
-### CT04 — Primeiro acesso do paciente com código válido (TM09)
+### CT05 — Diário: novo registro e recibo
+- **Passos:** responder às perguntas → "Enviar".
+- **Esperado:** recibo "Registro enviado." com o resumo e a opção de corrigir. No Firestore, a versão 1 enviada.
+- **Obtido:** como esperado.
+- **Evidência:** `ct05a-novo-registro-preenchido.png`, `ct05b-recibo-registro-enviado.png`, `ct10e-servidor-registros.txt`.
+- **Teste automatizado:** `diario_test.dart`, `test/dados/persistente/diario_persistente_test.dart`.
 
-- **Requisito:** RFM09 (D14).
-- **Persona:** João.
-- **Pré-condição:** código `K7M4QX` da semente, sem uso.
-- **Passos:**
-  1. TM00 → "Primeiro acesso" → "Recebi um código da clínica".
-  2. Código `K7M4QX`, CPF e nascimento do João.
-  3. "Sou o próprio paciente" → "Continuar".
-  4. Resumos "Aqui no aplicativo" e "Li e aceito o termo de consentimento" → "Continuar".
-  5. Tocar em "Criar acesso e entrar" com os campos vazios.
-  6. Preencher e-mail, senha e confirmação → "Criar acesso e entrar".
-- **Resultado esperado:**
-  - o passo 2 mostra "Encontramos o cadastro de João Pedro Assis.";
-  - o passo 5 recusa no campo, sem chamar o servidor;
-  - o passo 6 cria a conta, consome o código, liga o paciente e abre a TM02 do João.
-- **Resultado obtido:** como esperado. No passo 5 apareceram "Digite o e-mail." e "A senha precisa ter pelo menos 8
-  caracteres.". No servidor, a conta `joao.pedro.assis@exemplo.test` passou a existir.
-- **Evidência:** `ct04a-passo2-cadastro-encontrado.png`, `ct04b-passo3-termo-aceito.png`,
-  `ct04c-passo4-validacao-campos.txt`, `ct04d-inicio-joao-cadastrado.png`, `ct04e-servidor-conta-joao.txt`.
-- **Teste automatizado:**
-  - `test/funcionalidades/autenticacao/cadastro_paciente_tela_test.dart`, "avança pelos quatro passos e ativa com
-    termo, canal e acesso";
-  - `test/dados/persistente/autenticacao_firebase_test.dart`, grupo "primeiro acesso com o código da clínica (TM09,
-    D14)".
+### CT06 — Diário: lista com selos
+- **Passos:** aba Diário.
+- **Esperado:** cada registro com o seu selo ("Aguardando a terapeuta", "Corrigido", "Retirado por você", "Revisado
+  pela terapeuta").
+- **Obtido:** como esperado.
+- **Evidência:** `ct06a-lista-selos-versao2-retirado.png`.
+- **Teste automatizado:** `test/dados/memoria_diario_crud_test.dart`.
 
-### CT05 — Primeiro acesso com código inexistente e com código usado
+### CT07 — Diário: corrigir cria a versão 2
+- **Passos:** num registro do dia, "Corrigir" → mudar a resposta → "Salvar a correção" → "Ver a versão 1".
+- **Esperado:** o registro passa à versão 2, e a versão 1 continua visível, só para leitura.
+- **Obtido:** como esperado. No servidor, `v2 enviado`.
+- **Evidência:** `ct07a-correcao-enviada.png`, `ct07b-ver-a-versao-1.png`.
+- **Teste automatizado:** `memoria_diario_crud_test.dart`, `diario_persistente_test.dart`; as regras ficam em
+  `ferramentas/regras-firestore/` (22 casos).
 
-- **Requisito:** RFM09.
-- **Persona:** João (código inexistente) e Miguel (código usado).
-- **Pré-condição:** TM09, passo 1.
-- **Passos:**
-  1. Código `ZZ9ZZ9`, com CPF e nascimento do João → "Continuar".
-  2. Código `M5C2TG` (já usado pela Patrícia), com CPF e nascimento do Miguel → "Continuar".
-- **Resultado esperado:**
-  1. "Não encontramos esse código. Confira as letras e os números."
-  2. "Este código já foi usado. Se precisar, peça um novo."
+### CT08 — Diário: retirar com motivo
+- **Passos:** "Retirar" → motivo "Outro" sem detalhe (recusa) → motivo com detalhe → confirmar.
+- **Esperado:** pede o detalhe quando o motivo é "Outro". O registro fica "Retirado" com o motivo, e "Nada foi
+  apagado".
+- **Obtido:** como esperado. No servidor, `RETIRADO … (outro)`.
+- **Evidência:** `ct08a-retirar-outro-sem-detalhe.png`, `ct08b-registro-retirado-com-motivo.png`.
+- **Teste automatizado:** `memoria_diario_crud_test.dart`.
 
-  Nos dois casos o app fica no passo 1 e nada é gravado.
-- **Resultado obtido:** como esperado.
-- **Evidência:** `ct05a-codigo-inexistente.png`, `ct05b-codigo-ja-usado.png`.
-- **Teste automatizado:**
-  - `test/funcionalidades/autenticacao/cadastro_paciente_tela_test.dart`, grupo "recusas do passo 1 viram mensagem
-    simples" (`codigoJaUsado`, `codigoExpirado`);
-  - `test/dados/memoria_autenticacao_test.dart`, "recusas do passo 1, cada uma com o motivo certo".
+### CT09 — Revisado pela terapeuta não muda mais
+- **Passos:** abrir um registro revisado pela semente.
+- **Esperado:** o selo "Revisado pela terapeuta" e "Não dá mais para corrigir nem retirar", sem botões.
+- **Obtido:** como esperado.
+- **Evidência:** `ct09-revisado-nao-muda-mais.png`.
+- **Teste automatizado:** `memoria_diario_crud_test.dart`; as regras recusam no servidor (`regras.test.mjs`).
 
-### CT06 — Convite e primeiro acesso do cuidador (TM07 → TM10)
+### CT10 — Sem internet: fila e envio sozinho
+- **Passos:** ligar o modo avião → novo registro → "Enviar" → ver no Diário → desligar o modo avião.
+- **Esperado:** recibo "Registro guardado neste aparelho". O Diário mostra "Guardados neste aparelho" com "Enviar
+  agora". Ao voltar a conexão, a fila sai sozinha, uma vez só.
+- **Obtido:** como esperado. No servidor, um único `v1 enviado` (`nenhuma`).
+- **Evidência:** `ct10a-novo-registro-sem-internet.png`, `ct10b-recibo-guardado-neste-aparelho.png`,
+  `ct10c-guardados-neste-aparelho-enviar-agora.png`, `ct10d-fila-saiu-sozinha.png`, `ct10e-servidor-registros.txt`.
+- **Teste automatizado:** `test/dados/persistente/sincronizador_filas_test.dart`, `diario_persistente_test.dart`.
 
-- **Requisito:** RFM07, RFM09, RNFM05 (D29).
-- **Persona:** Antônio, que convida, e Carla, que aceita.
-- **Pré-condição:** Antônio sem cuidadores ("0 de 2").
-- **Passos:**
-  1. Antônio: Início → menu → "Cuidadores" → nome "Carla Ribeiro" e CPF `529.982.247-25` (fictício, válido) →
-     "Gerar convite".
-  2. "Sair" → "Primeiro acesso" → "Recebi um convite de cuidador" → o código gerado e o CPF.
-  3. Ler o passo 2, "O que você verá".
-  4. Aceitar o termo → criar o acesso → "Criar acesso e entrar".
-- **Resultado esperado:**
-  - o convite aparece como "Convite em aberto" com o código, e a contagem fica em "1 de 2";
-  - o passo 2 descreve o que o cuidador do Antônio vai ver. Antônio só faz TO, e pela D29 o cuidador dele não vê
-    medicação;
-  - no fim, abre a TM08 da Carla.
-- **Resultado obtido (1ª rodada) — reprovado:**
-  - o convite `PX3EZT` foi gerado e a Carla entrou na TM08;
-  - mas o passo 2 prometia "A medicação: os horários dos remédios e a data de renovação da receita" e falava de "cada
-    consulta". O termo dizia "Você vai ver a agenda, os remédios e os avisos de Antônio". A TM08 dela, corretamente,
-    não mostra medicação.
-- **Correção:** `29a9920`.
-  - O convite público só traz o nome do paciente. Antes da conta existir, a TM10 não sabe as linhas de cuidado, e pôr
-    as linhas no convite exporia dado de saúde a quem tem só o código.
-  - Os textos passaram a servir às duas linhas: "cada sessão ou consulta", "Se houver remédios no tratamento: …" e "a
-    agenda, os avisos e, se houver, os horários dos remédios".
-- **Reteste (APK `29a9920`) — aprovado:** novo convite `TBWCUN` do Antônio. O passo 2 mostrou os textos novos.
-- **Evidência:** `ct06a-convite-gerado-tm07.png`, `ct06b-passo2-o-que-vera-falha-to.png` (a falha),
-  `ct06c-passo2-texto-corrigido.png` (o reteste) e `ct19a-inicio-cuidadora-sem-clinico.png` (a TM08 da Carla).
-- **Teste automatizado:** `test/funcionalidades/autenticacao/cadastro_cuidador_tela_test.dart`:
-  - "o quadro e o termo servem a quem só faz TO: falam de sessão ou consulta e só prometem remédios "se houver""
-    (regressão);
-  - "avança pelos quatro passos e aceita com o acesso criado".
+### CT11 — Sem internet: corrigir e retirar travados
+- **Passos:** com o modo avião ligado, abrir "Corrigir" e "Retirar" num registro enviado.
+- **Esperado:** botão "… · precisa de internet" desabilitado, com a explicação. Nada vai para a fila.
+- **Obtido:** como esperado.
+- **Evidência:** `ct11a-corrigir-travado-sem-internet.png`, `ct11b-retirar-travado-sem-internet.png`.
+- **Teste automatizado:** `diario_test.dart`.
 
-### CT07 — "Sair" zera os dados do aparelho
+### CT12 — Registro crítico
+- **Passos:** novo registro com "Muito — precisamos de ajuda" → "Enviar".
+- **Esperado:** ajuda imediata (SAMU 192, CVV 188) e "A equipe da clínica foi avisada". No servidor, um alerta. O
+  registro que avisou a equipe não se corrige nem se retira.
+- **Obtido:** como esperado (`critico … AVISOU A EQUIPE`; 2 alertas).
+- **Evidência:** `ct12a-muito-ajuda-imediata-equipe-avisada.png`, `ct12b-lista-a-equipe-foi-avisada.png`,
+  `ct12c-servidor-alerta.txt`.
+- **Teste automatizado:** `test/dados/memoria_diario_test.dart`, `diario_test.dart`.
 
-- **Requisito:** RNFM04 (D20, D16).
-- **Persona:** Ana.
-- **Pré-condição:** Ana com a sessão aberta, depois do CT08 ao CT13.
-- **Passos:**
-  1. Contar as linhas das tabelas do SQLite e as chaves do SharedPreferences.
-  2. Início → menu → "Sair".
-  3. Contar de novo.
-- **Resultado esperado:** o app volta à TM00. O SQLite fica sem linhas e as preferências da conta são apagadas.
-- **Resultado obtido:**
-  - **antes:** `registros_diario` 16, `alertas` 2, `cache_documentos` 14, `registros_casa` 13,
-    `confirmacoes_presenca` 1, e as chaves `perfil_ativo` e `ultima_sincronizacao`;
-  - **depois:** todas as tabelas com 0 linhas e nenhuma chave, com a TM00 na tela.
-- **Evidência:** `ct07a-antes-de-sair.txt`, `ct07b-boas-vindas-depois-de-sair.png`, `ct07c-depois-de-sair.txt`.
-- **Teste automatizado:**
-  - `test/dados/persistente/autenticacao_firebase_test.dart`, "sair encerra o Firebase e apaga o SQLite e as
-    preferências";
-  - `test/dados/persistente/lembretes_locais_test.dart`, ""Sair": cancela no Android e apaga as escolhas";
-  - `test/dados/persistente/programa_em_casa_persistente_test.dart`, ""Sair" apaga também os registros das
-    atividades (D20)".
+### CT13 — Primeiro acesso com código inexistente e com código usado
+- **Passos:** "Primeiro acesso" → código `ZZ9ZZ9`; depois, um código já usado.
+- **Esperado:** "Não encontramos esse código…" e "Este código já foi usado…". O app fica no passo 1 e nada é
+  gravado.
+- **Obtido:** como esperado.
+- **Evidência:** `ct13a-codigo-inexistente.png`, `ct13b-codigo-ja-usado.png`.
+- **Teste automatizado:** `test/funcionalidades/autenticacao/cadastro_paciente_tela_test.dart`.
 
-### CT08 — Diário: criar registro em até 5 toques
+### CT14 — Primeiro acesso do paciente com código válido
+- **Passos:** código `K7M4QX` com o CPF e o nascimento do João → "Sou o próprio paciente" → aceitar o termo →
+  "Criar acesso e entrar" com os campos vazios → preencher → "Criar acesso e entrar".
+- **Esperado:** "Encontramos o cadastro de João Pedro Assis". Os campos vazios são recusados no próprio campo. No fim,
+  a conta é criada, o código é consumido e abre o Início do João.
+- **Obtido:** como esperado. O Authentication passou a ter `joao.pedro.assis@exemplo.test`.
+- **Evidência:** `ct14a-cadastro-encontrado.png`, `ct14b-termo-aceito.png`, `ct14e-cadastro-campos-vazios.txt`,
+  `ct14c-inicio-joao-cadastrado.png`, `ct14d-servidor-conta-joao.txt`.
+- **Observação:** quem toca em "Criar acesso" com os campos vazios e só depois digita o e-mail continua vendo
+  "Digite o e-mail." até o próximo toque, porque o formulário revalida ao enviar. Não impede o cadastro.
+- **Teste automatizado:** `cadastro_paciente_tela_test.dart`, `autenticacao_firebase_test.dart`.
 
-- **Requisito:** RFM03, RFM05, RNFM02.
-- **Persona:** Ana.
-- **Pré-condição:** TM02, com conexão.
-- **Passos:**
-  1. Tocar no atalho "Como você está hoje?".
-  2. "Tomei tudo".
-  3. "Leve".
-  4. "Cansaço".
-  5. Rolar e tocar em "Enviar meu registro".
-- **Resultado esperado:** a TM04 mostra "Registro enviado!" com o resumo, e a tela inicial volta sozinha. São 5
-  toques, sem texto obrigatório.
-- **Resultado obtido:** como esperado, em 5 toques e uma rolagem. O resumo foi "Remédios: Tomei tudo · Intensidade:
-  Leve · O que mais incomoda: Cansaço".
-- **Evidência:** `ct08a-diario-preenchido.png`, `ct08b-registro-enviado.png`.
-- **Teste automatizado:**
-  - `test/funcionalidades/paciente/diario_test.dart`, "do Início ao diário enviado, contando os toques";
-  - `integration_test/jornada_principal_test.dart`.
-
-### CT09 — Meus registros: listar e buscar (TM13)
-
-- **Requisito:** RFM11.
-- **Persona:** Ana.
-- **Pré-condição:** o registro do CT08 enviado.
-- **Passos:**
-  1. Aba Diário → "Meus registros".
-  2. Digitar "ansiedade" na busca → "Buscar".
-- **Resultado esperado:** a lista vem do mais recente, com o registro de hoje no topo. A busca, sem acento nem
-  maiúscula, filtra pelo sintoma.
-- **Resultado obtido:** "14 registros", com o de hoje (15:48, Cansaço, Leve, Enviado) primeiro. A busca resultou em
-  "4 registros", todos de Ansiedade.
-- **Evidência:** `ct09a-meus-registros.png`, `ct09b-busca-ansiedade.png`.
-- **Teste automatizado:**
-  - `test/funcionalidades/paciente/registros_test.dart`, "TM03 → TM13: lista do mais recente, busca e filtro";
-  - `test/dados/memoria_diario_crud_test.dart`, "busca sem acento nem maiúscula".
-- **Observação:** a busca só se aplica ao tocar em "Buscar" ou no "concluído" do teclado. Fechar o teclado com o
-  voltar não busca. É o comportamento do código (`onSubmitted`), não falha.
-
-### CT10 — Corrigir no mesmo dia; outro dia só leitura
-
-- **Requisito:** RFM11 (D17).
-- **Persona:** Ana.
-- **Pré-condição:** um registro de hoje e outros de dias anteriores.
-- **Passos:**
-  1. Abrir o registro de 23/11.
-  2. Voltar e abrir o de hoje → "Corrigir" → "Moderada" e "Sono ruim" → "Salvar correção".
-- **Resultado esperado:**
-  1. O de 23/11 não tem "Corrigir" nem "Excluir" e explica "Este registro é de outro dia e não pode mais ser mudado.
-     Se precisar, conte na próxima consulta."
-  2. O de hoje volta à TM14 com "Registro corrigido." e "Registrado às 15:48 · corrigido às 15:50".
-- **Resultado obtido:** como esperado. No servidor, o registro mostra `corrigido 2026-11-26T19:50:28Z`.
-- **Evidência:** `ct10b-outro-dia-so-leitura.png`, `ct10a-registro-corrigido.png`, `ct11c-servidor-excluido-em.txt`.
-- **Teste automatizado:**
-  - `test/funcionalidades/paciente/registros_test.dart`, "TM15: corrigir o de hoje volta à TM14 com as respostas
-    novas" e "TM14 de outro dia: só leitura, sem Corrigir nem Excluir";
-  - `test/dados/persistente/diario_persistente_test.dart`, "registro de ontem não muda: edicaoEncerrada".
-
-### CT11 — Excluir (lógico)
-
-- **Requisito:** RFM11 (D17; "nenhuma exclusão física").
-- **Persona:** Ana.
-- **Pré-condição:** o registro de hoje, corrigido no CT10.
-- **Passos:** TM14 → "Excluir" → "Excluir" no diálogo.
-- **Resultado esperado:**
-  - o diálogo diz "Excluir este registro? Ele sai da sua lista. Se a equipe já foi avisada por causa dele, o aviso
-    continua valendo.";
-  - depois, a TM13 com "Registro excluído." e um registro a menos;
-  - no servidor, o documento continua, com `excluidoEm`.
-- **Resultado obtido:** como esperado. A lista passou de 14 para 13 registros, e o servidor mostra o registro
-  "EXCLUÍDO 2026-11-26T19:50:44Z".
-- **Evidência:** `ct11a-confirmar-exclusao.png`, `ct11b-registro-excluido.png`, `ct11c-servidor-excluido-em.txt`.
-- **Teste automatizado:**
-  - `test/funcionalidades/paciente/registros_test.dart`, "TM14 de hoje: excluir pede confirmação e some da TM13";
-  - `test/dados/persistente/diario_persistente_test.dart`, "excluir é lógico: some da lista e o servidor guarda
-    excluidoEm";
-  - `integration_test/jornada_principal_test.dart`.
-
-### CT12 — Sem conexão: fila, aviso e envio sozinho
-
-- **Requisito:** RFM12, RNFM03 (D16).
-- **Persona:** Ana.
-- **Pré-condição:** modo avião ligado (`cmd connectivity airplane-mode enable`).
-- **Passos:**
-  1. Diário: "Tomei uma parte", "Grave", "Ansiedade" → "Enviar meu registro".
-  2. Abrir "Meus registros".
-  3. Desligar o modo avião sem tocar em nada e esperar 15 s.
-- **Resultado esperado:**
-  1. O registro é guardado no aparelho, e o aviso diz "Sem conexão — 1 registro aguardando envio. Ele sai sozinho
-     quando a conexão voltar."
-  2. A TM13 mostra o selo "Aguardando conexão para enviar".
-  3. Com a conexão de volta, a fila sai sozinha, o selo vira "Enviado" e o aviso some.
-- **Resultado obtido:** como esperado nos três passos. O servidor recebeu o registro "grave Ansiedade enviado".
-- **Evidência:** `ct12a-registro-guardado-sem-conexao.png`, `ct12b-meus-registros-aguardando-envio.png`,
-  `ct12c-fila-enviada-ao-voltar-conexao.png`, `ct13b-servidor-alerta.txt`.
-- **Teste automatizado:**
-  - `test/dados/persistente/diario_persistente_test.dart`, "sem conexão fica na fila; a conexão volta e a fila sai
-    sozinha";
-  - `test/funcionalidades/paciente/registros_test.dart`, "sem conexão: a TM13 avisa e o selo mostra a fila";
-  - `test/dados/persistente/sincronizador_filas_test.dart`, "o aviso de conexão soma o diário e todas as filas".
-
-### CT13 — Registro crítico: ajuda imediata e alerta
-
-- **Requisito:** RFM04 (§7.1, D18).
-- **Persona:** Ana.
-- **Pré-condição:** com conexão.
-- **Passos:** Diário: "Não tomei", "Crítica", "Tristeza" → "Enviar meu registro" → "Ciente".
-- **Resultado esperado:**
-  - antes de enviar, o aviso "Ao enviar, vamos mostrar na hora os contatos de ajuda.";
-  - a TM05 abre na hora com "Procure ajuda agora", ligação para o CVV 188 e para o SAMU 192, e "Seu profissional foi
-    avisado. O aviso chegou para Dra. Helena Prado.";
-  - no servidor, um alerta novo e o aviso do cuidador;
-  - "Ciente" volta ao Início.
-- **Resultado obtido:** como esperado. O servidor passou a "Alertas: 2; avisos do cuidador: 2" (a semente tinha 1),
-  com o registro "critica Tristeza enviado".
-- **Evidência:** `ct13a-ajuda-imediata-profissional-avisado.png`, `ct13b-servidor-alerta.txt`.
-- **Teste automatizado:**
-  - `test/funcionalidades/paciente/diario_test.dart`, "abre a TM05 na hora mesmo com envio lento";
-  - `test/dados/memoria_diario_test.dart`, "crítica: o servidor cria o alerta…";
-  - `test/dados/regras_test.dart`, "(a) crítica dispara mesmo sem histórico".
-
-### CT14 — Em casa: registrar a atividade do dia
-
-- **Requisito:** RFM13 (D26, D31).
-- **Persona:** Antônio.
-- **Pré-condição:** "Hoje: 1 de 2 atividades registradas" (o copo, pela semente).
-- **Passos:** aba Em casa → "Abotoar a camisa com a mão mais fraca" → "Sim" → "Registrar" → voltar.
-- **Resultado esperado:**
-  - a TM17 mostra "Registrado. Obrigado por contar!" só depois que o servidor confirma;
-  - de volta, a TM16 mostra "Hoje: 2 de 2 atividades registradas" e "Tudo contado por hoje. Obrigado!".
-- **Resultado obtido:** como esperado. O servidor mostra os dois registros de 26/11 como "feito", enviados.
-- **Evidência:** `ct14a-em-casa-1-de-2.png`, `ct14b-atividade-registrada.png`, `ct14c-em-casa-2-de-2.png`,
-  `ct14d-servidor-registro-casa.txt`.
-- **Teste automatizado:** `test/funcionalidades/paciente/em_casa_test.dart`:
-  - "registrar "Em parte" com reflexão; corrigir para "Sim"; desfazer";
-  - "sem conexão: guardado no aparelho e na fila".
-
-### CT15 — Sessões e presença
-
-- **Requisito:** D27. Sugestão para o v5.0: RFM14.
-- **Persona:** Antônio.
-- **Pré-condição:** a sessão de 03/12 às 08:00 com o Tiago, sem resposta.
-- **Passos:** Início → cartão "Sua próxima sessão" → TM18 → "Sim, vou" → voltar ao Início.
-- **Resultado esperado:**
-  - a TM18 mostra "Você vai?" (voz do titular, D24) e, depois da resposta, "Sim, vou — A clínica recebeu sua
-    resposta." com "Mudar a resposta";
-  - o Início mostra "Presença confirmada";
-  - "Falar com a clínica" usa o número fictício.
-- **Resultado obtido:** como esperado. O servidor gravou a sessão `…0012` com "vamos", enviado.
-- **Evidência:** `ct15a-sessoes-sim-vou.png`, `ct15b-servidor-presenca.txt`, `ct15c-inicio-presenca-confirmada.png`.
-- **Teste automatizado:** `test/funcionalidades/paciente/sessoes_test.dart`:
-  - "o titular lê "Você vai?" e "Sim, vou"; sem conexão, a resposta fica guardada";
-  - "a mãe responde "Sim, vamos" e depois muda para "Não vamos conseguir"; a sessão continua marcada".
+### CT15 — Presença e agenda
+- **Passos:** Início do João → "Confirmar presença" → aba Agenda.
+- **Esperado:** "Presença confirmada", só com "Mudar a resposta". A Agenda agrupa por semana e mostra "Falar com a
+  clínica" (número fictício). No servidor, a resposta `vamos`.
+- **Obtido:** como esperado (`sessão ad…09 vamos … enviado`).
+- **Evidência:** `ct15a-presenca-confirmada-joao.png`, `ct15b-agenda-joao.png`, `ct15c-servidor-presenca-joao.txt`.
+- **Teste automatizado:** `test/dados/regras_presenca_test.dart`, `test/dados/memoria_presenca_test.dart`.
 
 ### CT16 — Lembretes locais
+- **Passos:** Conta → "Lembretes neste aparelho" → ligar "Na véspera de cada sessão" → "Salvar" (o Android pede a
+  permissão de notificação) → ver "Próximos lembretes" → "Sair" → ver os alarmes.
+- **Esperado:** "Lembretes salvos." O próximo lembrete fica no sábado, 28/11, às 19:00, com um texto sem dado
+  clínico. Depois do "Sair", nenhum alarme pendente.
+- **Obtido:** como esperado ("Amanhã às 10:00 tem compromisso na clínica."). O `dumpsys alarm` mostra as 2 entradas
+  do app com `alarm_cancelled`.
+- **Evidência:** `ct16a-lembrete-da-vespera-agendado.png`, `ct16b-alarmes-depois-de-sair.txt`.
+- **Teste automatizado:** `test/dados/persistente/lembretes_locais_test.dart`, `test/dados/regras_lembretes_test.dart`.
 
-- **Requisito:** D28. Sugestão para o v5.0: RFM15.
-- **Persona:** Antônio.
-- **Pré-condição:** TM19 sem lembretes e notificação ainda não permitida.
-- **Passos:**
-  1. Menu → "Lembretes" → ligar "Na véspera de cada sessão ou consulta" → 19:00 → "Salvar".
-  2. Permitir as notificações no diálogo do Android.
-  3. "Mandar um lembrete de teste".
-  4. Abrir a barra de notificações.
-- **Resultado esperado:**
-  - o Android pergunta a permissão ao salvar;
-  - aparecem "Lembretes salvos." e o próximo, "Quarta-feira, 2 de dezembro às 19:00 — Amanhã às 08:00 tem compromisso
-    na clínica.";
-  - o lembrete de teste aparece na barra e fica lá até a pessoa tirar.
-- **Resultado obtido (1ª rodada) — reprovado:**
-  - a permissão, o "Lembretes salvos.", o próximo lembrete e 4 alarmes do app no sistema saíram como esperado;
-  - mas **o lembrete de teste não estava na barra** quando ela foi aberta, segundos depois.
-  - A causa: o reagendamento, que roda ao fim de cada sincronização e na volta ao app, chamava `cancelAll()`. No
-    Android, essa chamada também tira as notificações já mostradas. Um lembrete de véspera já entregue sumiria do
-    mesmo jeito.
-- **Correção:** `2f389fa`. O reagendamento passou a usar `cancelAllPendingNotifications()`, e o "Sair" continua
-  tirando tudo.
-- **Reteste (APK `29a9920`) — aprovado:** "Mandar um lembrete de teste" → app ao fundo → app aberto de novo (o que
-  reagenda) → a barra mostra "Terae — Os lembretes do Terae estão ligados neste celular.".
-- **Evidência:** `ct16a-permissao-do-android.png`, `ct16b-lembretes-salvos-proximos.png`, `ct16d-alarmes.txt`,
-  `ct16c-lembrete-de-teste-na-barra.png` (o reteste).
-- **Teste automatizado:**
-  - `test/dados/persistente/lembretes_locais_test.dart`, "reagendar troca só os agendados: o lembrete já mostrado
-    fica na barra (roteiro da A5, CT16)" (regressão);
-  - `test/funcionalidades/paciente/lembretes_test.dart`, "Antônio abre pelo menu, liga a véspera às 20:00 e as
-    atividades; salva e vê os próximos".
+### CT17 — Em casa: registrar a atividade do dia
+- **Passos:** Ana → aba Em casa → "Rotina para dormir" → "Sim" → "Registrar".
+- **Esperado:** "Registrado. Obrigado por contar!", "Esta semana" passa de 5 para 6 de 7, e o registro chega ao
+  Firestore.
+- **Obtido:** como esperado (`2026-11-27 feito paciente enviado`).
+- **Evidência:** `ct17a-em-casa-ana.png`, `ct17b-atividade-registrada.png`, `ct17c-servidor-atividade.txt`.
+- **Teste automatizado:** `test/funcionalidades/paciente/em_casa_test.dart`,
+  `test/dados/persistente/programa_em_casa_persistente_test.dart`.
 
-### CT17 — Metas: Jornada e TM20
+### CT18 — Metas: TM20 só de leitura
+- **Passos:** na atividade, "Esta atividade ajuda na meta".
+- **Esperado:** a meta com a situação, a área, o prazo e quem acompanha, mais "O que ajuda em casa". Não há escore
+  nem edição.
+- **Obtido:** como esperado.
+- **Evidência:** `ct18a-meta-tm20.png`.
+- **Teste automatizado:** `test/funcionalidades/paciente/metas_test.dart`, `test/dados/regras_metas_test.dart`.
 
-- **Requisito:** RFM06, D35. Sugestão para o v5.0: RFM16.
-- **Persona:** Antônio.
-- **Pré-condição:** as 3 metas da semente.
-- **Passos:** aba Jornada → "Vestir a camisa de botão sozinho".
-- **Resultado esperado:**
-  - "Nossas metas" em Autocuidado: as em andamento com o prazo e a alcançada por último, sem escore;
-  - a TM20 mostra com quem a meta foi combinada, quem acompanha, a atividade ligada, o próximo marco e "Para mudar
-    uma meta, fale com a clínica.".
-- **Resultado obtido:** como esperado. A TM20 mostrou:
-  - "Combinada com Antônio e a família";
-  - "Acompanhada por Tiago Moreira";
-  - "Prazo: 10/01/2027";
-  - a atividade "Abotoar a camisa com a mão mais fraca";
-  - o marco "Vestir a camisa sozinho".
-- **Evidência:** `ct17a-jornada-nossas-metas.png`, `ct17b-meta-tm20.png`.
-- **Teste automatizado:** `test/funcionalidades/paciente/metas_test.dart`:
-  - "Jornada do Antônio: "Nossas metas" por área da vida, com a situação e o prazo, sem escore (D25)";
-  - "a meta abre a TM20: …".
+### CT19 — Cuidadora sem conteúdo clínico
+- **Passos:** entrar como Regina → Início → Conta.
+- **Esperado:** a faixa "Modo cuidador · acesso limitado", 3 abas (Início, Agenda, Conta), sem Diário, metas nem
+  jornada. Aparecem a medicação (a Ana faz acompanhamento clínico), a próxima consulta e a presença.
+- **Obtido:** como esperado.
+- **Evidência:** `ct19a-inicio-cuidadora-regina.png`, `ct19b-conta-cuidadora-sem-diario.png`.
+- **Observação:** a Conta diz "Você é cuidador" também para a Regina e a Rosa. É um texto sem gênero que fica para a
+  próxima versão.
+- **Teste automatizado:** `test/dados/memoria_visao_cuidador_test.dart`,
+  `test/funcionalidades/cuidador/inicio_cuidador_tela_test.dart`.
 
-### CT18 — Indicador de carregamento e mensagem de erro
+## Casos — Terae local
 
-- **Requisito:** RNFM01, RNFM03.
-- **Persona:** Antônio.
-- **Pré-condição:** sessão guardada no aparelho.
-- **Passos:**
-  1. Fechar o app à força e abri-lo de novo, com capturas seguidas.
-  2. "Sair", ligar o modo avião e tentar entrar com e-mail e senha.
-- **Resultado esperado:**
-  1. Enquanto o resumo do dia carrega, o Início mostra o indicador (`CircularProgressIndicator`, rótulo
-     "Carregando").
-  2. Uma mensagem simples, sem jargão: "Sem internet agora. Tente de novo quando a conexão voltar."
-- **Resultado obtido:** como esperado nos dois passos.
-- **Evidência:** `ct18a-carregando-inicio.png`, `ct18b-erro-sem-internet-ao-entrar.txt`.
-- **Teste automatizado:**
-  - `test/funcionalidades/paciente/inicio_test.dart` e `jornada_test.dart`, "falha ao carregar oferece "Tentar de
-    novo"";
-  - `test/funcionalidades/paciente/diario_test.dart`, "TM04: enquanto o envio não resolve diz "Enviando…" …";
-  - `test/dados/persistente/autenticacao_firebase_test.dart`, "sem conexão, entrar recusa semConexao".
+### CT20 — Entrar em duas etapas
+- **Passos:** capa → "Entrar" ("Etapa 1 de 2") → e-mail e senha → "Continuar" → código de 6 dígitos que chega por
+  e-mail (Mailpit) → "Entrar".
+- **Esperado:** abre o Início da Laura com a clínica ao lado da data, "Boa noite, Laura." e 5 abas. A senha errada
+  dá uma mensagem genérica. O código errado diz quantas tentativas restam.
+- **Obtido:** como esperado (Laura, 1 código).
+- **Evidência:** `ct20a-inicio-laura-local.png`. A senha errada, o código errado e o código certo ficaram registrados
+  no assistido de 27/11 (`A2-senha-errada.png`, `A5-codigo-errado.png`, `A4-codigo-do-email.png`).
+- **Teste automatizado:** `test/funcionalidades/autenticacao/entrar_codigo_test.dart`,
+  `test/dados/terae_local/sessao_do_portal_test.dart`.
 
-### CT19 — Cuidador sem conteúdo clínico
+### CT21 — Diário no Terae web
+- **Passos:** Diário → "Novo registro" → "Fiz parte" e "Pouco" → "Enviar".
+- **Esperado:** recibo "Registro enviado. A sua terapeuta vai ler com atenção.", com a opção de corrigir. No banco
+  `registro_diario`, a versão 1 com `parcial`/`leve`.
+- **Obtido:** como esperado (`27/11 23:37:55 | parcial | leve | 1`).
+- **Evidência:** `ct21a-recibo-registro-enviado-local.png`, `ct21b-servidor-registro-laura.txt`. O crítico com
+  "A equipe foi avisada", a correção (versão 2), "Ver a versão 1" e a retirada com motivo, todos na mesma API, estão
+  no assistido de 27/11 (`F3`, `F4`, `F5`–`F9`).
+- **Teste automatizado:** `test/dados/terae_local/diario_terae_local_test.dart`; a fumaça contra a API real fica em
+  `ferramentas/fumaca_repositorios_terae_local_test.dart`.
 
-- **Requisito:** RFM08, RNFM05 (D29).
-- **Persona:** Carla, cuidadora do Antônio.
-- **Pré-condição:** CT06 concluído.
-- **Passos:** TM08 → "Agenda e avisos".
-- **Resultado esperado:**
-  - "Você está no modo cuidador: acesso limitado.", a próxima sessão com "Presença confirmada" e "Conteúdo clínico —
-    Bloqueado para cuidadores";
-  - sem "Medicação" (o Antônio só faz TO), sem diário, sem metas, CPF ou nascimento.
-- **Resultado obtido:** como esperado. "Agenda e avisos" mostra a sessão e "Nenhum aviso agora.".
-- **Evidência:** `ct19a-inicio-cuidadora-sem-clinico.png`, `ct19b-agenda-avisos-cuidadora.png`.
-- **Teste automatizado:**
-  - `test/funcionalidades/cuidador/inicio_cuidador_tela_test.dart`, "não mostra CPF, nascimento, motivo nem
-    conteúdo de registro";
-  - `test/funcionalidades/paciente/registros_test.dart`, "a cuidadora não chega à TM13 nem por link direto
-    (RNFM05)";
-  - `test/funcionalidades/roteador_test.dart`, "link direto para /paciente/diario cai em /cuidador/inicio".
+### CT22 — Sem internet no Terae local
+- **Passos:** modo avião → Diário (a lista dá erro) → novo registro "Fiz tudo" → "Enviar" → "Ver no diário" →
+  desligar o modo avião → "Enviar agora".
+- **Esperado:** "Registro guardado neste aparelho." O guardado aparece no Diário mesmo com a lista fora do ar. Ao
+  voltar a conexão, ele sai uma vez só.
+- **Obtido:** como esperado. No banco, uma única linha nova, guardada às 23:39:05 e criada às 23:39:58 (o
+  `guardado_em` mostra que foi escrita sem internet).
+- **Evidência:** `ct22a-guardado-neste-aparelho-local.png`, `ct22b-diario-guardado-visivel-sem-internet.png`,
+  `ct22d-fila-enviada-ao-voltar.png`, `ct22c-servidor-uma-vez-so.txt`.
+- **Teste automatizado:** `diario_terae_local_test.dart` (fila com dona e validade de 7 dias, TL8).
 
-### CT20 — Validação de formulário
+### CT23 — Cuidadora no Terae local
+- **Passos:** entrar como Rosa → Início → "Registrar o de hoje" em "Botões grandes" → "Sim" → "Registrar" → Conta.
+- **Esperado:** a faixa "Modo cuidador · acesso limitado. Você vê o programa em casa e a agenda de Alice." e 4 abas,
+  sem Diário. A agenda mostra "A clínica ainda não liberou a agenda para esta conta." O registro chega a
+  `registro_programa_domiciliar` em nome da Rosa.
+- **Obtido:** como esperado (`2026-11-27 | feito | 27/11 23:35 | cuidador-alice@…`).
+- **Evidência:** `ct23a-inicio-rosa-cuidadora-local.png`, `ct23b-rosa-registrou-botoes-grandes.png`,
+  `ct23c-servidor-registro-rosa.txt`, `ct23d-conta-rosa-sem-diario.png`.
+- **Teste automatizado:** `test/funcionalidades/cuidador/cuidador_do_terae_local_test.dart`.
 
-- **Requisito:** RNFM01, RNFM02.
-- **Persona:** Ana (diário) e João (cadastro).
-- **Pré-condição:** formulários abertos.
-- **Passos:**
-  1. Diário com só a intensidade marcada.
-  2. Passo 4 da TM09 com os campos vazios (CT04).
-  3. Login com os campos vazios (CT02).
-- **Resultado esperado:**
-  1. "Enviar meu registro" fica desabilitado e diz o que falta: "Para enviar, escolha os remédios e o sintoma."
-  2. e 3. Os erros aparecem no próprio campo, e nada vai ao servidor.
-- **Resultado obtido:** como esperado nos três formulários.
-  - No passo 4 da TM09, uma confirmação de senha digitada errado pelo teclado do emulador mostrou "As duas senhas não
-    são iguais." e não deixou criar a conta.
-- **Evidência:** `ct20-diario-validacao.png`, `ct04c-passo4-validacao-campos.txt`, `ct02a-campos-vazios.txt`.
-- **Teste automatizado:**
-  - `test/funcionalidades/paciente/diario_test.dart`, "sem as três escolhas, Enviar fica desabilitado";
-  - `test/funcionalidades/autenticacao/cadastro_paciente_tela_test.dart`, "erros locais ficam no campo e não chamam o
-    repositório";
-  - `test/funcionalidades/autenticacao/campos_cadastro_test.dart`.
+### CT24 — "Sair" revoga a sessão no servidor
+- **Passos:** Conta → "Sair" (Rosa e Laura).
+- **Esperado:** volta à capa, e as duas sessões do portal (senha e código) ficam com `revogada_em` no servidor.
+- **Obtido:** como esperado nas duas personas.
+- **Evidência:** `ct24a-capa-depois-de-sair-local.png`, `ct23e-servidor-sessao-revogada-rosa.txt`,
+  `ct24b-servidor-sessao-revogada-laura.txt`.
+- **Teste automatizado:** `sessao_do_portal_test.dart`.
+
+### CT25 — Confirmar presença grava no Terae web
+- **Passos:** Mariana → Início → "Confirmar presença" na sessão "Marcada" → clínica `:5201` → Agenda.
+- **Esperado:** o app mostra "Presença confirmada". A clínica vê "Confirmada por Portal da família"
+  (`agendamento.confirmado_em`, canal `portal`).
+- **Obtido (27/11, teste assistido):** como esperado.
+- **Evidência:** `assistido-27-11/C4-confirmar-presenca-gravou-no-portal.png`, `D3-agenda-mariana-proxima-semana.png`,
+  `J1-mariana-inicio-presenca-confirmada-na-web.png`.
+- **Teste automatizado:** `test/dados/terae_local/repositorios_terae_local_test.dart`.
+
+### CT26 — Web ↔ app
+- **Passos:** na clínica `:5201`, Caixa de entrada → "Marcar como revisada" num registro da Alice → no app, Diário.
+- **Esperado:** o app mostra "Revisado pela terapeuta" e "Não dá mais para corrigir nem retirar". No outro sentido, o
+  que a família envia aparece na Caixa de entrada.
+- **Obtido (27/11, teste assistido):** como esperado. Nesta rodada, a Caixa de entrada mostrou de novo os registros
+  da Alice enviados pelo app.
+- **Evidência:** `assistido-27-11/J2-revisado-na-web-aparece-no-app.png` e a seção "Conferência na web da clínica"
+  do `LEIA-ME.md` do assistido.
+
+### CT27 — Trava: nunca a produção
+- **Passos:** montar a fonte local com endereços que não são locais (domínio público, `*.localhost`, IP da rede).
+- **Esperado:** o app recusa com um erro claro. Só aceita `127.0.0.1`, `::1`, `localhost` e `10.0.2.2`, e o
+  cliente confere de novo ao nascer.
+- **Obtido:** como esperado.
+- **Teste automatizado:** `test/dados/terae_local/configuracao_terae_local_test.dart` ("recusa … com erro claro",
+  "o cliente confere de novo ao nascer").
 
 ## Falhas encontradas e corrigidas
 
-| # | Caso | Falha | Correção | Teste de regressão |
-|---|---|---|---|---|
-| 1 | CT16 | O reagendamento dos lembretes (fim de cada sincronização, volta ao app) chamava `cancelAll()`, que no Android também tira da barra as notificações já mostradas: o lembrete de teste, e um lembrete de véspera já entregue, sumiam | `2f389fa` — `cancelAllPendingNotifications()` no reagendamento; o "Sair" continua tirando tudo (D20) | `test/dados/persistente/lembretes_locais_test.dart` |
-| 2 | CT06 | A TM10 prometia "A medicação…" e falava só de "consulta" ao cuidador de quem só faz TO, que pela D29 não vê medicação | `29a9920` — textos que servem às duas linhas ("sessão ou consulta", remédios "se houver"), sem expor as linhas no convite público | `test/funcionalidades/autenticacao/cadastro_cuidador_tela_test.dart` |
+Nenhum caso reprovou na rodada final. Estas são as falhas achadas antes dela, cada uma com um teste de regressão:
 
-## Estado do Firebase depois do roteiro
+| # | Onde | Falha | Correção |
+|---|---|---|---|
+| 1 | Teste assistido (Terae local) | Sem internet, a lista do diário mostrava só o erro e o registro guardado sumia | `7326de4`: os guardados e os vencidos são lidos antes da rede |
+| 2 | Teste assistido | A agenda que a clínica não liberou parecia "Nenhuma sessão marcada" | `72fb156`: "A clínica ainda não liberou a agenda para esta conta." |
+| 3 | Teste assistido | O aviso de recusa (409) nascia abaixo da dobra; a faixa do cuidador não citava o programa | `72fb156` |
+| 4 | Teste assistido | "Mudar a resposta" repetia "Confirmar presença" e o portal respondia 409 | `8c312d2`: oferece só o que muda |
+| 5 | Teste assistido | A aba Diário abria com a lista velha depois de enviar | `fcc9a31` |
+| 6 | Teste das regras no emulador | O recorte `versoesAnteriores[0:0]` recusava toda primeira correção | corrigido nas `firestore.rules` (22 casos) |
+| 7 | Ensaio | A saudação usava a hora em UTC ("Bom dia" às 22:30) | `961f6c8` |
 
-Com o ok do dono, a semente rodou de novo com `--reiniciar` às 16h20 de 26/11. No Firestore não ficou nada do
-roteiro. Ficaram livres para a demonstração (conferido no servidor):
-- `K7M4QX`: paciente João; CPF 583.049.216-42; nascimento 19/07/1999. Vale até 08/12/2026, 23:59.
-- `P4X9RC`: cuidador da Ana; CPF 847.120.563-71. Vale até 01/12/2026, 23:59.
+## Estado dos servidores depois do roteiro
 
-Para uma demonstração depois de 01/12, rode a semente de novo, porque as datas são relativas ao dia em que ela roda
-(D9).
-
-Sobrou no Authentication a conta de teste `carla.ribeiro@exemplo.test`, criada no CT06. A semente só apaga os e-mails
-que conhece. Como o Firestore foi zerado, a conta entra sem nenhum vínculo ("Esta conta ainda não tem acesso"). Apagá-la
-é decisão do dono.
+- **Firebase:** ficaram os registros de teste da Ana em 27/11 (novo, corrigido, retirado, crítico com 2 alertas, o
+  guardado sem internet e a atividade "Rotina para dormir"), a presença do João e a conta
+  `joao.pedro.assis@exemplo.test`, que consumiu o `K7M4QX`. O `P4X9RC` (cuidador da Ana, vale até 01/12) continua
+  livre. Para zerar, rode a semente com `--reiniciar`, o que pede o ok do dono.
+- **Terae local:** ficaram 2 registros da Laura e 1 da Rosa no programa. A Rosa não está mais confiável neste
+  emulador.
