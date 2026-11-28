@@ -1,5 +1,7 @@
 # Terae web local para o app (`TERAE_FONTE=local`)
 
+> **Para rodar tudo de uma vez (comandos prontos, cota de códigos, roteiro assistido):** [`docs/roteiro-de-amanha.md`](../../docs/roteiro-de-amanha.md).
+
 O app acadêmico fala com o Firebase `terae-app-academico` por padrão. Para a apresentação, o dono decidiu (26/11/2026)
 ligá-lo **também** ao Terae web rodando **nesta máquina**, pela API do portal da família. Isso é só para a demonstração:
 **nunca** aponte o app para a produção (terae.com.br, VPS). O app do Terae produção será em React Native.
