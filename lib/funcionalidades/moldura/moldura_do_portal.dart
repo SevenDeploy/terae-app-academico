@@ -141,8 +141,8 @@ class MolduraDoPortal extends StatelessWidget {
   }
 }
 
-/// O topo do portal no telefone: o seletor de paciente (avatar, primeiro nome
-/// e, com mais de um perfil, a seta que abre "De quem você quer ver?") e o
+/// O topo do portal no telefone: o seletor de paciente (avatar com as
+/// iniciais, o nome inteiro e, com mais de um perfil, a seta que abre "De quem você quer ver?") e o
 /// atalho "Ajuda imediata", que abre os números do SAMU 192 e do CVV 188.
 ///
 /// Como a barra de baixo, o topo para a escala do texto em 1,15×: com a
@@ -207,10 +207,10 @@ class _SeletorDePaciente extends StatelessWidget {
         Avatar(nome: perfil.paciente.nome),
         const SizedBox(width: 10),
         Flexible(
-          // O portal mostra só o primeiro nome no topo; o nome inteiro fica
-          // na folha "De quem você quer ver?" e na Conta.
+          // Como o portal ao vivo: o nome inteiro, cortado com reticências
+          // quando falta lugar (o botão "Ajuda imediata" nunca encolhe).
           child: Text(
-            perfil.paciente.primeiroNome,
+            perfil.paciente.nome,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(
               fontSize: 16,
@@ -311,7 +311,26 @@ String rotuloDoPerfil(Perfil perfil) => switch (perfil.papel) {
     perfil.falaDeOutraPessoa ? 'Você é responsável' : 'Você mesmo',
 };
 
-/// Avatar do portal: círculo com a inicial do nome.
+/// As iniciais do `Avatar` do portal (`packages/ui`): a primeira letra das
+/// duas primeiras partes do nome, sem contar as de até duas letras ("da",
+/// "de"), exceto a última parte. "Alice Fictícia Duarte" → "AF".
+String iniciaisDoNome(String nome) {
+  final partes = nome
+      .trim()
+      .split(RegExp(r'\s+'))
+      .where((p) => p.isNotEmpty)
+      .toList();
+  if (partes.isEmpty) return '?';
+  final ultima = partes.last;
+  final iniciais = partes
+      .where((p) => p.length > 2 || p == ultima)
+      .take(2)
+      .map((p) => p[0].toUpperCase())
+      .join();
+  return iniciais.isEmpty ? '?' : iniciais;
+}
+
+/// Avatar do portal: círculo com as iniciais do nome ([iniciaisDoNome]).
 class Avatar extends StatelessWidget {
   const Avatar({super.key, required this.nome, this.tamanho = 36});
 
@@ -320,7 +339,7 @@ class Avatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final inicial = nome.trim().isEmpty ? '?' : nome.trim()[0].toUpperCase();
+    final iniciais = iniciaisDoNome(nome);
     return ExcludeSemantics(
       child: Container(
         width: tamanho,
@@ -331,10 +350,10 @@ class Avatar extends StatelessWidget {
           shape: BoxShape.circle,
         ),
         child: Text(
-          inicial,
+          iniciais,
           style: TextStyle(
             fontFamily: 'Lexend',
-            fontSize: tamanho * 0.42,
+            fontSize: iniciais.length > 1 ? tamanho * 0.36 : tamanho * 0.42,
             fontWeight: FontWeight.w600,
             color: CoresTerae.primaria700,
           ),

@@ -9,6 +9,7 @@ import 'package:terae_app/dados/enums/situacao_agendamento.dart';
 import 'package:terae_app/dados/modelos/agendamento.dart';
 import 'package:terae_app/dados/modelos/paciente.dart';
 import 'package:terae_app/dados/repositorios/autenticacao_repositorio.dart';
+import 'package:terae_app/funcionalidades/moldura/moldura_do_portal.dart';
 import 'package:terae_app/nucleo/rotas/rotas.dart';
 import 'package:terae_app/nucleo/sessao/sessao.dart';
 import 'package:terae_app/nucleo/tempo/relogio.dart';
@@ -258,8 +259,8 @@ void main() {
   });
 
   group('Topo: o seletor de paciente e a Ajuda imediata do portal', () {
-    testWidgets('só o primeiro nome no topo, o nome inteiro na folha e na '
-        'Conta; "Ajuda imediata" no botão', (tester) async {
+    testWidgets('iniciais e o nome inteiro no topo (como o portal); '
+        '"Ajuda imediata" no botão', (tester) async {
       final sessao = Sessao()..entrar(vinculosPatricia());
       sessao.escolherPerfil(
         sessao.perfis.firstWhere((p) => p.paciente.id == 'p-miguel'),
@@ -267,10 +268,17 @@ void main() {
       await abrirAppDoPaciente(tester, sessao: sessao);
       final seletor = find.byKey(const Key('seletor-de-paciente'));
       expect(
-        find.descendant(of: seletor, matching: find.text('Miguel')),
+        find.descendant(
+          of: seletor,
+          matching: find.text('Miguel Andrade Neves'),
+        ),
         findsOneWidget,
       );
-      expect(find.text('Miguel Andrade Neves'), findsNothing);
+      // Avatar do portal: a inicial das duas primeiras partes do nome.
+      expect(
+        find.descendant(of: seletor, matching: find.text('MA')),
+        findsOneWidget,
+      );
       expect(
         find.descendant(
           of: find.byKey(const Key('topo-ajuda')),
@@ -280,8 +288,44 @@ void main() {
       );
       await tocar(tester, seletor);
       expect(find.text('De quem você quer ver?'), findsOneWidget);
-      expect(find.text('Miguel Andrade Neves'), findsOneWidget);
       expect(find.text('Laura Andrade Neves'), findsOneWidget);
+    });
+
+    test('iniciaisDoNome segue o Avatar do portal', () {
+      expect(iniciaisDoNome('Alice Fictícia Duarte'), 'AF');
+      expect(iniciaisDoNome('Ana Lúcia Martins'), 'AL');
+      // "da" e "de" (2 letras) não contam, salvo se for a última parte.
+      expect(iniciaisDoNome('Maria da Silva'), 'MS');
+      expect(iniciaisDoNome('Ana'), 'A');
+      expect(iniciaisDoNome('  '), '?');
+    });
+
+    testWidgets('a 360 dp com a fonte 2× e um nome longo, o topo não '
+        'estoura: o nome é quem encolhe', (tester) async {
+      aparelho(tester, escala: 2);
+      final base = vinculosAna();
+      final ana = Paciente(
+        id: 'p-ana',
+        contaId: 'c-ana',
+        profissionalRefId: '',
+        nome: 'Alice Fictícia Duarte da Silva Nogueira',
+        ativo: true,
+      );
+      final sessao = Sessao()
+        ..entrar(
+          VinculosDaConta(
+            conta: base.conta,
+            pacientes: [ana],
+            qualidades: base.qualidades,
+          ),
+        );
+      await abrirAppDoPaciente(tester, sessao: sessao);
+      expect(tester.takeException(), isNull);
+      expect(find.text('Ajuda imediata'), findsOneWidget);
+      expect(
+        tester.getSize(find.byKey(const Key('topo-ajuda'))).width,
+        lessThanOrEqualTo(176),
+      );
     });
   });
 }
