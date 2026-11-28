@@ -85,3 +85,19 @@ e a aba Em casa do cuidador no Terae local e a "Etapa 1 de 2" do Entrar. O que f
   não tem o programa. A aba só existe com a capacidade `programaDoCuidador` (Terae local).
 - **Fonte Terae local:** sem cópia local. O que a API do portal não tem some pela `CapacidadesDaFonte` (TL5 em `estado.md`).
 - **Computador:** o portal tem o layout de duas colunas a partir de 768 px; o app só tem o do telefone.
+
+### Conferência lado a lado com o portal web rodando (27/11/2026, noite)
+
+Mesmo login (Mariana, perfil da Alice), o portal em `portal.localhost:5175` numa janela de 360×800 e o app no emulador:
+
+- **Iguais:** a etapa do código ("Etapa 2 de 2", "Digite o código do e-mail", 6 caixas, "Confiar neste aparelho por 30
+  dias", "Reenviar o código em …"); o Diário inteiro (título "Diário de Alice", o subtítulo, "Novo registro", os cartões
+  com "Revisado pela terapeuta" e "Retirado por você", "Ver a versão 1", o aviso "Não dá mais para corrigir nem
+  retirar"); os dados do Início (saudação, "Próxima sessão", Ter 1 dez, "14:00 · 50 minutos", "Com Terapeuta · Terapia
+  Ocupacional", "Presença confirmada", "2 de 3 orientações registradas").
+- **Diferem no Início:** o portal lista cada orientação do dia no cartão ("Em parte · por você", "Falta registrar") e o app
+  só mostra a barra e o botão; o portal mantém "Avisar que não vamos" depois de confirmar e o app mostra "Mudar a
+  resposta" mais "Abrir a agenda"; o portal diz "orientações registradas" e o app "atividades registradas".
+- **Topo (corrige o que estava escrito antes, que vinha do quadro):** o portal ao vivo mostra as iniciais ("AF") e o nome
+  inteiro cortado ("Alice Fictícia D…"); o app mostra "A" e o primeiro nome ("Alice"). Os dois têm "Ajuda imediata".
+- **Texto:** o portal diz "registros que você enviou pelo portal"; o app, "pelo app".

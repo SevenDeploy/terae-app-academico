@@ -80,6 +80,10 @@ Depois, no emulador, a Mariana entrou (senha e código do Mailpit; nenhuma captu
 
 "Sair" revogou a sessão (`sessao_autenticada.revogada_em` preenchido) e o app voltou à capa.
 
-Ainda **sem comprovação**: o portal web da família lado a lado com o app (faltou cota de código para entrar nele no
-navegador). Observação visual: em "Quem você acompanha" (Conta), o nome e o selo "Vendo agora" dividem a linha e o nome
-quebra em quatro linhas a 360 dp.
+O portal web da família foi aberto lado a lado, com o mesmo login e uma janela de 360×800: os dados são os mesmos e o
+Diário é praticamente idêntico; as diferenças estão em `docs/paridade-com-portal.md` (seção "Conferência lado a lado").
+Ele foi preenchido por um ajudante local de uma sessão só, que serviu a senha e o código sem passarem pelo chat; "Sair" no
+portal revogou a sessão (`revogada_em` preenchido).
+
+O que a revisão visual achou na aba Conta ("Quem você acompanha": o nome quebrava em quatro linhas a 360 dp porque o selo
+"Vendo agora" ficava ao lado) foi corrigido em `298f4a3`, com teste.
