@@ -11,6 +11,7 @@ import 'package:terae_app/dados/terae_local/autenticacao_terae_local.dart';
 import 'package:terae_app/dados/terae_local/cliente_do_portal.dart';
 import 'package:terae_app/dados/terae_local/contexto_do_portal.dart';
 import 'package:terae_app/dados/terae_local/indisponiveis_terae_local.dart';
+import 'package:terae_app/dados/terae_local/mapeadores_do_portal.dart';
 import 'package:terae_app/dados/terae_local/repositorios_terae_local.dart';
 import 'package:terae_app/nucleo/tempo/data_civil.dart';
 import 'package:terae_app/nucleo/tempo/relogio.dart';
@@ -483,6 +484,9 @@ void main() {
       );
       expect(daRosa.adesao, AdesaoEmCasa.feito);
       expect(daRosa.reflexao, isNull);
+      // O texto de quem registrou, como o `quemRegistrou` do portal.
+      expect(meu.autoria, 'por você');
+      expect(daRosa.autoria, 'por Rosa');
       expect(await repo.registros(idAlice, dias: 0), isEmpty);
     });
 
@@ -567,6 +571,22 @@ void main() {
             .consultas(contaCuidadorId: 'c', pacienteId: idAlice),
         _recusa(MotivoRecusa.acessoNegado),
       );
+    });
+  });
+
+  group('autoria do registro de hoje (`quemRegistrou` do portal)', () {
+    test('esta conta, outra conta (com e sem nome) e o link', () {
+      String texto(RegistradoPor por, [String? nome]) => autoriaDoRegistro(
+        RegistroDeHojeNoPortal(
+          adesao: AdesaoEmCasa.feito,
+          registradoPor: por,
+          primeiroNome: nome,
+        ),
+      );
+      expect(texto(RegistradoPor.estaConta), 'por você');
+      expect(texto(RegistradoPor.outraConta, 'Rosa'), 'por Rosa');
+      expect(texto(RegistradoPor.outraConta), 'por outra pessoa da família');
+      expect(texto(RegistradoPor.link), 'pelo link');
     });
   });
 

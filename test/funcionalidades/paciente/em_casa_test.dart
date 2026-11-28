@@ -10,6 +10,7 @@ import 'package:terae_app/dados/enums/adesao_em_casa.dart';
 import 'package:terae_app/dados/enums/quem_registrou.dart';
 import 'package:terae_app/dados/enums/situacao_envio.dart';
 import 'package:terae_app/dados/memoria/memoria_demonstracao.dart';
+import 'package:terae_app/dados/modelos/registro_de_atividade.dart';
 import 'package:terae_app/nucleo/rotas/rotas.dart';
 import 'package:terae_app/nucleo/tempo/data_civil.dart';
 
@@ -146,7 +147,7 @@ void main() {
       expect(
         find.descendant(
           of: find.byKey(const Key('atalho-em-casa')),
-          matching: find.text('2 de 2 atividades registradas'),
+          matching: find.text('2 de 2 orientações registradas'),
         ),
         findsOneWidget,
       );
@@ -333,7 +334,7 @@ void main() {
       expect(
         find.descendant(
           of: atalho,
-          matching: find.text('1 de 2 atividades registradas'),
+          matching: find.text('1 de 2 orientações registradas'),
         ),
         findsOneWidget,
       );
@@ -357,6 +358,77 @@ void main() {
       }
     });
 
+    testWidgets('o Início lista cada orientação do dia com o estado, como o '
+        'portal: "Falta registrar" ou o estado registrado', (tester) async {
+      await abrirComMemoria(
+        tester,
+        persona: Persona.antonio,
+        em: Rotas.pacienteInicio,
+      );
+      final cartao = find.byKey(const Key('atalho-em-casa'));
+      for (final titulo in [
+        'Abotoar a camisa com a mão mais fraca',
+        'Segurar o copo com as duas mãos',
+      ]) {
+        expect(
+          find.descendant(of: cartao, matching: find.text(titulo)),
+          findsOneWidget,
+          reason: titulo,
+        );
+      }
+      expect(
+        find.descendant(of: cartao, matching: find.text('Falta registrar')),
+        findsOneWidget,
+      );
+      // A memória não diz quem registrou: só o estado (Feito, Em parte, Não
+      // feito), sem o "por você" do portal.
+      expect(
+        find.descendant(
+          of: cartao,
+          matching: find.byWidgetPredicate(
+            (w) =>
+                w is Text &&
+                const {'Feito', 'Em parte', 'Não feito'}.contains(w.data),
+          ),
+        ),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('com a autoria da fonte (Terae local), a linha diz "<estado> '
+        '· por você"', (tester) async {
+      await abrirComMemoria(
+        tester,
+        persona: Persona.antonio,
+        em: Rotas.pacienteInicio,
+        preparar: (m) async {
+          final registros = m.estado.registrosCasa;
+          for (final id in registros.keys.toList()) {
+            final r = registros[id]!;
+            if (r.dia != m.hoje()) continue;
+            registros[id] = RegistroDeAtividade(
+              id: r.id,
+              pacienteId: r.pacienteId,
+              atividadeId: r.atividadeId,
+              dia: r.dia,
+              adesao: AdesaoEmCasa.emParte,
+              quem: r.quem,
+              registradoEm: r.registradoEm,
+              situacaoEnvio: r.situacaoEnvio,
+              autoria: 'por você',
+            );
+          }
+        },
+      );
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('atalho-em-casa')),
+          matching: find.text('Em parte · por você'),
+        ),
+        findsOneWidget,
+      );
+    });
+
     testWidgets('Ana (psiquiatria e TO): o cartão do diário e o atalho de '
         'casa', (tester) async {
       await abrirComMemoria(
@@ -368,7 +440,7 @@ void main() {
       expect(
         find.descendant(
           of: find.byKey(const Key('atalho-em-casa')),
-          matching: find.text('0 de 2 atividades registradas'),
+          matching: find.text('0 de 2 orientações registradas'),
         ),
         findsOneWidget,
       );

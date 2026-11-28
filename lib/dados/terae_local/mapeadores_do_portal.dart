@@ -375,6 +375,16 @@ AtividadeDeCasa atividadeDoPortal(
 String idDoRegistroDeHoje(String idOrientacao, DataCivil dia) =>
     '$idOrientacao:${dia.paraIso()}';
 
+/// De quem é o registro de hoje, como o `quemRegistrou` do portal.
+String autoriaDoRegistro(RegistroDeHojeNoPortal r) => switch (r.registradoPor) {
+  RegistradoPor.estaConta => 'por você',
+  RegistradoPor.outraConta =>
+    r.primeiroNome != null
+        ? 'por ${r.primeiroNome}'
+        : 'por outra pessoa da família',
+  RegistradoPor.link => 'pelo link',
+};
+
 /// O registro de hoje de uma orientação, como registro de atividade.
 RegistroDeAtividade registroDoPortal(
   OrientacaoNoPortal o,
@@ -393,4 +403,5 @@ RegistroDeAtividade registroDoPortal(
   // Sem a hora (registro de outra conta ou de link), o começo do dia.
   registradoEm: r.registradoEm ?? dia.inicioNaClinica,
   situacaoEnvio: SituacaoEnvio.enviado,
+  autoria: autoriaDoRegistro(r),
 );

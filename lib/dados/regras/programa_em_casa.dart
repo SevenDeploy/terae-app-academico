@@ -80,6 +80,54 @@ Iterable<RegistroDeAtividade> _umPorAtividadeEDia(
 bool podeAlterarRegistro(RegistroDeAtividade registro, DataCivil hoje) =>
     !registro.excluido && registro.dia == hoje;
 
+/// Uma orientação na lista do Início (o cartão "Programa em casa · hoje" do
+/// portal): o título e como foi hoje. [adesao] `null` é "Falta registrar".
+/// [autoria] é o "por você" / "por Rosa" / "pelo link" que a fonte dá.
+@immutable
+class ItemDoProgramaDeHoje {
+  const ItemDoProgramaDeHoje({
+    required this.id,
+    required this.titulo,
+    this.adesao,
+    this.autoria,
+  });
+
+  final String id;
+  final String titulo;
+  final AdesaoEmCasa? adesao;
+  final String? autoria;
+
+  /// A linha pequena do portal: "Falta registrar" ou o estado (`Feito`,
+  /// `Em parte`, `Não feito`) seguido da autoria ("Feito · por você"); sem a
+  /// autoria (Firebase e memória), só o estado.
+  String get linha {
+    final a = adesao;
+    if (a == null) return 'Falta registrar';
+    final estado = switch (a) {
+      AdesaoEmCasa.feito => 'Feito',
+      AdesaoEmCasa.emParte => 'Em parte',
+      AdesaoEmCasa.naoFeito => 'Não feito',
+    };
+    return autoria == null ? estado : '$estado · $autoria';
+  }
+}
+
+/// A lista de hoje: cada atividade vigente, na ordem da publicação, com o
+/// registro do dia (o desfeito não conta).
+List<ItemDoProgramaDeHoje> programaDeHoje(
+  Iterable<AtividadeDeCasa> atividades,
+  Iterable<RegistroDeAtividade> registros,
+  DataCivil hoje,
+) => [
+  for (final a in atividadesVigentes(atividades, hoje))
+    ItemDoProgramaDeHoje(
+      id: a.id,
+      titulo: a.titulo,
+      adesao: registroDoDia(registros, a.id, hoje)?.adesao,
+      autoria: registroDoDia(registros, a.id, hoje)?.autoria,
+    ),
+];
+
 /// "Esta semana: 2 de 3" — quantos dias, nos últimos 7 (hoje incluído), a
 /// atividade foi feita, mesmo que em parte.
 int vezesNaSemana(

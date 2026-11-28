@@ -28,6 +28,7 @@ class RegistroDeAtividade {
     required this.situacaoEnvio,
     DateTime? atualizadoEm,
     DateTime? excluidoEm,
+    this.autoria,
   }) : reflexao = _semVazio(reflexao),
        registradoEm = registradoEm.toUtc(),
        atualizadoEm = atualizadoEm?.toUtc(),
@@ -82,6 +83,12 @@ class RegistroDeAtividade {
 
   bool get excluido => excluidoEm != null;
 
+  /// De quem é o registro, já em palavras do portal ("por você", "por Rosa",
+  /// "pelo link"), só quando a fonte o diz (o Terae local; o `quemRegistrou`
+  /// do portal). Serve só para mostrar: não vai para o mapa, não entra na
+  /// igualdade e as outras fontes deixam `null`.
+  final String? autoria;
+
   /// Só a situação de envio muda (`naFila` → `enviado`).
   RegistroDeAtividade copyWith({SituacaoEnvio? situacaoEnvio}) =>
       RegistroDeAtividade(
@@ -96,6 +103,7 @@ class RegistroDeAtividade {
         situacaoEnvio: situacaoEnvio ?? this.situacaoEnvio,
         atualizadoEm: atualizadoEm,
         excluidoEm: excluidoEm,
+        autoria: autoria,
       );
 
   /// A correção feita [em] um instante, no mesmo dia: nova resposta e nova

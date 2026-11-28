@@ -50,6 +50,7 @@ class InicioControlador extends ChangeNotifier {
   ReceitaUsoContinuo? _receita;
   List<ItemMedicacao> _itens = const [];
   ({int registradas, int total})? _emCasa;
+  List<ItemDoProgramaDeHoje> _programaDeHoje = const [];
   ConfirmacaoDePresenca? _confirmacaoDaProxima;
   bool _mudando = false;
   bool _respondendo = false;
@@ -66,6 +67,10 @@ class InicioControlador extends ChangeNotifier {
   /// "Hoje: 1 de 2 atividades registradas"; `null` sem programa ou se a
   /// leitura falhou.
   ({int registradas, int total})? get emCasa => _emCasa;
+
+  /// A lista do cartão "Programa em casa · hoje" (como no portal): cada
+  /// orientação do dia com o estado e, quando a fonte diz, quem registrou.
+  List<ItemDoProgramaDeHoje> get itensDoPrograma => _programaDeHoje;
 
   /// F2 — a resposta de presença da próxima consulta ou sessão, se houver.
   RespostaPresenca? get respostaDaProxima => _confirmacaoDaProxima?.resposta;
@@ -172,13 +177,16 @@ class InicioControlador extends ChangeNotifier {
     final programa = this.programa;
     if (programa == null) return;
     try {
-      _emCasa = resumoDeHoje(
-        await programa.atividades(pacienteId),
-        await programa.registros(pacienteId, dias: 1),
-        DataCivil.hoje(relogio!),
+      final atividades = await programa.atividades(pacienteId);
+      final registros = await programa.registros(pacienteId, dias: 1);
+      final hoje = DataCivil.hoje(relogio!);
+      _emCasa = resumoDeHoje(atividades, registros, hoje);
+      _programaDeHoje = List.unmodifiable(
+        programaDeHoje(atividades, registros, hoje),
       );
     } catch (_) {
       _emCasa = null;
+      _programaDeHoje = const [];
     }
   }
 

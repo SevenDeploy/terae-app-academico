@@ -68,6 +68,63 @@ RegistroDeAtividade _registro(
 }
 
 void main() {
+  group('programaDeHoje (a lista do Início)', () {
+    test('cada atividade vigente, na ordem da publicação, com o estado de '
+        'hoje e a autoria quando a fonte a dá', () {
+      final a = _atividade('a', publicadaHaDias: 9);
+      final b = _atividade('b', publicadaHaDias: 5);
+      final c = _atividade('c', publicadaHaDias: 2);
+      final encerrada = _atividade('d', encerradaHaDias: 1);
+      final dela = RegistroDeAtividade(
+        id: 'ra',
+        pacienteId: 'p',
+        atividadeId: 'a',
+        dia: _hoje,
+        adesao: AdesaoEmCasa.emParte,
+        quem: QuemRegistrou.responsavel,
+        registradoEm: instanteNaClinica(2026, 10, 2, 19),
+        situacaoEnvio: SituacaoEnvio.enviado,
+        autoria: 'por Rosa',
+      );
+      final desfeito = _registro('b', 0, AdesaoEmCasa.feito, desfeito: true);
+      final itens = programaDeHoje(
+        [c, encerrada, a, b],
+        [dela, desfeito],
+        _hoje,
+      );
+      expect(itens.map((i) => i.id), ['a', 'b', 'c']);
+      expect(itens[0].titulo, 'Atividade a');
+      expect(itens[0].adesao, AdesaoEmCasa.emParte);
+      expect(itens[0].autoria, 'por Rosa');
+      // O desfeito não conta: ainda falta registrar.
+      expect(itens[1].adesao, isNull);
+      expect(itens[2].adesao, isNull);
+    });
+
+    test('a linha: "Falta registrar" ou "<Feito|Em parte|Não feito> · '
+        '<autoria>"', () {
+      ItemDoProgramaDeHoje item(AdesaoEmCasa? adesao, [String? autoria]) =>
+          ItemDoProgramaDeHoje(
+            id: 'x',
+            titulo: 'X',
+            adesao: adesao,
+            autoria: autoria,
+          );
+      expect(item(null).linha, 'Falta registrar');
+      expect(item(AdesaoEmCasa.feito, 'por você').linha, 'Feito · por você');
+      expect(
+        item(AdesaoEmCasa.emParte, 'por Rosa').linha,
+        'Em parte · por Rosa',
+      );
+      expect(
+        item(AdesaoEmCasa.naoFeito, 'pelo link').linha,
+        'Não feito · pelo link',
+      );
+      // Sem o dado de "quem" (Firebase e memória), só o estado.
+      expect(item(AdesaoEmCasa.feito).linha, 'Feito');
+    });
+  });
+
   group('atividades vigentes', () {
     test('publicada até hoje e não encerrada; na ordem da publicação', () {
       final antiga = _atividade('a', publicadaHaDias: 20);

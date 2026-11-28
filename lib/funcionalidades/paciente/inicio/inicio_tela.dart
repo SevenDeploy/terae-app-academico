@@ -3,8 +3,10 @@ import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 
+import '../../../dados/enums/adesao_em_casa.dart';
 import '../../../dados/modelos/item_medicacao.dart';
 import '../../../dados/modelos/receita_uso_continuo.dart';
+import '../../../dados/regras/programa_em_casa.dart';
 import '../../../dados/repositorios/paciente_repositorio.dart';
 import '../../../dados/repositorios/presenca_repositorio.dart';
 import '../../../dados/repositorios/programa_em_casa_repositorio.dart';
@@ -313,6 +315,7 @@ List<Widget> _programaDeHoje(
       _AtalhoEmCasa(
         registradas: registradas,
         total: total,
+        itens: controlador.itensDoPrograma,
         papel: papel,
         cuidador: cuidador,
       ),
@@ -328,12 +331,16 @@ class _AtalhoEmCasa extends StatelessWidget {
   const _AtalhoEmCasa({
     required this.registradas,
     required this.total,
+    required this.itens,
     required this.papel,
     required this.cuidador,
   });
 
   final int registradas;
   final int total;
+
+  /// Cada orientação do dia, com o estado (a lista do portal).
+  final List<ItemDoProgramaDeHoje> itens;
   final Papel papel;
   final bool cuidador;
 
@@ -344,12 +351,14 @@ class _AtalhoEmCasa extends StatelessWidget {
       sobre: 'Programa em casa · hoje',
       titulo:
           '$registradas de $total '
-          '${total == 1 ? 'atividade registrada' : 'atividades registradas'}',
+          '${total == 1 ? 'orientação registrada' : 'orientações registradas'}',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           BarraDeProgresso(feitas: registradas, total: total),
           const SizedBox(height: 12),
+          for (final item in itens) _LinhaDoPrograma(item: item),
+          if (itens.isNotEmpty) const SizedBox(height: 4),
           BotaoGrande(
             key: const Key('abrir-programa-em-casa'),
             rotulo: cuidador
@@ -640,3 +649,55 @@ class ItemDaReceita extends StatelessWidget {
 
 String _maiuscula(String texto) =>
     texto.isEmpty ? texto : texto[0].toUpperCase() + texto.substring(1);
+
+/// Uma orientação do dia no cartão do Início (`Inicio.tsx`): o ícone do
+/// estado, o título e a linha "Falta registrar" ou "Feito · por você".
+class _LinhaDoPrograma extends StatelessWidget {
+  const _LinhaDoPrograma({required this.item});
+
+  final ItemDoProgramaDeHoje item;
+
+  /// Círculo tracejado (falta), check (feito), meio (em parte) e traço (não
+  /// feito), como o `IconeDoRegistro` do portal. A cor nunca é a única pista:
+  /// a linha de baixo diz o estado em palavras.
+  (IconData, Color) get _icone => switch (item.adesao) {
+    null => (LucideIcons.circleDashed, CoresTerae.neutro500),
+    AdesaoEmCasa.feito => (LucideIcons.circleCheck, CoresTerae.sucesso),
+    AdesaoEmCasa.emParte => (LucideIcons.contrast, CoresTerae.info),
+    AdesaoEmCasa.naoFeito => (LucideIcons.minus, CoresTerae.neutro500),
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    final textos = Theme.of(context).textTheme;
+    final (icone, cor) = _icone;
+    return Padding(
+      key: Key('programa-hoje-${item.id}'),
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(top: 2),
+            child: ExcludeSemantics(child: Icon(icone, size: 20, color: cor)),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(item.titulo, style: textos.bodyMedium),
+                Text(
+                  item.linha,
+                  style: textos.bodySmall?.copyWith(
+                    color: CoresTerae.textoSecundario,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
