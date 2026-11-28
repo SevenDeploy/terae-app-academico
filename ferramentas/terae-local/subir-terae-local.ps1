@@ -1,4 +1,4 @@
-# Confere (e, com -Subir, sobe) o Terae web LOCAL que o app consome em TERAE_FONTE=local.
+﻿# Confere (e, com -Subir, sobe) o Terae web LOCAL que o app consome em TERAE_FONTE=local.
 # Só localhost: nada aqui aponta para a produção. Não guarda nem imprime segredo (as senhas ficam no
 # .credenciais/contas-de-dev.json do terae, fora dos dois repositórios).
 #

@@ -1,4 +1,4 @@
-# Deixa a demonstração do app integrado ao Terae web LOCAL pronta, num comando só (rode ~10 min antes):
+﻿# Deixa a demonstração do app integrado ao Terae web LOCAL pronta, num comando só (rode ~10 min antes):
 #   1. sobe o que faltar do Terae local (Postgres, Mailpit, API, worker, clínica sem senha :5201 e :5202);
 #   2. liga o emulador Terae_Pixel e confere se o app instalado é o da fonte local (instala só se não for,
 #      porque reinstalar faz a Rosa perder o "confiar neste aparelho");
@@ -61,7 +61,8 @@ if (-not $SemNavegador) {
 }
 
 Passo '4. Painel do back'
-Start-Process powershell -ArgumentList '-NoExit', '-ExecutionPolicy', 'Bypass', '-File', (Join-Path $aqui 'painel-do-back.ps1')
+$shell = if (Get-Command pwsh -ErrorAction SilentlyContinue) { 'pwsh' } else { 'powershell' }
+Start-Process $shell -ArgumentList '-NoExit', '-ExecutionPolicy', 'Bypass', '-File', (Join-Path $aqui 'painel-do-back.ps1')
 Write-Host '  ok    painel aberto numa janela à parte (Ctrl+C fecha)'
 
 Passo '5. Cota de códigos (10 por conta em 24 h, 5 por hora)'

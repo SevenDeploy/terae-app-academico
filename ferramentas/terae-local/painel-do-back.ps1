@@ -1,4 +1,4 @@
-# Painel do back para a demonstração: mostra, ao vivo e SÓ LENDO, o que o app gravou no Terae web local
+﻿# Painel do back para a demonstração: mostra, ao vivo e SÓ LENDO, o que o app gravou no Terae web local
 # (banco terae_app_local). Serve para provar a integração do lado do servidor enquanto o app é usado no emulador.
 #
 # Uso (na pasta terae_app):  .\ferramentas\terae-local\painel-do-back.ps1          (atualiza a cada 3 s; Ctrl+C sai)
@@ -10,6 +10,7 @@ param([switch]$UmaVez, [int]$Segundos = 3)
 
 $ErrorActionPreference = 'Continue'
 [Console]::OutputEncoding = [Text.Encoding]::UTF8
+$OutputEncoding = [Text.UTF8Encoding]::new($false)   # o SQL vai ao psql em UTF-8 também no Windows PowerShell 5.1
 
 $sql = @'
 \pset footer off
@@ -52,7 +53,7 @@ select split_part(u.nome,' ',1) as "quem", count(*) as "códigos em 24 h (teto 1
 '@
 
 do {
-  $saida = $sql | docker exec -i infra-postgres-1 psql -X -q -U postgres -d terae_app_local 2>&1
+  $saida = $sql | docker exec -i -e PGCLIENTENCODING=UTF8 infra-postgres-1 psql -X -q -U postgres -d terae_app_local 2>&1
   if (-not $UmaVez) { Clear-Host }
   Write-Host ("Terae web local — painel do back (só leitura) · " + (Get-Date -Format 'HH:mm:ss')) -ForegroundColor Cyan
   $saida | ForEach-Object { if ("$_" -like '==*') { Write-Host $_ -ForegroundColor Yellow } else { Write-Host $_ } }
