@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:terae_app/funcionalidades/paciente/inicio/inicio_tela.dart';
 import 'package:terae_app/nucleo/rotas/rotas.dart';
 import 'package:terae_app/nucleo/sessao/sessao.dart';
+import 'package:terae_app/nucleo/tempo/relogio.dart';
 
 import '../../apoio/dubles.dart';
 import 'apoio_paciente.dart';
@@ -238,5 +240,24 @@ void main() {
         greaterThan(tester.getBottomLeft(nome).dy),
       );
     });
+  });
+
+  test('saudação pela hora da clínica (−04:00), não pela hora em UTC', () {
+    // 02:30Z de 28/11 é 22:30 de 27/11 em Cuiabá: "Boa noite", não "Bom dia".
+    expect(saudacaoDoMomento(DateTime.utc(2026, 11, 28, 2, 30)), 'Boa noite');
+    expect(
+      saudacaoDoMomento(instanteNaClinica(2026, 11, 27, 7, 59)),
+      'Bom dia',
+    );
+    expect(saudacaoDoMomento(instanteNaClinica(2026, 11, 27, 12)), 'Boa tarde');
+    expect(
+      saudacaoDoMomento(instanteNaClinica(2026, 11, 27, 17, 59)),
+      'Boa tarde',
+    );
+    expect(saudacaoDoMomento(instanteNaClinica(2026, 11, 27, 18)), 'Boa noite');
+    expect(
+      saudacaoDoMomento(instanteNaClinica(2026, 11, 27, 0, 30)),
+      'Bom dia',
+    );
   });
 }

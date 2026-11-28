@@ -221,9 +221,10 @@ class _ConteudoInicio extends StatelessWidget {
   }
 }
 
-/// "Bom dia", "Boa tarde" ou "Boa noite", pela hora de [agora] (o portal
-/// cumprimenta assim no Início).
-String saudacaoDoMomento(DateTime agora) => switch (agora.hour) {
+/// "Bom dia", "Boa tarde" ou "Boa noite", pela hora de [agora] no relógio de
+/// parede da clínica (−04:00, não a do aparelho nem UTC: às 22:30 em Cuiabá o
+/// instante em UTC já é 02:30 do dia seguinte).
+String saudacaoDoMomento(DateTime agora) => switch (naClinica(agora).hour) {
   < 12 => 'Bom dia',
   < 18 => 'Boa tarde',
   _ => 'Boa noite',
