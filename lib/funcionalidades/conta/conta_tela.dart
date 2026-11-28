@@ -68,21 +68,10 @@ class ContaTela extends StatelessWidget {
             child: Column(
               children: [
                 for (final p in sessao.perfis)
-                  ListTile(
-                    key: Key('conta-perfil-${p.chave}'),
-                    contentPadding: EdgeInsets.zero,
-                    minTileHeight: 56,
-                    leading: Avatar(nome: p.paciente.nome),
-                    title: Text(p.paciente.nome),
-                    subtitle: Text(rotuloDoPerfil(p)),
-                    trailing: p == perfil
-                        ? const Selo(
-                            texto: 'Vendo agora',
-                            tom: TomDoSelo.info,
-                            icone: LucideIcons.eye,
-                          )
-                        : null,
-                    onTap: p == perfil ? null : () => sessao.escolherPerfil(p),
+                  _PerfilDaConta(
+                    perfil: p,
+                    atual: p == perfil,
+                    aoEscolher: () => sessao.escolherPerfil(p),
                   ),
               ],
             ),
@@ -168,6 +157,71 @@ class _ItemDaConta extends StatelessWidget {
             color: CoresTerae.neutro600,
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Uma linha de "Quem você acompanha": avatar, nome inteiro, o vínculo e, no
+/// perfil que está aberto, o selo "Vendo agora" embaixo (ao lado do nome ele o
+/// espremia em quatro linhas a 360 dp).
+class _PerfilDaConta extends StatelessWidget {
+  const _PerfilDaConta({
+    required this.perfil,
+    required this.atual,
+    required this.aoEscolher,
+  });
+
+  final Perfil perfil;
+  final bool atual;
+  final VoidCallback aoEscolher;
+
+  @override
+  Widget build(BuildContext context) {
+    final textos = Theme.of(context).textTheme;
+    final linha = ConstrainedBox(
+      key: Key('conta-perfil-${perfil.chave}'),
+      constraints: const BoxConstraints(minHeight: 56),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Avatar(nome: perfil.paciente.nome),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(perfil.paciente.nome, style: textos.bodyLarge),
+                  Text(
+                    rotuloDoPerfil(perfil),
+                    style: textos.bodySmall?.copyWith(
+                      color: CoresTerae.textoSecundario,
+                    ),
+                  ),
+                  if (atual) ...[
+                    const SizedBox(height: 6),
+                    const Selo(
+                      texto: 'Vendo agora',
+                      tom: TomDoSelo.info,
+                      icone: LucideIcons.eye,
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (atual) return linha;
+    return Semantics(
+      button: true,
+      child: InkWell(
+        borderRadius: const BorderRadius.all(Radius.circular(8)),
+        onTap: aoEscolher,
+        child: linha,
       ),
     );
   }

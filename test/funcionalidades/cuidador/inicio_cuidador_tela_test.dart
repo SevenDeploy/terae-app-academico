@@ -216,6 +216,17 @@ void main() {
     expect(find.byKey(const Key('TM21')), findsOneWidget);
     expect(find.byKey(const Key('conta-lembretes')), findsNothing);
     expect(find.byKey(const Key('conta-cuidadores')), findsNothing);
+    // A lista da Conta é preguiçosa: rola até o Sair aparecer.
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('conta-sair')),
+      120,
+      scrollable: find
+          .descendant(
+            of: find.byKey(const Key('TM21')),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
     await _tocar(tester, find.byKey(const Key('conta-sair')));
     expect(sessao.autenticada, isFalse);
     expect(find.byKey(const Key('TM00')), findsOneWidget);

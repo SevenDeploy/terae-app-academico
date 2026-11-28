@@ -205,5 +205,38 @@ void main() {
       expect(sessao.perfilAtivo, laura);
       expect(find.text('Laura Andrade Neves'), findsWidgets);
     });
+
+    testWidgets('"Quem você acompanha": o nome inteiro não quebra em quatro '
+        'linhas e o selo "Vendo agora" vem embaixo (360 dp)', (tester) async {
+      tester.view.physicalSize = const Size(360, 800) * 3;
+      tester.view.devicePixelRatio = 3;
+      addTearDown(tester.view.reset);
+      final sessao = Sessao()..entrar(vinculosPatricia());
+      sessao.escolherPerfil(
+        sessao.perfis.firstWhere((p) => p.paciente.id == 'p-miguel'),
+      );
+      await abrirAppDoPaciente(tester, sessao: sessao);
+      await _abrirConta(tester);
+      final atual = find.byKey(
+        Key('conta-perfil-${sessao.perfilAtivo!.chave}'),
+      );
+      final nome = find.descendant(
+        of: atual,
+        matching: find.text('Miguel Andrade Neves'),
+      );
+      final selo = find.descendant(
+        of: atual,
+        matching: find.text('Vendo agora'),
+      );
+      expect(nome, findsOneWidget);
+      expect(selo, findsOneWidget);
+      // O nome cabe em no máximo duas linhas (a fonte de teste é larga) e o
+      // selo fica abaixo dele.
+      expect(tester.getSize(nome).height, lessThan(80));
+      expect(
+        tester.getTopLeft(selo).dy,
+        greaterThan(tester.getBottomLeft(nome).dy),
+      );
+    });
   });
 }
